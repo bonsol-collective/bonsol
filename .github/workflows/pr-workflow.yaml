@@ -10,7 +10,7 @@ permissions:
 jobs:
   fmt:
     name: Check & Fmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       volumes:
