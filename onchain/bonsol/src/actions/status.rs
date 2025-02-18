@@ -104,7 +104,7 @@ pub fn process_status_v1<'a>(
         }
         let verified = verify_with_prover(input_digest, co, asud, er, exed, st, proof)?;
         let tip = er.tip();
-        
+
         if verified {
             let callback_program_set =
                 sol_memcmp(sa.callback_program.key.as_ref(), crate::ID.as_ref(), 32) != 0;
@@ -165,7 +165,7 @@ pub fn process_status_v1<'a>(
                 };
                 let callback_ix =
                     Instruction::new_with_bytes(*sa.callback_program.key, &payload, accounts);
-               drop(er_ref);
+                drop(er_ref);
                 let res = invoke_signed(&callback_ix, &ainfos, &[&seeds]);
                 match res {
                     Ok(_) => {}

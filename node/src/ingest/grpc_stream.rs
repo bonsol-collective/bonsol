@@ -1,7 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use tracing::error;
-use yellowstone_grpc_client::ClientTlsConfig;
+use {tracing::error, yellowstone_grpc_client::ClientTlsConfig};
 
 use {
     anyhow::anyhow,
@@ -58,19 +57,13 @@ impl GrpcIngester {
 impl<'a> TryFrom<&'a mut GrpcIngester> for GeyserGrpcBuilder {
     type Error = anyhow::Error;
     fn try_from(value: &'a mut GrpcIngester) -> Result<Self, Self::Error> {
-        
-        Ok(
-            
-            
-            GeyserGrpcClient::build_from_shared(value.url.clone())?
+        Ok(GeyserGrpcClient::build_from_shared(value.url.clone())?
             .x_token(Some(value.token.clone()))?
             .connect_timeout(Duration::from_secs(
                 value.connection_timeout_secs.unwrap_or(10) as u64,
             ))
             .tls_config(ClientTlsConfig::new().with_enabled_roots())?
-            .timeout(Duration::from_secs(value.timeout_secs.unwrap_or(10) as u64))
-        )
-
+            .timeout(Duration::from_secs(value.timeout_secs.unwrap_or(10) as u64)))
     }
 }
 

@@ -7,7 +7,7 @@ use indicatif::ProgressBar;
 use object_store::aws::AmazonS3Builder;
 use object_store::ObjectStore;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;vim 
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 
