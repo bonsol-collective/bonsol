@@ -1062,7 +1062,7 @@ name = "bonsol-interface"
 version = "0.4.0"
 dependencies = [
  "arrayref",
- "bonsol-schema 0.3.5",
+ "bonsol-schema 0.4.0",
  "bytemuck",
  "flatbuffers",
  "hex",
