@@ -1,6 +1,6 @@
 [package]
 name = "bonsol-prover"
-version = "0.4.0"
+version = "0.3.5"
 description = "Zero-knowledge proof generation for Bonsol"
 authors = ["anagram build team"]
 repository = "https://github.com/anagrambuild/bonsol"
@@ -12,7 +12,7 @@ anyhow = "1.0.86"
 async-trait = "0.1.80"
 arrayref = "0.3.6"
 bincode = "1.3.3"
-bonsol-schema = "0.4.0"
+bonsol-schema = "0.3.5"
 bytes = "1.5.0"
 futures-util = "0.3.30"
 reqwest = { version = "0.11.26", features = [
