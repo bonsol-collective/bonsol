@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 * `bonsol` cli option requirements and error messages updated for added clarity
 * **Breaking**: `bonsol deploy` cli subcommand requirements updated. Please refer to the docs, or use `bonsol deploy --help` for more info.
+* Fixes corner cases in bonsol program where there is no callback program.
+* Pins cli to a cargo risc0 version
+* Upgrade to solana 2.0 and risc0 zkvm 1.2.1
+* Publish crates
 
 ### Added
 * `bonsol estimate` for estimating execution cost of bonsol programs.

@@ -59,6 +59,7 @@ impl TryInto<FBSProverVersion> for ProverVersion {
         #[allow(unreachable_patterns)]
         match self {
             ProverVersion::V1_0_1 { .. } => Ok(FBSProverVersion::V1_0_1),
+            ProverVersion::V1_2_1 { .. } => Ok(FBSProverVersion::V1_2_1),
             _ => Err(ProverVersionError::UnsupportedVersion),
         }
     }

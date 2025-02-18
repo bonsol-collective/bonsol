@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
-      credentials:
-         username: ${{ github.actor }}
-         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - local:/workspaces/bonsol
     steps:
