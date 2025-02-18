@@ -62,7 +62,6 @@ impl<'a> TryFrom<&'a mut GrpcIngester> for GeyserGrpcBuilder {
             .connect_timeout(Duration::from_secs(
                 value.connection_timeout_secs.unwrap_or(10) as u64,
             ))
-            .tls_config(ClientTlsConfig::new().with_enabled_roots())?
             .timeout(Duration::from_secs(value.timeout_secs.unwrap_or(10) as u64)))
     }
 }
