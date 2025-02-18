@@ -4,9 +4,11 @@ on:
   push:
     tags:
       - "*"
+    branches:
+      - main
 jobs:
   build-and-push:
-    runs-on: self-hosted-linux
+    runs-on: ubicloud-standard-16
     strategy:
       matrix:
         flavor: [standard, cuda]
@@ -14,11 +16,11 @@ jobs:
       contents: read
       packages: write
     steps:
-#      - name: Free Disk Space (Ubuntu)
-#        uses: jlumbroso/free-disk-space@main
-#        with:
-#          tool-cache: true
-#          docker-images: false
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          docker-images: false
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Set up Docker Buildx
@@ -29,28 +31,24 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract Version from Cargo.toml
-        run: echo "VERSION=v${{ github.head_ref || github.ref_name }}-$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "bonsol-node") | .version')" >> $GITHUB_ENV
-        working-directory: ./node
-#      - name: Check tag and version match
-#        run: |
-#          if [[ "${{ github.ref_name }}" != "v"* ]]; then
-#            echo "Tag must start with v"
-#            exit 1
-#          fi
-#          if [[ "${{ github.ref_name }}" != "${{ env.VERSION }}" ]]; then
-#            echo "Tag and version do not match"
-#            exit 1
-#          fi
+      # Set different tags based on whether this is a tag push or main branch push
+      - name: Set Docker Tags
+        id: docker_tags
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # For tag releases, use flavor-v{version}
+            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            # For main branch pushes, use flavor-{commit_sha}
+            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           file: Dockerfile.${{ matrix.flavor }}
-          tags: |
-            ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-v${{ github.ref_name }}
-            ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.sha }}
+          tags: ${{ steps.docker_tags.outputs.TAGS }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
