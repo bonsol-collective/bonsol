@@ -8,7 +8,8 @@ on:
       - main
 jobs:
   build-and-push:
-    runs-on: BigBoi
+    runs-on:
+      labels: bigboi
     strategy:
       matrix:
         flavor: [standard, cuda]
