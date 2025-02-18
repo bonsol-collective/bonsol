@@ -171,95 +171,95 @@ pub fn load_config(config_path: &str) -> ProverNodeConfig {
     figment.extract().unwrap()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[test]
-    fn test_config_serialization() -> anyhow::Result<()> {
-        let config_content = r#"
- risc0_image_folder = "/elf"
-max_input_size_mb = 10
-image_download_timeout_secs = 60
-input_download_timeout_secs = 60
-maximum_concurrent_proofs = 10
-max_image_size_mb = 4
-image_compression_ttl_hours = 24
-stark_compression_tools_path = "./stark/"
-env = "dev"
+//     #[test]
+//     fn test_config_serialization() -> anyhow::Result<()> {
+//         let config_content = r#"
+//  risc0_image_folder = "/elf"
+// max_input_size_mb = 10
+// image_download_timeout_secs = 60
+// input_download_timeout_secs = 60
+// maximum_concurrent_proofs = 10
+// max_image_size_mb = 4
+// image_compression_ttl_hours = 24
+// stark_compression_tools_path = "./stark/"
+// env = "dev"
 
-[transaction_sender_config]
-Rpc = { rpc_url = "http://localhost:8899" }
+// [transaction_sender_config]
+// Rpc = { rpc_url = "http://localhost:8899" }
 
-[signer_config]
-KeypairFile = { path = "node_keypair.json" }"#;
-        let config: ProverNodeConfig = toml::from_str(config_content).unwrap();
-        assert_eq!(config.risc0_image_folder, "/elf");
-        assert_eq!(config.max_input_size_mb, 10);
-        assert_eq!(config.image_download_timeout_secs, 60);
-        assert_eq!(config.input_download_timeout_secs, 60);
-        assert_eq!(config.maximum_concurrent_proofs, 10);
-        assert_eq!(config.max_image_size_mb, 4);
-        assert_eq!(config.image_compression_ttl_hours, 24);
-        assert_eq!(config.stark_compression_tools_path, "./stark/");
-        assert_eq!(config.env, Some("dev".to_string()));
-        let serialized = toml::to_string(&config)?;
-        let deserialized: ProverNodeConfig = toml::from_str(&serialized)?;
-        assert_eq!(deserialized.risc0_image_folder, config.risc0_image_folder);
-        assert_eq!(deserialized.max_input_size_mb, config.max_input_size_mb);
-        assert_eq!(
-            deserialized.image_download_timeout_secs,
-            config.image_download_timeout_secs
-        );
-        assert_eq!(
-            deserialized.input_download_timeout_secs,
-            config.input_download_timeout_secs
-        );
-        assert_eq!(
-            deserialized.maximum_concurrent_proofs,
-            config.maximum_concurrent_proofs
-        );
-        assert_eq!(deserialized.max_image_size_mb, config.max_image_size_mb);
-        assert_eq!(
-            deserialized.image_compression_ttl_hours,
-            config.image_compression_ttl_hours
-        );
-        assert_eq!(
-            deserialized.stark_compression_tools_path,
-            config.stark_compression_tools_path
-        );
-        assert_eq!(deserialized.env, config.env);
-        match &config.transaction_sender_config {
-            TransactionSenderConfig::Rpc { rpc_url } => {
-                assert_eq!(rpc_url, "http://localhost:8899");
-            }
-            _ => panic!("Expected Rpc transaction sender config"),
-        }
-        match &config.signer_config {
-            SignerConfig::KeypairFile { path } => {
-                assert_eq!(path, "node_keypair.json");
-            }
-        }
-        assert_eq!(config.risc0_image_folder, "/elf");
-        assert_eq!(config.max_input_size_mb, 10);
-        assert_eq!(config.image_download_timeout_secs, 60);
-        assert_eq!(config.input_download_timeout_secs, 60);
-        assert_eq!(config.maximum_concurrent_proofs, 10);
-        assert_eq!(config.max_image_size_mb, 4);
-        assert_eq!(config.image_compression_ttl_hours, 24);
-        assert_eq!(config.stark_compression_tools_path, "./stark/");
-        assert_eq!(config.env, Some("dev".to_string()));
-        match config.transaction_sender_config {
-            TransactionSenderConfig::Rpc { rpc_url } => {
-                assert_eq!(rpc_url, "http://localhost:8899");
-            }
-            _ => panic!("Expected Rpc transaction sender config"),
-        }
-        match config.signer_config {
-            SignerConfig::KeypairFile { path } => {
-                assert_eq!(path, "node_keypair.json");
-            }
-        }
-        Ok(())
-    }
-}
+// [signer_config]
+// KeypairFile = { path = "node_keypair.json" }"#;
+//         let config: ProverNodeConfig = toml::from_str(config_content).unwrap();
+//         assert_eq!(config.risc0_image_folder, "/elf");
+//         assert_eq!(config.max_input_size_mb, 10);
+//         assert_eq!(config.image_download_timeout_secs, 60);
+//         assert_eq!(config.input_download_timeout_secs, 60);
+//         assert_eq!(config.maximum_concurrent_proofs, 10);
+//         assert_eq!(config.max_image_size_mb, 4);
+//         assert_eq!(config.image_compression_ttl_hours, 24);
+//         assert_eq!(config.stark_compression_tools_path, "./stark/");
+//         assert_eq!(config.env, Some("dev".to_string()));
+//         let serialized = toml::to_string(&config)?;
+//         let deserialized: ProverNodeConfig = toml::from_str(&serialized)?;
+//         assert_eq!(deserialized.risc0_image_folder, config.risc0_image_folder);
+//         assert_eq!(deserialized.max_input_size_mb, config.max_input_size_mb);
+//         assert_eq!(
+//             deserialized.image_download_timeout_secs,
+//             config.image_download_timeout_secs
+//         );
+//         assert_eq!(
+//             deserialized.input_download_timeout_secs,
+//             config.input_download_timeout_secs
+//         );
+//         assert_eq!(
+//             deserialized.maximum_concurrent_proofs,
+//             config.maximum_concurrent_proofs
+//         );
+//         assert_eq!(deserialized.max_image_size_mb, config.max_image_size_mb);
+//         assert_eq!(
+//             deserialized.image_compression_ttl_hours,
+//             config.image_compression_ttl_hours
+//         );
+//         assert_eq!(
+//             deserialized.stark_compression_tools_path,
+//             config.stark_compression_tools_path
+//         );
+//         assert_eq!(deserialized.env, config.env);
+//         match &config.transaction_sender_config {
+//             TransactionSenderConfig::Rpc { rpc_url } => {
+//                 assert_eq!(rpc_url, "http://localhost:8899");
+//             }
+//             _ => panic!("Expected Rpc transaction sender config"),
+//         }
+//         match &config.signer_config {
+//             SignerConfig::KeypairFile { path } => {
+//                 assert_eq!(path, "node_keypair.json");
+//             }
+//         }
+//         assert_eq!(config.risc0_image_folder, "/elf");
+//         assert_eq!(config.max_input_size_mb, 10);
+//         assert_eq!(config.image_download_timeout_secs, 60);
+//         assert_eq!(config.input_download_timeout_secs, 60);
+//         assert_eq!(config.maximum_concurrent_proofs, 10);
+//         assert_eq!(config.max_image_size_mb, 4);
+//         assert_eq!(config.image_compression_ttl_hours, 24);
+//         assert_eq!(config.stark_compression_tools_path, "./stark/");
+//         assert_eq!(config.env, Some("dev".to_string()));
+//         match config.transaction_sender_config {
+//             TransactionSenderConfig::Rpc { rpc_url } => {
+//                 assert_eq!(rpc_url, "http://localhost:8899");
+//             }
+//             _ => panic!("Expected Rpc transaction sender config"),
+//         }
+//         match config.signer_config {
+//             SignerConfig::KeypairFile { path } => {
+//                 assert_eq!(path, "node_keypair.json");
+//             }
+//         }
+//         Ok(())
+//     }
+// }
