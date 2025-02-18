@@ -42,6 +42,27 @@ pub fn build(keypair: &impl Signer, zk_program_path: String) -> Result<()> {
     }
 }
 
+fn check_cargo_risczero_version() -> Result<(), BonsolCliError> {
+    let output = Command::new(CARGO_COMMAND)
+        .args(["risczero", "--version"])
+        .output()
+        .map_err(|e| {
+            BonsolCliError::BuildFailure(format!("Failed to get cargo-risczero version: {:?}", e))
+        })?;
+    if output.status.success() {
+        let version = String::from_utf8(output.stdout)
+        .map_err(|e| BonsolCliError::BuildFailure(format!("Failed to parse cargo-risczero version: {:?}", e)))?;
+        if version != CARGO_RISCZERO_VERSION {
+            return Err(BonsolCliError::BuildDependencyVersionMismatch {
+                dep: "cargo-risczero".to_string(),
+                version: CARGO_RISCZERO_VERSION.to_string(),
+                current_version: version,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn validate_build_dependencies() -> Result<(), BonsolCliError> {
     const CARGO_RISCZERO: &str = "risczero";
     const DOCKER: &str = "docker";
@@ -51,6 +72,7 @@ fn validate_build_dependencies() -> Result<(), BonsolCliError> {
     if !cargo_has_plugin(CARGO_RISCZERO) {
         missing_deps.push(format!("cargo-{}", CARGO_RISCZERO));
     }
+    
     if !has_executable(DOCKER) {
         missing_deps.push(DOCKER.into());
     }
@@ -58,6 +80,8 @@ fn validate_build_dependencies() -> Result<(), BonsolCliError> {
     if !missing_deps.is_empty() {
         return Err(BonsolCliError::MissingBuildDependencies { missing_deps });
     }
+
+    check_cargo_risczero_version()?;
 
     Ok(())
 }
