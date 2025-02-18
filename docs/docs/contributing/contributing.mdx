@@ -10,7 +10,7 @@ and any other tools that are necessary to build all of the goodness that is ä¹ƒã
 
 ## Getting Started
 
-> NOTE: Currently only supported on `x86_64-linux` machines, this will eventually change to support other architectures.
+> NOTE: Currently proving is only supported on `x86_64-linux` machines, this will eventually change to support other architectures.
 
 ### Fork and Clone the Repo
 ```bash
@@ -27,6 +27,7 @@ cd bonsol
 solana --version
 cargo --version
 rustc --version
+flatc --version
 ```
 
 Great! Our tools are there. Let's run the `simple` example already provided from the README to make sure our environment is working properly.  
@@ -37,11 +38,11 @@ If this is your first time running bonsol install the Risc0 Groth16 Prover:
 ./bin/install_prover.sh --prefix .
 ```
 
-The solona cli must be configured. This configuration is typically found in `${HOME}/.config/solana/cli/config.yml`
+The Solana cli must be configured. This configuration is typically found in `${HOME}/.config/solana/cli/config.yml`
 ```bash
 cat >> ${HOME}/.config/solana/cli/config.yml <<EOF
-json_rpc_url: https://localhost:9900
-websocket_url: ""
+json_rpc_url: https://localhost:8899
+websocket_url: ws://localhost:8900/
 keypair_path: /home/solana/.config/solana/id.json
 commitment: confirmed
 EOF

@@ -136,8 +136,8 @@ async fn main() -> Result<()> {
         }
     });
     select! {
-        _ = handle => {
-            info!("Runner exited");
+        e = handle => {
+            info!("Runner exited: {:?}", e);
             let _ = ingester.stop();
             let _ = runner.stop();
         },

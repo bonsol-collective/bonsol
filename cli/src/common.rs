@@ -21,6 +21,7 @@ pub(crate) const MANIFEST_JSON: &str = "manifest.json";
 pub(crate) const CARGO_COMMAND: &str = "cargo";
 pub(crate) const CARGO_TOML: &str = "Cargo.toml";
 pub(crate) const TARGET_DIR: &str = "target";
+pub(crate) const CARGO_RISCZERO_VERSION: &str = "1.2.1";
 
 pub fn cargo_has_plugin(plugin_name: &str) -> bool {
     Command::new("cargo")
