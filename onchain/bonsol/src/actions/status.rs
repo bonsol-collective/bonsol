@@ -104,10 +104,12 @@ pub fn process_status_v1<'a>(
         }
         let verified = verify_with_prover(input_digest, co, asud, er, exed, st, proof)?;
         let tip = er.tip();
+        
         if verified {
             let callback_program_set =
                 sol_memcmp(sa.callback_program.key.as_ref(), crate::ID.as_ref(), 32) != 0;
             let ix_prefix_set = er.callback_instruction_prefix().is_some();
+
             if callback_program_set && ix_prefix_set {
                 let cbp = er
                     .callback_program_id()
@@ -163,7 +165,7 @@ pub fn process_status_v1<'a>(
                 };
                 let callback_ix =
                     Instruction::new_with_bytes(*sa.callback_program.key, &payload, accounts);
-                drop(er_ref);
+               drop(er_ref);
                 let res = invoke_signed(&callback_ix, &ainfos, &[&seeds]);
                 match res {
                     Ok(_) => {}
@@ -171,15 +173,18 @@ pub fn process_status_v1<'a>(
                         msg!("{} Callback Failed: {:?}", sa.eid, e);
                     }
                 }
+            } else {
+                drop(er_ref);
             }
-            // add curve reduction here
             payout_tip(sa.exec, sa.prover, tip)?;
             cleanup_execution_account(sa.exec, sa.requester, ExitCode::Success as u8)?;
         } else {
+            drop(er_ref);
             msg!("{} Verifying Failed Cleaning up", sa.eid);
             cleanup_execution_account(sa.exec, sa.requester, ExitCode::VerifyError as u8)?;
         }
     } else {
+        drop(er_ref);
         msg!("{} Proving Failed Cleaning up", sa.eid);
         cleanup_execution_account(sa.exec, sa.requester, ExitCode::ProvingError as u8)?;
     }
