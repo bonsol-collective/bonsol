@@ -21,7 +21,7 @@ fn main() {
         panic!("flatc not found. Please install flatc version {}.", FLATC_VERSION);
     }
     // Define schema directory and target directory for generated Rust code.
-    let schema_dir = Path::new("schema");
+    let schema_dir = Path::new("../schemas");
     let generated_src =
         PathBuf::from(env::var("GENERATED_CODE_DIR").unwrap_or_else(|_| "src".to_string()));
 
