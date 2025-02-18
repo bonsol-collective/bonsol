@@ -50,8 +50,9 @@ fn check_cargo_risczero_version() -> Result<(), BonsolCliError> {
             BonsolCliError::BuildFailure(format!("Failed to get cargo-risczero version: {:?}", e))
         })?;
     if output.status.success() {
-        let version = String::from_utf8(output.stdout)
-        .map_err(|e| BonsolCliError::BuildFailure(format!("Failed to parse cargo-risczero version: {:?}", e)))?;
+        let version = String::from_utf8(output.stdout).map_err(|e| {
+            BonsolCliError::BuildFailure(format!("Failed to parse cargo-risczero version: {:?}", e))
+        })?;
         if version != CARGO_RISCZERO_VERSION {
             return Err(BonsolCliError::BuildDependencyVersionMismatch {
                 dep: "cargo-risczero".to_string(),
@@ -72,7 +73,7 @@ fn validate_build_dependencies() -> Result<(), BonsolCliError> {
     if !cargo_has_plugin(CARGO_RISCZERO) {
         missing_deps.push(format!("cargo-{}", CARGO_RISCZERO));
     }
-    
+
     if !has_executable(DOCKER) {
         missing_deps.push(DOCKER.into());
     }

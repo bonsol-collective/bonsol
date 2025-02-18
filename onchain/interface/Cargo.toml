@@ -1,6 +1,6 @@
 [package]
 name = "bonsol-interface"
-version = "0.3.5"  
+version.workspace = true
 description = "Interface definitions for Bonsol"
 authors = ["anagram build team"]
 repository = "https://github.com/anagrambuild/bonsol"

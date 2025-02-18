@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use {tracing::error, yellowstone_grpc_client::ClientTlsConfig};
+use tracing::error;
 
 use {
     anyhow::anyhow,
