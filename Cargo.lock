@@ -981,7 +981,7 @@ version = "0.4.0"
 dependencies = [
  "ark-bn254",
  "ark-serialize",
- "bonsol-interface 0.4.0",
+ "bonsol-interface",
  "flatbuffers",
  "groth16-solana",
  "hex",
@@ -996,8 +996,8 @@ name = "bonsol-anchor-interface"
 version = "0.4.0"
 dependencies = [
  "anchor-lang",
- "bonsol-interface 0.3.5",
- "bonsol-schema 0.3.5",
+ "bonsol-interface",
+ "bonsol-schema",
  "paste",
 ]
 
@@ -1009,9 +1009,9 @@ dependencies = [
  "assert_cmd",
  "atty",
  "bincode",
- "bonsol-interface 0.4.0",
+ "bonsol-interface",
  "bonsol-prover",
- "bonsol-sdk 0.4.0",
+ "bonsol-sdk",
  "byte-unit",
  "bytemuck",
  "bytes",
@@ -1041,28 +1041,10 @@ dependencies = [
 
 [[package]]
 name = "bonsol-interface"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e26442126f1e156d03978977e51ae82d16c76aefe62bb2dea76c8500baa15a6d"
-dependencies = [
- "arrayref",
- "bonsol-schema 0.3.5",
- "bytemuck",
- "flatbuffers",
- "hex",
- "serde",
- "sha3 0.10.8",
- "solana-program 2.0.23",
- "solana-sdk",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "bonsol-interface"
 version = "0.4.0"
 dependencies = [
  "arrayref",
- "bonsol-schema 0.4.0",
+ "bonsol-schema",
  "bytemuck",
  "flatbuffers",
  "hex",
@@ -1087,7 +1069,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "async-trait",
- "bonsol-interface 0.4.0",
+ "bonsol-interface",
  "bonsol-prover",
  "bytemuck",
  "byteorder",
@@ -1145,7 +1127,7 @@ dependencies = [
  "arrayref",
  "async-trait",
  "bincode",
- "bonsol-schema 0.4.0",
+ "bonsol-schema",
  "bytes",
  "futures-util",
  "mockito",
@@ -1163,19 +1145,6 @@ dependencies = [
 
 [[package]]
 name = "bonsol-schema"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc095aee568d4d6df65369a5c832078d3dcd27ff40b1dd1b210dabfb0308758a"
-dependencies = [
- "bytemuck",
- "flatbuffers",
- "num-derive 0.3.3",
- "num-traits",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "bonsol-schema"
 version = "0.4.0"
 dependencies = [
  "bytemuck",
@@ -1187,39 +1156,13 @@ dependencies = [
 
 [[package]]
 name = "bonsol-sdk"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f33050cac13d3d661e47fb20bd94c418bb56e87eb618b017a4909bad6ac2dd70"
-dependencies = [
- "anyhow",
- "async-trait",
- "bincode",
- "bonsol-interface 0.3.5",
- "bonsol-schema 0.3.5",
- "bytes",
- "flatbuffers",
- "futures-util",
- "num-traits",
- "reqwest 0.11.27",
- "risc0-binfmt",
- "risc0-zkvm",
- "serde",
- "serde_json",
- "solana-rpc-client",
- "solana-rpc-client-api",
- "solana-sdk",
- "tokio",
-]
-
-[[package]]
-name = "bonsol-sdk"
 version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
- "bonsol-interface 0.4.0",
- "bonsol-schema 0.4.0",
+ "bonsol-interface",
+ "bonsol-schema",
  "bytes",
  "flatbuffers",
  "futures-util",
@@ -1241,8 +1184,8 @@ version = "0.4.0"
 dependencies = [
  "anyhow",
  "bonsol-cli",
- "bonsol-interface 0.3.5",
- "bonsol-sdk 0.3.5",
+ "bonsol-interface",
+ "bonsol-sdk",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "solana-rpc-client",
@@ -1476,7 +1419,7 @@ dependencies = [
 name = "callback-example"
 version = "0.4.0"
 dependencies = [
- "bonsol-interface 0.3.5",
+ "bonsol-interface",
  "solana-program 2.0.23",
 ]
 
