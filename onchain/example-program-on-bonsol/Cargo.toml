@@ -11,7 +11,7 @@ edition = "2021"
 test-sbf = []
 
 [dependencies]
-bonsol-interface = { version = "0.3.5", features = [
+bonsol-interface = { workspace = true, features = [
   "on-chain",
 ], default-features = false }
 solana-program = { workspace = true }
