@@ -34,10 +34,78 @@ async fn main() -> Result<()> {
     let timeout = args.get(1).map(|s| s.parse::<u64>().unwrap()).unwrap_or(60);
     example_bonsol_program_test(&bonsol_client, &rpc_client, &signer, timeout).await?;
     example_sdk_test(&bonsol_client, &rpc_client, &signer, timeout).await?;
+    example_sdk_no_callback_test(&bonsol_client, &rpc_client, &signer, timeout).await?; 
     Ok(())
 }
 
 const SIMPLE_IMAGE_ID: &str = "68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960";
+
+async fn example_sdk_no_callback_test(
+    bonsol_client: &BonsolClient,
+    client: &RpcClient,
+    signer: &dyn Signer,
+    timeout: u64,
+) -> Result<()> {
+    println!("Running sdk test, no callback");
+    let expiration: u64 = 10000000000;
+    let execution_id = rand_id(16);
+    let input_1 = "{\"attestation\":\"test\"}";
+    let input_2 = "https://echoserver.dev/server?response=N4IgFgpghgJhBOBnEAuA2mkBjA9gOwBcJCBaAgTwAcIQAaEIgDwIHpKAbKASzxAF0+9AEY4Y5VKArVUDCMzogYUAlBlFEBEAF96G5QFdkKAEwAGU1qA";
+    let input_hash = hashv(&[input_1.as_bytes(), input_2.as_bytes()]);
+    println!("Execution expiry {}", expiration);
+    let slot = bonsol_client.get_current_slot().await?;
+    let ixs = bonsol_client
+        .execute_v1(
+            &signer.pubkey(),
+            SIMPLE_IMAGE_ID,
+            &execution_id,
+            vec![
+                InputRef::new(InputType::PublicData, input_1.as_bytes()),
+                InputRef::new(InputType::Private, input_2.as_bytes()),
+            ],
+            10000,
+            slot + expiration,
+            ExecutionConfig {
+                verify_input_hash: true,
+                input_hash: Some(input_hash.as_ref()),
+                forward_output: true,
+            },
+            None,
+            None,
+        )
+        .await?;
+    let bh = client.get_latest_blockhash().await?;
+    let tsx = v0::Message::try_compile(
+        &signer.pubkey(),
+        &ixs,
+        &[],
+        client.get_latest_blockhash().await?,
+    )?;
+    let tx = VersionedTransaction::try_new(VersionedMessage::V0(tsx), &[signer])?;
+    let signature = client
+        .send_transaction_with_config(
+            &tx,
+            RpcSendTransactionConfig {
+                skip_preflight: true,
+                ..Default::default()
+            },
+        )
+        .await?;
+    client
+        .confirm_transaction_with_spinner(&signature, &bh, CommitmentConfig::confirmed())
+        .await?;
+    bonsol_client
+        .wait_for_claim(signer.pubkey(), &execution_id, Some(timeout))
+        .await?;
+    let status = bonsol_client
+        .wait_for_proof(signer.pubkey(), &execution_id, Some(timeout))
+        .await?;
+    if status != ExitCode::Success {
+        return Err(anyhow::anyhow!("Execution failed"));
+    }
+    println!("SDK Execution succeeded");
+    Ok(())
+}
 
 async fn example_sdk_test(
     bonsol_client: &BonsolClient,
