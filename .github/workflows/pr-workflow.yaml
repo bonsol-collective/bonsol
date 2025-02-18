@@ -10,7 +10,7 @@ permissions:
 jobs:
   fmt:
     name: Check & Fmt
-    runs-on: ubicloud-standard-8
+    runs-on: ubicloud-standard-16
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       volumes:
@@ -30,7 +30,7 @@ jobs:
           cargo +nightly fmt --all 
   test:
     name: Unit Test
-    runs-on: ubicloud-standard-8
+    runs-on: ubicloud-standard-16
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       options: "-it"
@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - uses: actions/cache/restore@v4
+      - uses: ubicloud/cache/save@v4
         id: cache
         with:
           path: stark
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Deps
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./bin/install_prover.sh --prefix . 
-      - uses: actions/cache/save@v4
+      - uses: ubicloud/cache/save@v4
         if: always() &&  steps.cache.outputs.cache-hit != 'true'
         with:
           path: stark
@@ -75,7 +75,7 @@ jobs:
         run: |
           ls -la stark
           cargo build-sbf
-          cargo build --release --features=cuda -p bonsol-node
+          cargo build --release -p bonsol-node
           cargo build -p bonsol-cli
           cargo build -p bonsol-tester
           
