@@ -977,7 +977,7 @@ checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
 name = "bonsol"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "ark-bn254",
  "ark-serialize",
@@ -993,7 +993,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-anchor-interface"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anchor-lang",
  "bonsol-interface",
@@ -1003,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-cli"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1041,10 +1041,10 @@ dependencies = [
 
 [[package]]
 name = "bonsol-interface"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "arrayref",
- "bonsol-schema 0.4.0",
+ "bonsol-schema 0.4.5",
  "bytemuck",
  "flatbuffers",
  "hex",
@@ -1057,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-node"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -1121,13 +1121,13 @@ dependencies = [
 
 [[package]]
 name = "bonsol-prover"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "arrayref",
  "async-trait",
  "bincode",
- "bonsol-schema 0.4.0",
+ "bonsol-schema 0.4.5",
  "bytes",
  "futures-util",
  "mockito",
@@ -1158,7 +1158,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-schema"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "bytemuck",
  "flatbuffers",
@@ -1169,13 +1169,13 @@ dependencies = [
 
 [[package]]
 name = "bonsol-sdk"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
  "bonsol-interface",
- "bonsol-schema 0.4.0",
+ "bonsol-schema 0.4.5",
  "bytes",
  "flatbuffers",
  "futures-util",
@@ -1193,7 +1193,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-tester"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "bonsol-interface",
@@ -1429,7 +1429,7 @@ dependencies = [
 
 [[package]]
 name = "callback-example"
-version = "0.4.0"
+version = "0.4.5"
 dependencies = [
  "bonsol-interface",
  "solana-program 2.0.23",
@@ -3389,7 +3389,7 @@ dependencies = [
 
 [[package]]
 name = "iop"
-version = "0.4.0"
+version = "0.4.5"
 
 [[package]]
 name = "ipnet"
