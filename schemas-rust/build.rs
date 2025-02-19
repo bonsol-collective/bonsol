@@ -2,8 +2,24 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
+const FLATC_VERSION: &str = "24.3.25";
 fn main() {
+    // Check if flatc is installed.
+    let flatc_version = Command::new("flatc")
+        .arg("--version")
+        .output()
+        .ok()
+        .and_then(|output| String::from_utf8(output.stdout).ok());
+    if let Some(version) = flatc_version {
+        if !version.contains(FLATC_VERSION) {
+            panic!(
+                "Expected flatc version {}, found {}",
+                FLATC_VERSION, version
+            );
+        }
+    } else {
+        panic!("flatc not found. Please install flatc version {}.", FLATC_VERSION);
+    }
     // Define schema directory and target directory for generated Rust code.
     let schema_dir = Path::new("../schemas");
     let generated_src =

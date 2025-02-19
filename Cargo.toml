@@ -48,9 +48,9 @@ risc0-zkvm-platform = { version = "1.2.1" }
 risc0-circuit-rv32im = { version = "1.2.1" }
 risc0-circuit-recursion-sys = { version = "1.2.1" }
 tokio-test = "0.4.3"
-bonsol-interface = { version = "0.4.0", path = "./onchain/interface" }
+bonsol-interface = { version = "0.4.0", path = "./onchain/interface"}
 bonsol-schema = { version = "0.4.0", path = "./schemas-rust" }
-bonsol-cli = { path = "./cli" }
+bonsol-cli = { version = "0.4.0", path = "./cli" }
 bonsol-sdk = { version = "0.4.0", path = "./sdk" }
 bonsol-prover = { version = "0.4.0", path = "./prover" }
 
