@@ -10,8 +10,9 @@ include = [
     "src/**/*",
     "Cargo.toml",
     "build.rs",
-    "schema/**/*"
+    "flatbuffers/**/*"
 ]
+publish = true
 
 [dependencies]
 bytemuck = "1.7.2"
