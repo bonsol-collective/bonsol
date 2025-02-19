@@ -1,8 +1,11 @@
 [package]
 name = "bonsol-anchor-interface"
 version.workspace = true
+description = "Anchor Interface definitions for Bonsol"
+authors = ["anagram build team"]
+repository = "https://github.com/anagrambuild/bonsol"
+license = "MIT"
 edition = "2021"
-publish = false                  # Exclude local crates from licensing checks
 
 [features]
 idl-build = ["anchor-lang/idl-build"]
