@@ -53,7 +53,7 @@ fn check_cargo_risczero_version() -> Result<(), BonsolCliError> {
         let version = String::from_utf8(output.stdout).map_err(|e| {
             BonsolCliError::BuildFailure(format!("Failed to parse cargo-risczero version: {:?}", e))
         })?;
-        if version != CARGO_RISCZERO_VERSION {
+        if !version.contains(CARGO_RISCZERO_VERSION) {
             return Err(BonsolCliError::BuildDependencyVersionMismatch {
                 dep: "cargo-risczero".to_string(),
                 version: CARGO_RISCZERO_VERSION.to_string(),
