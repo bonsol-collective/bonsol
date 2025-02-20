@@ -27,7 +27,7 @@ RUN cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
 COPY . . 
 RUN cargo build --release
 FROM rust:${RUST_VERSION}-slim
-LABEL org.opencontainers.image.source=https://github.com/anagrambuild/bonsol
+LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
 LABEL org.opencontainers.image.description="A bonsol proving node"
 RUN mkdir -p /usr/opt/bonsol/stark

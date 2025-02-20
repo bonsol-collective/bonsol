@@ -7,7 +7,6 @@ members = [
   "onchain/bonsol",
   "onchain/interface",
   "onchain/example-program-on-bonsol",
-  "onchain/anchor-interface",
   "node",
   "schemas",
   "cli",

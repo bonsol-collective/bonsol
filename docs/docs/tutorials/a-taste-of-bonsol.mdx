@@ -14,14 +14,14 @@ The following example is showcase of how you could use bonsol to build a Proof o
 This fun little demo simulates the minig process for a Pow token, every pattern is different.
 
 :::info 
-This is a demo, if you experience an issue please put an issue on the PoW example repo [here](https://github.com/anagrambuild/bonsol-powpow/issues).
+This is a demo, if you experience an issue please put an issue on the PoW example repo [here](https://github.com/bonsolcollective/bonsol-powpow/issues).
 :::
 
 <PowPowDemo />
 
 Congratulations! You have minted yourself some PowPow tokens.
 Lets take a moment to break down what happened in this example.
-When you clicked the Mint button you sent a transaction to the Solana blockchain. You sent it to the Bonsol PoW example program which then sent a message to the Bonsol Channel program to request a proof. A node in the prover network claimed that compute and rand the sequence for you, and then sent you a proof. The Bonsol Channel program then verified the proof and minted you and the node that provider the proof some PowPow tokens according to the difficulty of the sequence. While this is a contrived example it is a non trivial one that shows the folowing:
+When you clicked the Mint button you sent a transaction to the Solana blockchain. You sent it to the Bonsol PoW example program which then sent a message to the Bonsol program to request a proof. A node in the prover network claimed that compute and rand the sequence for you, and then sent you a proof. The Bonsol program then verified the proof and minted you and the node that provider the proof some PowPow tokens according to the difficulty of the sequence. While this is a contrived example it is a non trivial one that shows the folowing:
 - Building a solana program that uses Bonsol
 - Using Bonsol to prove a computation
 - Builsing a Bonsol zk program 
@@ -33,10 +33,13 @@ Since this is a turotial we will break down each of these steps in detail. Start
 ## Getting Started Quickly
 If you want to skip all the mindless setup and get stright into a fully setup environment, try our GitPod for this demo here.
 
-[PowPow GitPod](https://gitpod.io/#https://github.com/anagrambuild/bonsol-powpow)
+[PowPow GitPod](https://gitpod.io/#https://github.com/bonsolcollective/bonsol-powpow)
 
 ## Building an Anchor Program that uses Bonsol
-Get the latest version of anchor using `avm` and ensure you are using the correct version of rust and solana. At the time of writing this tutorial the version of anchor is 0.30.1 with the reccomended rust version is 1.79.0 and the solana version is 1.18.17.
+Get the latest version of anchor using `avm` and ensure you are using the correct version of rust and solana. At the time of writing this tutorial the version of anchor is 0.30.1 with the reccomended rust version is 1.81.0 and the solana version is 2.0.23.
+
+NOTE ANCHOR IS NOTORIOUSLY BAD WITH VERSIONING ISSUES SO YOUR MILEAGE MAY VARY HERE
+
 <Prereq />
 
 #### Building the Anchor Workspace
@@ -64,7 +67,7 @@ This will create a new directory called `powpow` and initialize a new anchor wor
 ```
 
 In lib.rs we will build out our program that requests execution from Bonsol and recieves the callback. 
-You can see the full code for this example [here](https://github.com/anagrambuild/bonsol-powpow/tree/main/programs/bonsol-pow-pow/src/lib.rs).
+You can see the full code for this example [here](https://github.com/bonsolcollective/bonsol-powpow/tree/main/programs/bonsol-pow-pow/src/lib.rs).
 We highly reccomend reading that code as the docs may drift from the implementation. The following will be a close approximation of the code.
 
 Here is a diagram of how the program works.
@@ -97,9 +100,9 @@ use bonsol_interface::instructions::{
 };
 ...
 ```
-Here we import various macros and interfaces need to interact with the Bonsol channel program. 
-The `execute` macro will request the execution of a desired program with specified inputs and the `callback` macro will recieve the callback from the Bonsol channel program.
-The `BonsolChannel` interface is used to interact with the Bonsol channel program via anchor and the `DeploymentAccountV1` and `ExecutionRequestV1` allow convenient access to the accounts needed to interact with the Bonsol channel program.
+Here we import various macros and interfaces need to interact with the Bonsol program. 
+The `execute` macro will request the execution of a desired program with specified inputs and the `callback` macro will recieve the callback from the Bonsol program.
+The `BonsolChannel` interface is used to interact with the Bonsol program via anchor and the `DeploymentAccountV1` and `ExecutionRequestV1` allow convenient access to the accounts needed to interact with the Bonsol program.
 
 ```rust
 #[instruction(args: MineTokenArgs)]
@@ -292,7 +295,7 @@ Anyway here is how we made the program.
 <InitNewBonsol />
 
 With the new bonsol program created we can now start building the collatz sequence program. Lets break down the code in main.rs.
-Keep in mind the full code for this example can be found [here](https://github.com/anagrambuild/bonsol-powpow/zkprograms/collatz/src/main.rs), while we will looking at this code here, the docs may drift from the implementation.
+Keep in mind the full code for this example can be found [here](https://github.com/bonsolcollective/bonsol-powpow/zkprograms/collatz/src/main.rs), while we will looking at this code here, the docs may drift from the implementation.
 The following will be a close approximation of the code.
 
 ```rust
@@ -348,5 +351,5 @@ The very last step is to deploy the program to the Bonsol network.
 <Deploy />
 
 Congratulations! You have now built a zk program that can be used to prove the collatz sequence.
-Feel free to poke around in the [Code](https://github.com/anagrambuild/bonsol-powpow) to see how the program works.
-The source code for the simple ui can be found [here](https://github.com/anagrambuild/bonsol/tree/main/docs/src/components/PowPowDemo).
+Feel free to poke around in the [Code](https://github.com/bonsolcollective/bonsol-powpow) to see how the program works.
+The source code for the simple ui can be found [here](https://github.com/bonsolcollective/bonsol/tree/main/docs/src/components/PowPowDemo).

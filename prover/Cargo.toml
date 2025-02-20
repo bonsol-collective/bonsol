@@ -3,7 +3,7 @@ name = "bonsol-prover"
 version.workspace = true
 description = "Zero-knowledge proof generation for Bonsol"
 authors = ["anagram build team"]
-repository = "https://github.com/anagrambuild/bonsol"
+repository = "https://github.com/bonsolcollective/bonsol"
 license = "MIT"
 edition = "2021"
 

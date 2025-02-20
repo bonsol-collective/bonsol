@@ -94,7 +94,7 @@ ENV PATH=${PATH}:/home/solana/.local/share/pnpm
 LABEL \
     org.label-schema.name="bonsol" \
     org.label-schema.description="Bonsol Development Container" \
-    org.label-schema.url="https://github.com/anagrambuild/bonsol" \
+    org.label-schema.url="https://github.com/bonsolcollective/bonsol" \
     org.label-schema.vcs-url="git@github.com/anagrambuild/bonsol.git" \
     org.label-schema.vendor="anagram.xyz" \
     org.label-schema.schema-version="1.0" \

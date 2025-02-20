@@ -15,7 +15,7 @@ The bonsol cli is a command line interface for interacting with bonsol programs,
 To install the bonsol cli you can use the following command.
 
 ```bash
-cargo install bonsol-cli --git https://github.com/anagrambuild/bonsol
+cargo install bonsol-cli --git https://github.com/bonsolcollective/bonsol
 ```
 
 ## Usage
