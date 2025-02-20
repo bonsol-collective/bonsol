@@ -40,7 +40,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/anagrambuild/bonsol/tree/main/docs/',
+            'https://github.com/bonsolcollective/bonsol/tree/main/docs/',
         },
         blog: false,
         theme: {
@@ -93,7 +93,7 @@ const config: Config = {
             label: 'Contributing',
           },
           {
-            href: 'https://github.com/anagrambuild/bonsol',
+            href: 'https://github.com/bonsolcollective/bonsol',
             label: 'GitHub',
             position: 'right',
           },
@@ -116,7 +116,7 @@ const config: Config = {
             items: [
               {
                 label: 'GitHub',
-                href: 'https://github.com/anagrambuild/bonsol',
+                href: 'https://github.com/bonsolcollective/bonsol',
               },
             ],
           },

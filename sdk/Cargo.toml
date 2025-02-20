@@ -3,7 +3,7 @@ name = "bonsol-sdk"
 version.workspace = true
 description = "SDK for interacting with Bonsol protocol"
 authors = ["anagram build team"]
-repository = "https://github.com/anagrambuild/bonsol"
+repository = "https://github.com/bonsolcollective/bonsol"
 license = "MIT"
 edition = "2021"
 

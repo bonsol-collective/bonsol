@@ -3,7 +3,7 @@ name = "callback-example"
 version.workspace = true
 description = "example raw solana program to show how to use the callback feature of bonsol"
 authors = ["anagram build team"]
-repository = "https://github.com/anagrambuild/bonsol"
+repository = "https://github.com/bonsolcollective/bonsol"
 license = "MIT"
 edition = "2021"
 

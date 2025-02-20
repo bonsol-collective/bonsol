@@ -53,8 +53,8 @@ ENTRYPOINT ["/usr/local/bin/ci-entry.sh"]
 LABEL \
     org.opencontainers.image.name="bonsol-ci-env" \
     org.opencontainers.image.description="Bonsol CI Build Environment" \
-    org.opencontainers.image.url="https://github.com/anagrambuild/bonsol" \
-    org.opencontainers.image.source="https://github.com/anagrambuild/bonsol.git" \
+    org.opencontainers.image.url="https://github.com/bonsolcollective/bonsol" \
+    org.opencontainers.image.source="https://github.com/bonsolcollective/bonsol.git" \
     org.opencontainers.image.vendor="anagram.xyz" \
     org.opencontainers.image.created=$(date --rfc-3339=seconds) \
     org.opencontainers.image.licenses="GNU-Affero" \

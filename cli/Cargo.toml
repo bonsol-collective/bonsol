@@ -3,7 +3,7 @@ name = "bonsol-cli"
 version.workspace = true
 description = "Cli For Bonsol"
 authors = ["anagram build team"]
-repository = "https://github.com/anagrambuild/bonsol"
+repository = "https://github.com/bonsolcollective/bonsol"
 license = "MIT"
 edition = "2021"      # Exclude local crates from licensing checks
 

@@ -4,7 +4,7 @@ Chart deploys bonsol prover and its tester which triggers proof generation
 
 ## Introduction
 
-This chart bootstraps a [bonsol prover](https://github.com/anagrambuild/bonsol) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
+This chart bootstraps a [bonsol prover](https://github.com/bonsolcollective/bonsol) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
 ## Prerequisites
 
