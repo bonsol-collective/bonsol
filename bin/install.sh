@@ -2,7 +2,7 @@
 set -e
 
 curl -L https://risczero.com/install | bash
-rzup install cargo-risczero v1.2.1
+rzup install cargo-risczero 1.2.1
 
 
 # check os linux or mac
@@ -11,11 +11,12 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if ! command -v nvidia-smi &> /dev/null
     then
         echo "installing without cuda support, proving will be slower"
-        cargo install bonsol-cli --git https://github.com/bonsolcollective/bonsol 
+        cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol 
     else
         echo "installing with cuda support"
-        cargo install bonsol-cli --git https://github.com/bonsolcollective/bonsol --features linux
+        cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    cargo install bonsol-cli --git https://github.com/bonsolcollective/bonsol --features mac
+    cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features mac
 fi
+
