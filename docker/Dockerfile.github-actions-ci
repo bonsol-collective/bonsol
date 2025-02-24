@@ -86,6 +86,6 @@ RUN rustup component add \
 &&  rustup default ${RUST_VERSION} \
 &&  cargo install sccache --locked
 
-COPY ci-entry.sh /usr/local/bin/ci-entry.sh
+COPY docker/ci-entry.sh /usr/local/bin/ci-entry.sh
 
 ENTRYPOINT ["/usr/local/bin/ci-entry.sh"]
