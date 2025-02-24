@@ -22,7 +22,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.tar.gz v${FLATC_VERSION}.tar.gz
 
-RUN tar -zxvf v${FLATC_VERSION}.tar.gz || { echo "Failed to extract tarball"; exit 1; } \
+RUN set -euxo pipefail \
+&&  tar -zxvf v${FLATC_VERSION}.tar.gz \
 &&  cmake -G "Unix Makefiles" \
 &&  make -j \
 &&  make install \
@@ -65,7 +66,9 @@ COPY --from=flatc-build /usr/local/lib/pkgconfig/flatbuffers.pc /usr/local/lib/p
 
 # Set working directory
 # Install Rust components
-RUN apt-get update \
+
+RUN set -euxo pipefail \
+&&  apt-get update \
 &&  apt-get install -y -q --no-install-recommends  \
       ca-certificates \
       bzip2 \
@@ -78,7 +81,8 @@ RUN apt-get update \
 && apt-get clean \
 && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN rustup component add \
+RUN set -euxo pipefail \
+&&  rustup component add \
     clippy \
 &&  rustup toolchain install nightly \
 &&  rustup component add rustfmt --toolchain nightly \

@@ -3,6 +3,9 @@ name: Build container image used in github actions
 on:
   workflow_dispatch:
 
+env:
+  CONTAINER_IMAGE": "ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0"
+
 jobs:
   build:
     permissions:
@@ -26,6 +29,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # This is a workaround to set github packages as immutable repository
+      # No existing image should be owerwritten
+      # Don't disable this step
+
+      - name: Check if Tag Exists
+        run: |
+          if docker manifest inspect ${CONTAINER_IMAGE} > /dev/null 2>&1; then
+            echo "ERROR: Image ${CONTAINER_IMAGE} already exists in the registry. Exiting."
+            exit 1
+          fi
+
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
@@ -33,7 +47,7 @@ jobs:
           file: docker/Dockerfile.github-actions-ci
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
+          tags: ${CONTAINER_IMAGE}
           build-args: |
             VERSION=1.0.0
           cache-from: type=gha
