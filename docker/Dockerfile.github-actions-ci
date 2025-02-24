@@ -67,7 +67,7 @@ COPY --from=flatc-build /usr/local/lib/pkgconfig/flatbuffers.pc /usr/local/lib/p
 # Install Rust components
 RUN apt-get update \
 &&  apt-get install -y -q --no-install-recommends  \
-      ca-certificates 
+      ca-certificates \
       bzip2 \
       nodejs \
       zstd \
