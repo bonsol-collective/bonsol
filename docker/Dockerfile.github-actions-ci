@@ -79,7 +79,7 @@ RUN apt-get update \
 && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN rustup component add \
-    clippy
+    clippy \
 &&  rustup toolchain install nightly \
 &&  rustup component add rustfmt --toolchain nightly \
 &&  rustup toolchain install ${RUST_VERSION} \
