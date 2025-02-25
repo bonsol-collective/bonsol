@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  CONTAINER_IMAGE": "ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0"
+  CONTAINER_IMAGE: "ghcr.io/bonsol-collective/bonsol-ci-env"
+  CONTAINER_TAG:   "1.0.0"
 
 jobs:
   build:
@@ -35,8 +36,8 @@ jobs:
 
       - name: Check if Tag Exists
         run: |
-          if docker manifest inspect ${CONTAINER_IMAGE} > /dev/null 2>&1; then
-            echo "ERROR: Image ${CONTAINER_IMAGE} already exists in the registry. Exiting."
+          if docker manifest inspect ${CONTAINER_IMAGE}:${CONTAINER_TAG} > /dev/null 2>&1; then
+            echo "ERROR: Image ${CONTAINER_IMAGE}:${CONTAINER_TAG} already exists in the registry. Exiting."
             exit 1
           fi
 
@@ -47,8 +48,11 @@ jobs:
           file: docker/Dockerfile.github-actions-ci
           platforms: linux/amd64
           push: true
-          tags: ${CONTAINER_IMAGE}
+          tags: ${{ env.CONTAINER_IMAGE }}:${{ env.CONTAINER_TAG }}
           build-args: |
-            VERSION=1.0.0
+            FLATC_VERSION=24.3.25
+            PACKAGE=bonsol
+            SOLANA=1.18.22
+            RUST_VERSION=1.81.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
