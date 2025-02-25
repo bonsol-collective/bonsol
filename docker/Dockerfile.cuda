@@ -36,6 +36,8 @@ FROM chef as builder
 WORKDIR /app/
 
 ENV ENV RUSTC_WRAPPER=/usr/local/cargo/bin/sccache
+ENV FLAT_BUFFERS_VERSION=${FLAT_BUFFERS_VERSION}
+ENV CUDA_VERSION=${CUDA_VERSION}
 
 COPY --from=planner /app/recipe.json recipe.json
 COPY . . 
@@ -77,6 +79,8 @@ LABEL org.opencontainers.image.description="A bonsol proving node"
 
 WORKDIR /usr/opt/bonsol
 
+ENV CUDA_VERSION=${CUDA_VERSION}
+
 COPY --from=builder /app/target/release/bonsol-node /usr/opt/bonsol
 COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify /usr/opt/bonsol/stark/stark_verify
 COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify.dat /usr/opt/bonsol/stark/stark_verify.dat
@@ -107,7 +111,4 @@ RUN set -euxo pipefail \
 EXPOSE 9000
 
 ENTRYPOINT ["/usr/opt/bonsol/bonsol-node"]
-
-
-
 

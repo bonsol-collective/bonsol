@@ -37,6 +37,8 @@ WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
 COPY . . 
 
+ENV FLAT_BUFFERS_VERSION=${FLAT_BUFFERS_VERSION}
+
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
