@@ -1,6 +1,6 @@
 # Stage 1: flatc build
 
-FROM debian:stable-slim AS flatc-build
+FROM debian:bookworm-slim AS flatc-build
 
 SHELL ["/bin/bash", "-c"]
 
