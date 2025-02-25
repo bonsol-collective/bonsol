@@ -5,6 +5,6 @@ on:
 
 jobs:
   call-reusable-workflow:
-    uses: bonsol-collective/bonsol/.github/workflows/reusable.yml@main
+    uses: bonsol-collective/bonsol/.github/workflows/build-node-containers.yaml@main
     with:
     secrets:
