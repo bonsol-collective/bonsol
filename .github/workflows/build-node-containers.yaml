@@ -2,8 +2,6 @@ name: Build Bonsol node images
 
 on:
   workflow_call:
-    inputs: 
-    secrets:
 
 jobs:
   build-and-push:
