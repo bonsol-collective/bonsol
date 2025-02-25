@@ -63,7 +63,7 @@ RUN set -euxo pipefail \
 &&  PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
 &&  cargo build -p bonsol-node --features=cuda --release; \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/* \
+&&  rm -rf /var/lib/apt/lists/*
 
 
 ######################################################################
