@@ -13,7 +13,7 @@ jobs:
 
     permissions:
       contents: read
-#      packages: write
+      packages: write
 
     steps:
 #      - name: Free Disk Space (Ubuntu)

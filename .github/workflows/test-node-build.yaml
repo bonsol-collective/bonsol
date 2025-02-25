@@ -4,5 +4,9 @@ on:
   workflow_dispatch:
 
 jobs:
+
   call-reusable-workflow:
+    permissions:
+      contents: read
+      packages: write
     uses: bonsol-collective/bonsol/.github/workflows/build-node-containers.yaml@main
