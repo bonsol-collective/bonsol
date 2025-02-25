@@ -1,4 +1,4 @@
-name: build Bonsol node images
+name: Build Bonsol node images
 
 on:
   workflow_call:
