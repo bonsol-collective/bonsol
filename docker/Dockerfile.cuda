@@ -49,7 +49,7 @@ RUN set -euxo pipefail \
       libssl-dev \
       software-properties-common \
       build-essential \
-&&  cmake \
+      cmake \
 &&  git clone -b v${FLAT_BUFFERS_VERSION} https://github.com/google/flatbuffers.git \
 &&  cd flatbuffers \
 &&  cmake -G "Unix Makefiles" \
