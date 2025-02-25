@@ -10,7 +10,29 @@ FROM rust:${RUST_VERSION} as chef
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
-&&  cargo install cargo-chef ###################################################################### # Cargo chef prepare FROM chef as planner WORKDIR /app COPY . .  SHELL ["/bin/bash", "-c"] RUN set -euxo pipefail \ &&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json ###################################################################### # Build bonsol node FROM chef as builder WORKDIR /app/
+&&  cargo install cargo-chef 
+
+
+###################################################################### 
+# Cargo chef prepare 
+
+FROM chef as planner 
+
+WORKDIR /app COPY . .  
+
+SHELL ["/bin/bash", "-c"] 
+
+RUN set -euxo pipefail \
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json 
+
+
+###################################################################### 
+# Build bonsol node 
+
+FROM chef as builder 
+
+WORKDIR /app/
+
 ENV ENV RUSTC_WRAPPER=/usr/local/cargo/bin/sccache
 ENV FLAT_BUFFERS_VERSION=24.3.25
 ENV CUDA_VERSION=12.5
