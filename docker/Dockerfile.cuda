@@ -36,8 +36,8 @@ FROM chef as builder
 WORKDIR /app/
 
 ENV ENV RUSTC_WRAPPER=/usr/local/cargo/bin/sccache
-ENV FLAT_BUFFERS_VERSION=${FLAT_BUFFERS_VERSION}
-ENV CUDA_VERSION=${CUDA_VERSION}
+ENV FLAT_BUFFERS_VERSION=24.3.25
+ENV CUDA_VERSION=12.5
 
 COPY --from=planner /app/recipe.json recipe.json
 COPY . . 

@@ -37,7 +37,7 @@ WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
 COPY . . 
 
-ENV FLAT_BUFFERS_VERSION=${FLAT_BUFFERS_VERSION}
+ENV FLAT_BUFFERS_VERSION=24.3.25
 
 SHELL ["/bin/bash", "-c"]
 
