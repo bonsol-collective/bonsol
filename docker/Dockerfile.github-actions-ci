@@ -2,6 +2,8 @@
 
 FROM debian:stable-slim AS flatc-build
 
+SHELL ["/bin/bash", "-c"]
+
 ARG FLATC_VERSION=24.3.25
 
 WORKDIR /flatbuffers/flatbuffers-${FLATC_VERSION}
@@ -34,6 +36,8 @@ RUN set -euxo pipefail \
 # Stage 2: Bonsol Test
 
 FROM ghcr.io/anagrambuild/risczero:v1.0.3_2
+
+SHELL ["/bin/bash", "-c"]
 
 LABEL \
     org.opencontainers.image.name="bonsol-ci-env" \
