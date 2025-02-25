@@ -1,10 +1,13 @@
 # syntax = docker/dockerfile:1.2
 
-# Cargo chef container 
+ARG RUST_VERSION=1.81.0
+ARG FLAT_BUFFERS_VERSION=24.3.25
+ARG CUDA_VERSION=12.5
+
+######################################################################
+# Cargo chef container
 
 FROM rust:${RUST_VERSION} as chef
-
-ARG RUST_VERSION=1.81.0
 
 SHELL ["/bin/bash", "-c"]
 
@@ -12,6 +15,7 @@ RUN set -euxo pipefail \
 &&  cargo install cargo-chef
 
 
+######################################################################
 # Cargo chef prepare
 
 FROM chef as planner
@@ -26,12 +30,10 @@ RUN set -euxo pipefail \
 &&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 
 
-# Build bonsol node  
+######################################################################
+# Build bonsol node
 
 FROM chef as builder
-
-ARG FLAT_BUFFERS_VERSION=24.3.25
-ARG CUDA_VERSION=12.5
 
 WORKDIR /app/
 
@@ -66,11 +68,10 @@ RUN set -euxo pipefail \
 &&  cargo build -p bonsol-node --features=cuda --release; 
 
 
+######################################################################
 # Create an optimized container with Bonsol node
 
 FROM rust:${RUST_VERSION}-slim
-
-ARG CUDA_VERSION=12.5
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"

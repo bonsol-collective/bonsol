@@ -1,18 +1,20 @@
 # syntax = docker/dockerfile:1.2
 
+ARG RUST_VERSION=1.81.0
+ARG FLAT_BUFFERS_VERSION=24.3.25
+
+######################################################################
 # Cargo chef container 
 
 FROM rust:${RUST_VERSION} as chef
 
-ARG RUST_VERSION=1.81.0
- 
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
 &&  cargo install cargo-chef
 
 
-
+######################################################################
 # Cargo chef prepare
 
 FROM chef as planner
@@ -27,11 +29,10 @@ RUN set -euxo pipefail \
 &&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 
 
+######################################################################
 # Build bonsol node  
 
 FROM chef as builder
-
-ARG FLAT_BUFFERS_VERSION=24.3.25
 
 WORKDIR /app/
 
@@ -58,6 +59,7 @@ RUN set -euxo pipefail \
 &&  cargo build --release
 
 
+######################################################################
 # Create an optimized container with Bonsol node
 
 FROM rust:${RUST_VERSION}-slim
