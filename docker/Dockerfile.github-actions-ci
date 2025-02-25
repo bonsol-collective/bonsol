@@ -23,6 +23,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.tar.gz v${FLATC_VERSION}.tar.gz
 
 RUN set -euxo pipefail \
+&&  ls -l \
 &&  tar -zxvf v${FLATC_VERSION}.tar.gz \
 &&  cmake -G "Unix Makefiles" \
 &&  make -j \
