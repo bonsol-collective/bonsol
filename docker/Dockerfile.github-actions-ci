@@ -27,7 +27,7 @@ ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.ta
 
 RUN set -euxo pipefail \
 &&  tar -zxvf v${FLATC_VERSION}.tar.gz \
-&&  cd cd flatbuffers-${FLATC_VERSION}/ \
+&&  cd flatbuffers-${FLATC_VERSION}/ \
 &&  cmake -G "Unix Makefiles" \
 &&  make -j \
 &&  make install \
