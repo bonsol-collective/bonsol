@@ -18,7 +18,9 @@ RUN set -euxo pipefail \
 
 FROM chef as planner 
 
-WORKDIR /app COPY . .  
+WORKDIR /app 
+
+COPY . .  
 
 SHELL ["/bin/bash", "-c"] 
 
