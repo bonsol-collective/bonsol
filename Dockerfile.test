@@ -23,7 +23,7 @@ RUN apt-get clean && \
     make install
 WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
+RUN cat recipe.json && echo "############################" && cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
 COPY . . 
 RUN cat recipe.json && cargo build --release
 FROM rust:${RUST_VERSION}-slim
