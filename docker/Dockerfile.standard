@@ -53,6 +53,7 @@ RUN set -euxo pipefail \
 &&  cd flatbuffers \
 &&  cmake -G "Unix Makefiles" \
 &&  make install \
+&&  cd .. \
 &&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json \
 &&  cargo build --release \
 &&  apt-get clean \
