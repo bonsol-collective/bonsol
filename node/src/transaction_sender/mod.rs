@@ -229,6 +229,8 @@ impl TransactionSender for RpcTransactionSender {
             AccountMeta::new(self.signer.pubkey(), true),
         ];
         accounts.extend(additional_accounts);
+
+        /*
         let mut fbb = FlatBufferBuilder::new();
         let proof_vec = fbb.create_vector(proof);
         let execution_digest = fbb.create_vector(execution_digest);
@@ -263,7 +265,8 @@ impl TransactionSender for RpcTransactionSender {
             },
         );
         fbb2.finish(root, None);
-        let ix_data = fbb2.finished_data();
+        */
+        let ix_data = &[]; // todo: create new instruction data here
         let instruction = Instruction::new_with_bytes(self.bonsol_program, ix_data, accounts);
         let (blockhash, last_valid) = self
             .rpc_client

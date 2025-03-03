@@ -1,0 +1,19 @@
+env = "dev"
+bonsol_program = "default"
+risc0_image_folder = "/images"
+max_image_size_mb = 4
+image_compression_ttl_hours = 24
+max_input_size_mb = 10
+image_download_timeout_secs = 60
+input_download_timeout_secs = 60
+maximum_concurrent_proofs = 10
+ingester_config = "WebsocketSub"
+stark_compression_tools_path = "./stark/"
+metrics_config = "None"
+missing_image_strategy = "DownloadAndClaim"
+
+[transaction_sender_config]
+rpc_url = "http://localhost:8899"
+
+[signer_config.KeypairFile]
+Path = "node_keypair.json"
