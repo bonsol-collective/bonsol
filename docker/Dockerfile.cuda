@@ -55,17 +55,17 @@ RUN set -euxo pipefail \
 &&  git clone -b v${FLAT_BUFFERS_VERSION} https://github.com/google/flatbuffers.git \
 &&  cd flatbuffers \
 &&  cmake -G "Unix Makefiles" \
-&&  make install \
-&&  cargo install sccache --locked \
-&&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
-&&  dpkg -i cuda-keyring_1.1-1_all.deb \
-&&  add-apt-repository contrib \
-&&  apt-get update \
-&&  apt-get -y install cuda-toolkit-${CUDA_VERSION}; \
-&&  PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
-&&  cargo build -p bonsol-node --features=cuda --release; \
-&&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/*
+&&  make install 
+#&&  cargo install sccache --locked \
+#&&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
+#&&  dpkg -i cuda-keyring_1.1-1_all.deb \
+#&&  add-apt-repository contrib \
+#&&  apt-get update \
+#&&  apt-get -y install cuda-toolkit-${CUDA_VERSION}; \
+#&&  PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
+#&&  cargo build -p bonsol-node --features=cuda --release; \
+#&&  apt-get clean \
+#&&  rm -rf /var/lib/apt/lists/*
 
 
 ######################################################################
