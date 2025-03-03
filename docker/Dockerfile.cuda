@@ -79,7 +79,7 @@ LABEL org.opencontainers.image.description="A bonsol proving node"
 
 WORKDIR /usr/opt/bonsol
 
-ENV CUDA_VERSION=${CUDA_VERSION}
+ENV CUDA_VERSION=12.5
 
 COPY --from=builder /app/target/release/bonsol-node /usr/opt/bonsol
 COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify /usr/opt/bonsol/stark/stark_verify
