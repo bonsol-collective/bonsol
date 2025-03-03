@@ -1,0 +1,91 @@
+# Docker Setup for WSL
+
+:::tip Recommended for WSL Users
+For Bonsol development in WSL, we strongly recommend installing Docker directly in your WSL environment rather than using Docker Desktop for Windows. This guide will walk you through the recommended setup.
+:::
+
+This guide explains how to set up Docker in WSL (Windows Subsystem for Linux) for Bonsol development.
+
+## Why Docker in WSL vs Docker Desktop?
+
+When developing with Bonsol in WSL, we recommend installing Docker directly in your WSL environment rather than using Docker Desktop for Windows. Here's why:
+
+1. **Better Performance**: Native Linux Docker provides better performance than Docker Desktop
+2. **Resource Efficiency**: Lighter weight than running Docker Desktop
+3. **Development Integration**: Direct integration with WSL development environment
+4. **Simplicity**: No need for Windows/WSL interop layer
+
+## Installation Steps
+
+### 1. Install Prerequisites
+
+```bash
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+```
+
+### 2. Add Docker's Official GPG Key
+
+```bash
+# Create directory for keyrings
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# Download and add GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Set permissions
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+```
+
+### 3. Add Docker Repository
+
+```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+### 4. Install Docker
+
+```bash
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+### 5. Configure User Permissions
+
+```bash
+# Add your user to docker group
+sudo usermod -aG docker $USER
+
+# Apply changes to current session
+newgrp docker
+```
+
+### 6. Verify Installation
+
+```bash
+docker --version
+docker compose version
+```
+
+## Notes
+
+- Docker daemon starts automatically with WSL
+- No Docker Desktop required
+- GUI features available through Docker Desktop later if needed
+- Compatible with all Bonsol development requirements
+
+## Troubleshooting
+
+If you encounter permission issues after installation:
+1. Ensure you've logged out and back in after adding your user to the docker group
+2. Or run `newgrp docker` to apply changes in current session
+
+If Docker daemon isn't starting:
+```bash
+sudo service docker start
+```
+
+## Next Steps
+
+Once Docker is installed, you can proceed with the [Bonsol quickstart guide](/tutorials/quickstart) to begin development. 
