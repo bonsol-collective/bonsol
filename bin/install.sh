@@ -1,4 +1,26 @@
 #!/bin/sh
+# Bonsol Installation Script
+# 
+# This script installs the Bonsol CLI and RISC0 toolchain.
+# 
+# Usage:
+#   ./install.sh                     # Normal installation
+#   curl -sSf https://raw.githubusercontent.com/bonsol-collective/bonsol/main/bin/install.sh | sh
+#
+# Environment Variables:
+#   DEBUG=1        Enable debug output showing each command as it executes
+#   DRY_RUN=1      Show commands that would be executed without running them
+#   NONINTERACTIVE=1   Force non-interactive mode (automatically set when piping)
+#
+# Examples:
+#   DEBUG=1 ./install.sh            # Run with debug output
+#   DRY_RUN=1 ./install.sh         # Show what would be installed without installing
+#   DEBUG=1 DRY_RUN=1 ./install.sh # Show debug output and commands without executing
+#
+# Note: When using curl | sh, you can still use flags:
+#   curl -sSf ... | DEBUG=1 sh
+#   curl -sSf ... | DRY_RUN=1 sh
+
 # Ensure we're running in bash
 if [ -z "$BASH_VERSION" ]; then
     exec bash "$0" "$@"
