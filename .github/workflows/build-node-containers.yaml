@@ -9,7 +9,8 @@ jobs:
 
     strategy:
       matrix:
-        flavor: [standard, cuda, test]
+#        flavor: [standard, cuda]
+        flavor: [test]
 
     permissions:
       contents: read

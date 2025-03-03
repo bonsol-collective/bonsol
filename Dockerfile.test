@@ -5,7 +5,7 @@ RUN cargo install cargo-chef
 FROM chef as planner
 WORKDIR /app
 COPY . .
-RUN ls -l recipe.json && cat recipe.json && cargo chef prepare --bin bonsol-node --recipe-path recipe.json
+RUN cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 FROM chef as builder
 ARG FLAT_BUFFERS_VERSION=24.3.25
 RUN apt-get clean && \
@@ -25,7 +25,7 @@ WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
 COPY . . 
-RUN cargo build --release
+RUN cat recipe.json && cargo build --release
 FROM rust:${RUST_VERSION}-slim
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
