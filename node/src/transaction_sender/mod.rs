@@ -57,6 +57,7 @@ pub trait TransactionSender {
         execution_account: Pubkey,
         block_commitment: u64,
     ) -> Result<Signature>;
+
     async fn submit_proof(
         &self,
         execution_id: &str,
@@ -67,10 +68,18 @@ pub trait TransactionSender {
         input_digest: &[u8],
         assumption_digest: &[u8],
         committed_outputs: &[u8],
-        additional_accounts: Vec<AccountMeta>,
         exit_code_system: u32,
         exit_code_user: u32,
     ) -> Result<Signature>;
+
+    async fn submit_status(
+        &self,
+        execution_id: &str,
+        requester_account: Pubkey,
+        callback_exec: Option<ProgramExec>,
+        additional_accounts: Vec<AccountMeta>,
+    ) -> Result<Signature>;
+
     async fn get_current_block(&self) -> Result<u64>;
     fn get_signature_status(&self, sig: &Signature) -> Option<TransactionStatus>;
     fn clear_signature_status(&self, sig: &Signature);
@@ -120,6 +129,18 @@ impl RpcTransactionSender {
             sigs: Arc::new(DashMap::new()),
         }
     }
+}
+
+struct SubmitProofTxData<'a> {
+    execution_id: u64,
+    status: StatusTypes,
+    proof: &'a [u8],
+    execution_digest: Option<&'a [u8]>,
+    input_digest: Option<&'a [u8]>,
+    assumption_digest: Option<&'a [u8]>,
+    committed_outputs: Option<&'a [u8]>,
+    exit_code_system: u8,
+    exit_code_user: u8,
 }
 
 #[async_trait]
@@ -207,9 +228,42 @@ impl TransactionSender for RpcTransactionSender {
         input_digest: &[u8],
         assumption_digest: &[u8],
         committed_outputs: &[u8],
-        additional_accounts: Vec<AccountMeta>,
         exit_code_system: u32,
         exit_code_user: u32,
+    ) -> Result<()> {
+        let ix_data = &[]; // todo: create new instruction data here
+        let instruction = Instruction::new_with_bytes(self.bonsol_program, ix_data, accounts);
+        let (blockhash, last_valid) = self
+            .rpc_client
+            .get_latest_blockhash_with_commitment(self.rpc_client.commitment())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to get blockhash: {:?}", e))?;
+
+        let msg = v0::Message::try_compile(&self.signer.pubkey(), &[instruction], &[], blockhash)?;
+        let tx = VersionedTransaction::try_new(VersionedMessage::V0(msg), &[&self.signer])?;
+
+        let sig = self
+            .rpc_client
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                CommitmentConfig::confirmed(),
+                RpcSendTransactionConfig {
+                    skip_preflight: true,
+                    ..Default::default()
+                },
+            )
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to send transaction: {:?}", e))?;
+        self.sigs
+            .insert(sig, TransactionStatus::Pending { expiry: last_valid });
+    }
+
+    async fn submit_status(
+        &self,
+        execution_id: &str,
+        requester_account: Pubkey,
+        callback_exec: Option<ProgramExec>,
+        additional_accounts: Vec<AccountMeta>,
     ) -> Result<Signature> {
         let (execution_request_data_account, _) =
             execution_address(&requester_account, execution_id.as_bytes());
@@ -229,6 +283,20 @@ impl TransactionSender for RpcTransactionSender {
             AccountMeta::new(self.signer.pubkey(), true),
         ];
         accounts.extend(additional_accounts);
+
+        /*
+        let status = &StatusV1Args {
+            execution_id: Some(eid),                    //0-?? bytes lets say 16
+            status: StatusTypes::Completed,             //1 byte
+            proof: Some(proof_vec),                     //256 bytes
+            execution_digest: Some(execution_digest),   //32 bytes
+            input_digest: Some(input_digest),           //32 bytes
+            assumption_digest: Some(assumption_digest), //32 bytes
+            committed_outputs: Some(out),               //0-?? bytes lets say 32
+            exit_code_system,                           //4 byte
+            exit_code_user,                             //4 byte
+        };
+        */
 
         /*
         let mut fbb = FlatBufferBuilder::new();
@@ -266,6 +334,7 @@ impl TransactionSender for RpcTransactionSender {
         );
         fbb2.finish(root, None);
         */
+
         let ix_data = &[]; // todo: create new instruction data here
         let instruction = Instruction::new_with_bytes(self.bonsol_program, ix_data, accounts);
         let (blockhash, last_valid) = self

@@ -66,6 +66,17 @@ impl<'a, 'b> StatusAccounts<'a, 'b> {
     }
 }
 
+pub struct VerifyProofInstruction<'a> {
+    accounts: &'a [AccountInfo<'a>],
+}
+
+pub fn process_verify_proof<'a>(
+    accounts: &'a [AccountInfo<'a>],
+    ix: VerifyProofInstruction,
+) -> Result<(), ProgramError> {
+    Ok(())
+}
+
 pub fn process_status_v1<'a>(
     accounts: &'a [AccountInfo<'a>],
     ix: ChannelInstruction,

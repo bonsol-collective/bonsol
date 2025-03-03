@@ -1,5 +1,3 @@
-# This config is used for local development and testing 
-
 risc0_image_folder = "elf"
 max_input_size_mb = 10
 image_download_timeout_secs = 60
