@@ -65,7 +65,7 @@ RUN set -euxo pipefail \
 &&  apt-get -y install cuda-toolkit-${CUDA_VERSION}; \
 &&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
 &&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
-&&  cargo build -p bonsol-node --features=cuda --release; \
+&&  cargo build -p bonsol-node --features=cuda --release \
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
 
