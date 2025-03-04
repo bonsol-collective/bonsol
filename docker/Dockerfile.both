@@ -105,6 +105,8 @@ RUN set -euxo pipefail \
 
 FROM rust:${RUST_VERSION}-slim
 
+ARG CUDA_VERSION
+
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
 LABEL org.opencontainers.image.description="A bonsol proving node"
