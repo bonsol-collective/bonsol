@@ -54,18 +54,25 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
 
             let dest =
                 object_store::path::Path::from(format!("{}-{}", manifest.name, manifest.image_id));
-
-            let url = endpoint.unwrap_or(format!(
-                "https://{}.s3.{}.amazonaws.com/{}",
-                bucket, region, dest
+            
+            // Use a separate path variable for the S3 operations
+            // object_store will automatically prepend the bucket name
+            let store_path = dest.clone();
+            
+            // Construct the endpoint URL using the standard AWS S3 format
+            // This prevents path duplication in the final S3 URI
+            let endpoint_url = endpoint.unwrap_or(format!(
+                "https://s3.{}.amazonaws.com",
+                region
             ));
-
+            
+            // Create the S3 client with the proper configuration
             let s3_client = AmazonS3Builder::new()
                 .with_bucket_name(&bucket)
                 .with_region(&region)
                 .with_access_key_id(&access_key)
                 .with_secret_access_key(&secret_key)
-                .with_endpoint(&url)
+                .with_endpoint(&endpoint_url)
                 .build()
                 .map_err(|err| {
                     BonsolCliError::S3ClientError(S3ClientError::FailedToBuildClient {
@@ -84,20 +91,20 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 })?;
 
             // get the file to see if it exists
-            if s3_client.head(&dest).await.is_ok() {
+            if s3_client.head(&store_path).await.is_ok() {
                 bar.set_message("File already exists, skipping upload");
             } else {
                 s3_client
-                    .put(&dest, loaded_binary.into())
+                    .put(&store_path, loaded_binary.into())
                     .await
                     .map_err(|err| {
-                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest, err })
+                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest: store_path.clone(), err })
                     })?;
             }
 
             bar.finish_and_clear();
-            println!("Uploaded to S3 url {}", url);
-            url
+            println!("Uploaded to S3 url s3://{}/{}", bucket, store_path);
+            format!("s3://{}/{}", bucket, store_path)
         }
         DeployArgs::Url(url_upload) => {
             let req = reqwest::get(&url_upload.url).await?;
