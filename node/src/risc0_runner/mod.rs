@@ -652,6 +652,13 @@ async fn handle_image_deployment<'a>(
     info!("Image ID: {}, Size: {}", image_id, size);
     info!("Program name: {}", program_name);
     
+    let image_id = deploy.image_id().unwrap_or_default();
+    let program_name = deploy.program_name().unwrap_or_default();
+    
+    info!("Attempting to download image from URL: {}", url);
+    info!("Image ID: {}, Size: {}", image_id, size);
+    info!("Program name: {}", program_name);
+    
     emit_histogram!(MetricEvents::ImageDownload, size as f64, url => url.to_string());
     emit_event_with_duration!(MetricEvents::ImageDownload, {
         // Use the URL directly from the deployment data
@@ -673,9 +680,14 @@ async fn handle_image_deployment<'a>(
             }
             if img.id != image_id {
                 info!("Image ID mismatch. Expected: {}, Got: {}", image_id, img.id);
+            if img.id != image_id {
+                info!("Image ID mismatch. Expected: {}, Got: {}", image_id, img.id);
                 return Err(Risc0RunnerError::InvalidData.into());
             }
             loaded_images.insert(img.id.clone(), img);
+            info!("Successfully downloaded and stored image: {}", image_id);
+        } else {
+            info!("Download failed with status: {}", resp.status());
             info!("Successfully downloaded and stored image: {}", image_id);
         } else {
             info!("Download failed with status: {}", resp.status());

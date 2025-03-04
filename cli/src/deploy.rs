@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::path::Path;
+use std::path::Path as StdPath;
 
 use anyhow::Result;
 use bonsol_sdk::{BonsolClient, ProgramInputType};
@@ -16,6 +16,10 @@ use crate::command::{DeployArgs, S3UploadArgs, SharedDeployArgs};
 use crate::common::ZkProgramManifest;
 use crate::error::{BonsolCliError, S3ClientError, ZkManifestError};
 
+fn get_s3_path(manifest_name: &str, image_id: &str) -> String {
+    format!("{}-{}", manifest_name, image_id)
+}
+
 pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -> Result<()> {
     let bar = ProgressBar::new_spinner();
     let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::confirmed());
@@ -24,7 +28,7 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
         auto_confirm,
     } = deploy_args.shared_args();
 
-    let manifest_file = File::open(Path::new(&manifest_path)).map_err(|err| {
+    let manifest_file = File::open(StdPath::new(&manifest_path)).map_err(|err| {
         BonsolCliError::ZkManifestError(ZkManifestError::FailedToOpen {
             manifest_path: manifest_path.clone(),
             err,
