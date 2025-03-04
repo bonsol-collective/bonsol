@@ -4,6 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 use bonsol_sdk::{BonsolClient, ProgramInputType};
 use indicatif::ProgressBar;
+use log::debug;
 use object_store::aws::AmazonS3Builder;
 use object_store::ObjectStore;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -52,15 +53,10 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 ..
             } = s3_upload;
 
-            let dest =
-                object_store::path::Path::from(format!("{}-{}", manifest.name, manifest.image_id));
+            let dest = format!("{}-{}", manifest.name, manifest.image_id);
+            let store_path = object_store::path::Path::from(dest.clone());
             
-            // Use a separate path variable for the S3 operations
-            // object_store will automatically prepend the bucket name
-            let store_path = dest.clone();
-            
-            // Construct the endpoint URL using the standard AWS S3 format
-            // This prevents path duplication in the final S3 URI
+            // Use conventional S3 endpoint URL format
             let endpoint_url = endpoint.unwrap_or(format!(
                 "https://s3.{}.amazonaws.com",
                 region
@@ -103,8 +99,16 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
             }
 
             bar.finish_and_clear();
-            println!("Uploaded to S3 url s3://{}/{}", bucket, store_path);
-            format!("s3://{}/{}", bucket, store_path)
+
+            // Create a properly formatted HTTPS URL for the S3 object
+            // This follows the AWS S3 URL convention
+            let https_url = format!("https://{}.s3.{}.amazonaws.com/{}", bucket, region, dest);
+            println!("Image uploaded to S3");
+            debug!("S3 path: s3://{}/{}", bucket, dest);
+            debug!("HTTPS URL (used for download): {}", https_url);
+            
+            // Return the HTTPS URL for compatibility with the HTTP client
+            https_url
         }
         DeployArgs::Url(url_upload) => {
             let req = reqwest::get(&url_upload.url).await?;
