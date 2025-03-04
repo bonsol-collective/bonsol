@@ -60,5 +60,5 @@ jobs:
           file: docker/Dockerfile.${{ matrix.flavor }}
           tags: ${{ steps.docker_tags.outputs.TAGS }}
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+#          cache-from: type=gha
+#          cache-to: type=gha,mode=max

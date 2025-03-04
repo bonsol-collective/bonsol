@@ -6,7 +6,7 @@ ARG CUDA_VERSION=12.5
 # Cargo chef container 
 ######################################################################
 
-FROM rust:${RUST_VERSION} as chef
+FROM rust:${RUST_VERSION} AS chef
 
 SHELL ["/bin/bash", "-c"]
 
@@ -18,7 +18,7 @@ RUN set -euxo pipefail \
 # Cargo chef prepare
 ######################################################################
 
-FROM chef as planner
+FROM chef AS planner
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ RUN set -euxo pipefail \
 # Build bonsol node common build environment
 ######################################################################
 
-FROM chef as builder-base
+FROM chef AS builder-base
 
 ARG FLAT_BUFFERS_VERSION
 
@@ -64,19 +64,20 @@ RUN set -euxo pipefail \
 # Build bonsol node cpu version
 ######################################################################
 
-FROM builder-base as bonsol-node-cpu
+FROM builder-base AS bonsol-node-cpu
 
 WORKDIR /app/
 
 RUN set -euxo pipefail \
 &&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json \
-&&  cargo build --release 
+&&  cargo build --release \
+&&  ls -l /app/target/release/ 
 
 ###################################################################### 
 # Build bonsol node gpu version
 ######################################################################
 
-FROM builder-base as bonsol-node-gpu
+FROM builder-base AS bonsol-node-gpu
 
 ARG RUST_VERSION
 ARG FLAT_BUFFERS_VERSION
@@ -96,7 +97,8 @@ RUN set -euxo pipefail \
 &&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
 &&  cargo build -p bonsol-node --features=cuda --release \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/*
+&&  rm -rf /var/lib/apt/lists/* \
+&&  ls -l /app/target/release/ 
 
 
 ######################################################################
