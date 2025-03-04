@@ -61,7 +61,7 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
             let store_path = object_store::path::Path::from(dest.clone());
             
             // Use conventional S3 endpoint URL format
-            let endpoint_url = endpoint.unwrap_or(format!(
+            let endpoint_url = endpoint.clone().unwrap_or(format!(
                 "https://s3.{}.amazonaws.com",
                 region
             ));
@@ -104,9 +104,12 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
 
             bar.finish_and_clear();
 
-            // Create a properly formatted HTTPS URL for the S3 object
-            // This follows the AWS S3 URL convention
-            let https_url = format!("https://{}.s3.{}.amazonaws.com/{}", bucket, region, dest);
+            // Create the download URL using the provided endpoint or AWS S3 URL convention
+            let https_url = if let Some(ep) = endpoint {
+                format!("{}/{}/{}", ep, bucket, dest)
+            } else {
+                format!("https://{}.s3.{}.amazonaws.com/{}", bucket, region, dest)
+            };
             println!("Image uploaded to S3");
             debug!("S3 path: s3://{}/{}", bucket, dest);
             debug!("HTTPS URL (used for download): {}", https_url);
