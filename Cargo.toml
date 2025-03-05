@@ -12,7 +12,7 @@ members = [
   "cli",
   "sdk",
   "prover",
-  "tester",
+  "tester", "testing",
 ]
 
 
