@@ -55,7 +55,7 @@ RUN set -euxo pipefail \
 &&  git clone -b v${FLAT_BUFFERS_VERSION} https://github.com/google/flatbuffers.git \
 &&  cd flatbuffers \
 &&  cmake -G "Unix Makefiles" \
-&&  make install \
+&&  make install 
 #&&  cargo install sccache --locked \
 #&&  apt-get clean \
 #&&  rm -rf /var/lib/apt/lists/*
