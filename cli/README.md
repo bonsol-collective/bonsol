@@ -5,7 +5,7 @@ This is a command line interface for bonsol. It allows you to execute a bonsol p
 You must have cargo-binstall and cargo-risczero installed.
 
 ```
-cargo install bonsol-cli --git https://github.com/anagrambuild/bonsol
+cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol
 ```
 
 ## Usage

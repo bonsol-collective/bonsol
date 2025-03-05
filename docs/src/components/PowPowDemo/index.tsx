@@ -18,7 +18,8 @@ function CollatzDemo() {
   const ctxRef = useRef(null);
   const sequenceRef = useRef([]);
   const timelineRef = useRef(null);
-  const connection = useMemo(() => new Connection('https://celestine-kww4t3-fast-mainnet.helius-rpc.com'), []);
+  // will only work on this website
+  const connection = useMemo(() => new Connection('https://austbot-devnet-9df9.devnet.rpcpool.com'), []);
 
   useEffect(() => {
     const intervalId = setInterval(async () => {

@@ -43,6 +43,13 @@ pub enum BonsolCliError {
 
     #[error("The following build dependencies are missing: {}", missing_deps.join(", "))]
     MissingBuildDependencies { missing_deps: Vec<String> },
+
+    #[error("Build Dependancy version mismatch: {} is required at version {}, but the current version is {}", dep, version, current_version)]
+    BuildDependencyVersionMismatch {
+        dep: String,
+        version: String,
+        current_version: String,
+    },
 }
 
 #[derive(Debug, DeriveError, Clone)]

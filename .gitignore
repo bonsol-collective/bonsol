@@ -15,6 +15,5 @@ NodeDragon.toml
 images/**/manifest.json
 stark
 MyLogFile.log
-*_generated.rs
 .pnpm-store
-flatbuffers/
+

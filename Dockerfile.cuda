@@ -7,6 +7,7 @@ WORKDIR /app
 COPY . .
 RUN cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 FROM chef as builder
+ARG FLAT_BUFFERS_VERSION=24.3.25
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get update --fix-missing && \
@@ -14,7 +15,12 @@ RUN apt-get clean && \
     pkg-config \
     libssl-dev \
     software-properties-common \
-    build-essential
+    build-essential \
+    cmake && \
+    git clone -b v${FLAT_BUFFERS_VERSION} https://github.com/google/flatbuffers.git && \
+    cd flatbuffers && \
+    cmake -G "Unix Makefiles" && \
+    make install
 RUN cargo install sccache --locked
 WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
@@ -29,7 +35,7 @@ RUN PATH=/usr/local/cuda-12.5/bin${PATH:+:${PATH}} cargo chef cook --bin bonsol-
 COPY . . 
 RUN cargo build -p bonsol-node --features=cuda --release; 
 FROM rust:${RUST_VERSION}-slim
-LABEL org.opencontainers.image.source=https://github.com/anagrambuild/bonsol
+LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
 LABEL org.opencontainers.image.description="A bonsol proving node"
 ARG FLAVOR=standard  

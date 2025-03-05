@@ -214,8 +214,7 @@ impl InputResolver for DefaultInputResolver {
         let mut res = vec![ProgramInput::Empty; inputs.len()];
         for (index, input) in inputs.into_iter().enumerate() {
             let client = self.http_client.clone();
-            res[index] =
-                self.par_resolve_input(client, index as u8, input, &mut url_set)?;
+            res[index] = self.par_resolve_input(client, index as u8, input, &mut url_set)?;
         }
         while let Some(url) = url_set.join_next().await {
             match url {

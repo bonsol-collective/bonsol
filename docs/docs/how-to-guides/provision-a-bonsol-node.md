@@ -51,7 +51,7 @@ you will put the path in the below section of the config file.
 
 ## Installing Bonsol
 ```bash
-git clone --depth=1 https://github.com/anagrambuild/bonsol.git bonsol
+git clone --depth=1 https://github.com/bonsolcollective/bonsol.git bonsol
 cd bonsol/
 cargo build -f cuda --release
 ```
