@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
 #        flavor: [standard, cuda]
-        flavor: [cpu]
+        flavor: [citest]
 
     permissions:
       contents: read
