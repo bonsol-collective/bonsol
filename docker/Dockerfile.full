@@ -1,0 +1,27 @@
+######################################################################
+# Create an optimized container with Bonsol node and add stark files
+######################################################################
+
+ARG IMAGE
+ARG CUDA_VERSION=12.5
+
+FROM ${IMAGE}
+
+LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+LABEL org.opencontainers.image.title="bonsol-node"
+LABEL org.opencontainers.image.description="A bonsol proving node with Stark files and Cuda libraries"
+
+WORKDIR /usr/opt/bonsol
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
+&&  dpkg -i cuda-keyring_1.1-1_all.deb \
+&&  rm cuda-keyring_1.1-1_all.deb \
+&&  add-apt-repository contrib \
+&&  apt-get update \
+&&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/* 
+

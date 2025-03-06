@@ -1,0 +1,19 @@
+######################################################################
+# Create an optimized container with Bonsol node and add stark files
+######################################################################
+
+ARG IMAGE
+ARG RISC0_VERSION="v2024-05-17.1"
+
+FROM ${IMAGE}
+
+LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+LABEL org.opencontainers.image.title="bonsol-node"
+LABEL org.opencontainers.image.description="A bonsol proving node with Stark files"
+
+WORKDIR /usr/opt/bonsol
+
+COPY --from=risczero/risc0-groth16-prover:${RISC0_VERSION} /app/stark_verify /usr/opt/bonsol/stark/stark_verify
+COPY --from=risczero/risc0-groth16-prover:${RISC0_VERSION} /app/stark_verify.dat /usr/opt/bonsol/stark/stark_verify.dat
+COPY --from=risczero/risc0-groth16-prover:${RISC0_VERSION} /app/stark_verify_final.zkey /usr/opt/bonsol/stark/stark_verify_final.zkey
+COPY --from=risczero/risc0-groth16-prover:${RISC0_VERSION} /usr/local/sbin/rapidsnark /usr/opt/bonsol/stark/rapidsnark

@@ -7,11 +7,6 @@ jobs:
   build-and-push:
     runs-on: ubicloud-standard-16
 
-    strategy:
-      matrix:
-#        flavor: [standard, cuda]
-        flavor: [citest]
-
     permissions:
       contents: read
       packages: write
@@ -44,12 +39,13 @@ jobs:
       - name: Set Docker Tags
         id: docker_tags
         run: |
+          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
-            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             # For main branch pushes, use flavor-{commit_sha}
-            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and Push Docker Image
@@ -57,8 +53,32 @@ jobs:
         with:
           context: .
           push: true
-          file: docker/Dockerfile.${{ matrix.flavor }}
-          tags: ${{ steps.docker_tags.outputs.TAGS }}
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
           platforms: linux/amd64
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: docker/Dockerfile.stark
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
+          build-args: IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: docker/Dockerfile.full
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
+          build-args: IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
