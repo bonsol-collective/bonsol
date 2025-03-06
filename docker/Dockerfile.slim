@@ -84,8 +84,6 @@ RUN set -euxo pipefail \
 
 FROM builder-base AS bonsol-node-gpu
 
-ARG RUST_VERSION
-ARG FLAT_BUFFERS_VERSION
 ARG CUDA_VERSION
 
 WORKDIR /app/
@@ -116,8 +114,6 @@ RUN set -euxo pipefail \
 ######################################################################
 
 FROM rust:${RUST_VERSION}-slim
-
-ARG CUDA_VERSION
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"

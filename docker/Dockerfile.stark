@@ -1,11 +1,11 @@
 ######################################################################
 # Create an optimized container with Bonsol node and add stark files
 ######################################################################
-
 ARG IMAGE
-ARG RISC0_VERSION="v2024-05-17.1"
 
 FROM ${IMAGE}
+
+ARG RISC0_VERSION="v2024-05-17.1"
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
