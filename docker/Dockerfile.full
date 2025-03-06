@@ -7,6 +7,8 @@ ARG CUDA_VERSION=12.5
 
 FROM ${IMAGE}
 
+ARG CUDA_VERSION
+
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
 LABEL org.opencontainers.image.description="A bonsol proving node with Stark files and Cuda libraries"
