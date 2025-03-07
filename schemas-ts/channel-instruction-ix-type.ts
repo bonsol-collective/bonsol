@@ -4,7 +4,6 @@
 
 export enum ChannelInstructionIxType {
   ExecuteV1 = 0,
-  StatusV1 = 1,
-  DeployV1 = 2,
-  ClaimV1 = 3
+  DeployV1 = 1,
+  ClaimV1 = 2
 }

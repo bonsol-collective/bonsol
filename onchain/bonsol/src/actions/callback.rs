@@ -10,7 +10,7 @@ use crate::{
 
 use bonsol_interface::{
     bonsol_schema::{
-        root_as_execution_request_v1, ChannelInstruction, ExecutionRequestV1, ExitCode, StatusV1,
+        root_as_execution_request_v1, ChannelInstruction, ExecutionRequestV1, ExitCode,
     },
     prover_version::{ProverVersion, VERSION_V1_0_1, VERSION_V1_2_1},
     util::execution_address_seeds,

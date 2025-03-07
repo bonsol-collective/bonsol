@@ -4,7 +4,6 @@
 // @generated
 
 use crate::execution_request_v1_generated::*;
-use crate::status_v1_generated::*;
 use crate::claim_v1_generated::*;
 use crate::input_type_generated::*;
 use crate::deploy_v1_generated::*;
@@ -17,12 +16,11 @@ use self::flatbuffers::{EndianScalar, Follow};
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_CHANNEL_INSTRUCTION_IX_TYPE: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_CHANNEL_INSTRUCTION_IX_TYPE: u8 = 3;
+pub const ENUM_MAX_CHANNEL_INSTRUCTION_IX_TYPE: u8 = 2;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_CHANNEL_INSTRUCTION_IX_TYPE: [ChannelInstructionIxType; 4] = [
+pub const ENUM_VALUES_CHANNEL_INSTRUCTION_IX_TYPE: [ChannelInstructionIxType; 3] = [
   ChannelInstructionIxType::ExecuteV1,
-  ChannelInstructionIxType::StatusV1,
   ChannelInstructionIxType::DeployV1,
   ChannelInstructionIxType::ClaimV1,
 ];
@@ -33,15 +31,13 @@ pub struct ChannelInstructionIxType(pub u8);
 #[allow(non_upper_case_globals)]
 impl ChannelInstructionIxType {
   pub const ExecuteV1: Self = Self(0);
-  pub const StatusV1: Self = Self(1);
-  pub const DeployV1: Self = Self(2);
-  pub const ClaimV1: Self = Self(3);
+  pub const DeployV1: Self = Self(1);
+  pub const ClaimV1: Self = Self(2);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 3;
+  pub const ENUM_MAX: u8 = 2;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::ExecuteV1,
-    Self::StatusV1,
     Self::DeployV1,
     Self::ClaimV1,
   ];
@@ -49,7 +45,6 @@ impl ChannelInstructionIxType {
   pub fn variant_name(self) -> Option<&'static str> {
     match self {
       Self::ExecuteV1 => Some("ExecuteV1"),
-      Self::StatusV1 => Some("StatusV1"),
       Self::DeployV1 => Some("DeployV1"),
       Self::ClaimV1 => Some("ClaimV1"),
       _ => None,
@@ -125,9 +120,8 @@ impl<'a> flatbuffers::Follow<'a> for ChannelInstruction<'a> {
 impl<'a> ChannelInstruction<'a> {
   pub const VT_IX_TYPE: flatbuffers::VOffsetT = 4;
   pub const VT_EXECUTE_V1: flatbuffers::VOffsetT = 6;
-  pub const VT_STATUS_V1: flatbuffers::VOffsetT = 8;
-  pub const VT_DEPLOY_V1: flatbuffers::VOffsetT = 10;
-  pub const VT_CLAIM_V1: flatbuffers::VOffsetT = 12;
+  pub const VT_DEPLOY_V1: flatbuffers::VOffsetT = 8;
+  pub const VT_CLAIM_V1: flatbuffers::VOffsetT = 10;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -141,7 +135,6 @@ impl<'a> ChannelInstruction<'a> {
     let mut builder = ChannelInstructionBuilder::new(_fbb);
     if let Some(x) = args.claim_v1 { builder.add_claim_v1(x); }
     if let Some(x) = args.deploy_v1 { builder.add_deploy_v1(x); }
-    if let Some(x) = args.status_v1 { builder.add_status_v1(x); }
     if let Some(x) = args.execute_v1 { builder.add_execute_v1(x); }
     builder.add_ix_type(args.ix_type);
     builder.finish()
@@ -150,9 +143,6 @@ impl<'a> ChannelInstruction<'a> {
   pub fn unpack(&self) -> ChannelInstructionT {
     let ix_type = self.ix_type();
     let execute_v1 = self.execute_v1().map(|x| {
-      x.into_iter().collect()
-    });
-    let status_v1 = self.status_v1().map(|x| {
       x.into_iter().collect()
     });
     let deploy_v1 = self.deploy_v1().map(|x| {
@@ -164,7 +154,6 @@ impl<'a> ChannelInstruction<'a> {
     ChannelInstructionT {
       ix_type,
       execute_v1,
-      status_v1,
       deploy_v1,
       claim_v1,
     }
@@ -191,22 +180,6 @@ impl<'a> ChannelInstruction<'a> {
       // Created from a valid Table for this object
       // Which contains a valid flatbuffer in this slot
       unsafe { <flatbuffers::ForwardsUOffset<ExecutionRequestV1<'a>>>::follow(data.bytes(), 0) }
-    })
-  }
-  #[inline]
-  pub fn status_v1(&self) -> Option<flatbuffers::Vector<'a, u8>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(ChannelInstruction::VT_STATUS_V1, None)}
-  }
-  pub fn status_v1_nested_flatbuffer(&'a self) -> Option<StatusV1<'a>> {
-    self.status_v1().map(|data| {
-      use flatbuffers::Follow;
-      // Safety:
-      // Created from a valid Table for this object
-      // Which contains a valid flatbuffer in this slot
-      unsafe { <flatbuffers::ForwardsUOffset<StatusV1<'a>>>::follow(data.bytes(), 0) }
     })
   }
   #[inline]
@@ -252,7 +225,6 @@ impl flatbuffers::Verifiable for ChannelInstruction<'_> {
     v.visit_table(pos)?
      .visit_field::<ChannelInstructionIxType>("ix_type", Self::VT_IX_TYPE, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("execute_v1", Self::VT_EXECUTE_V1, false)?
-     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("status_v1", Self::VT_STATUS_V1, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("deploy_v1", Self::VT_DEPLOY_V1, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("claim_v1", Self::VT_CLAIM_V1, false)?
      .finish();
@@ -262,7 +234,6 @@ impl flatbuffers::Verifiable for ChannelInstruction<'_> {
 pub struct ChannelInstructionArgs<'a> {
     pub ix_type: ChannelInstructionIxType,
     pub execute_v1: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
-    pub status_v1: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
     pub deploy_v1: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
     pub claim_v1: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
 }
@@ -272,7 +243,6 @@ impl<'a> Default for ChannelInstructionArgs<'a> {
     ChannelInstructionArgs {
       ix_type: ChannelInstructionIxType::ExecuteV1,
       execute_v1: None,
-      status_v1: None,
       deploy_v1: None,
       claim_v1: None,
     }
@@ -291,10 +261,6 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> ChannelInstructionBuilder<'a, '
   #[inline]
   pub fn add_execute_v1(&mut self, execute_v1: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ChannelInstruction::VT_EXECUTE_V1, execute_v1);
-  }
-  #[inline]
-  pub fn add_status_v1(&mut self, status_v1: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ChannelInstruction::VT_STATUS_V1, status_v1);
   }
   #[inline]
   pub fn add_deploy_v1(&mut self, deploy_v1: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
@@ -324,7 +290,6 @@ impl core::fmt::Debug for ChannelInstruction<'_> {
     let mut ds = f.debug_struct("ChannelInstruction");
       ds.field("ix_type", &self.ix_type());
       ds.field("execute_v1", &self.execute_v1());
-      ds.field("status_v1", &self.status_v1());
       ds.field("deploy_v1", &self.deploy_v1());
       ds.field("claim_v1", &self.claim_v1());
       ds.finish()
@@ -335,7 +300,6 @@ impl core::fmt::Debug for ChannelInstruction<'_> {
 pub struct ChannelInstructionT {
   pub ix_type: ChannelInstructionIxType,
   pub execute_v1: Option<Vec<u8>>,
-  pub status_v1: Option<Vec<u8>>,
   pub deploy_v1: Option<Vec<u8>>,
   pub claim_v1: Option<Vec<u8>>,
 }
@@ -344,7 +308,6 @@ impl Default for ChannelInstructionT {
     Self {
       ix_type: ChannelInstructionIxType::ExecuteV1,
       execute_v1: None,
-      status_v1: None,
       deploy_v1: None,
       claim_v1: None,
     }
@@ -359,9 +322,6 @@ impl ChannelInstructionT {
     let execute_v1 = self.execute_v1.as_ref().map(|x|{
       _fbb.create_vector(x)
     });
-    let status_v1 = self.status_v1.as_ref().map(|x|{
-      _fbb.create_vector(x)
-    });
     let deploy_v1 = self.deploy_v1.as_ref().map(|x|{
       _fbb.create_vector(x)
     });
@@ -371,7 +331,6 @@ impl ChannelInstructionT {
     ChannelInstruction::create(_fbb, &ChannelInstructionArgs{
       ix_type,
       execute_v1,
-      status_v1,
       deploy_v1,
       claim_v1,
     })

@@ -56,53 +56,38 @@ executeV1Array():Uint8Array|null {
   return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
-statusV1(index: number):number|null {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : 0;
-}
-
-statusV1Length():number {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-statusV1Array():Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
-}
-
 deployV1(index: number):number|null {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : 0;
 }
 
 deployV1Length():number {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 deployV1Array():Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
 claimV1(index: number):number|null {
-  const offset = this.bb!.__offset(this.bb_pos, 12);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : 0;
 }
 
 claimV1Length():number {
-  const offset = this.bb!.__offset(this.bb_pos, 12);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 claimV1Array():Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 12);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
 static startChannelInstruction(builder:flatbuffers.Builder) {
-  builder.startObject(5);
+  builder.startObject(4);
 }
 
 static addIxType(builder:flatbuffers.Builder, ixType:ChannelInstructionIxType) {
@@ -125,24 +110,8 @@ static startExecuteV1Vector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(1, numElems, 1);
 }
 
-static addStatusV1(builder:flatbuffers.Builder, statusV1Offset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, statusV1Offset, 0);
-}
-
-static createStatusV1Vector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset {
-  builder.startVector(1, data.length, 1);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addInt8(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startStatusV1Vector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(1, numElems, 1);
-}
-
 static addDeployV1(builder:flatbuffers.Builder, deployV1Offset:flatbuffers.Offset) {
-  builder.addFieldOffset(3, deployV1Offset, 0);
+  builder.addFieldOffset(2, deployV1Offset, 0);
 }
 
 static createDeployV1Vector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset {
@@ -158,7 +127,7 @@ static startDeployV1Vector(builder:flatbuffers.Builder, numElems:number) {
 }
 
 static addClaimV1(builder:flatbuffers.Builder, claimV1Offset:flatbuffers.Offset) {
-  builder.addFieldOffset(4, claimV1Offset, 0);
+  builder.addFieldOffset(3, claimV1Offset, 0);
 }
 
 static createClaimV1Vector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset {
@@ -186,11 +155,10 @@ static finishSizePrefixedChannelInstructionBuffer(builder:flatbuffers.Builder, o
   builder.finish(offset, undefined, true);
 }
 
-static createChannelInstruction(builder:flatbuffers.Builder, ixType:ChannelInstructionIxType, executeV1Offset:flatbuffers.Offset, statusV1Offset:flatbuffers.Offset, deployV1Offset:flatbuffers.Offset, claimV1Offset:flatbuffers.Offset):flatbuffers.Offset {
+static createChannelInstruction(builder:flatbuffers.Builder, ixType:ChannelInstructionIxType, executeV1Offset:flatbuffers.Offset, deployV1Offset:flatbuffers.Offset, claimV1Offset:flatbuffers.Offset):flatbuffers.Offset {
   ChannelInstruction.startChannelInstruction(builder);
   ChannelInstruction.addIxType(builder, ixType);
   ChannelInstruction.addExecuteV1(builder, executeV1Offset);
-  ChannelInstruction.addStatusV1(builder, statusV1Offset);
   ChannelInstruction.addDeployV1(builder, deployV1Offset);
   ChannelInstruction.addClaimV1(builder, claimV1Offset);
   return ChannelInstruction.endChannelInstruction(builder);
@@ -200,7 +168,6 @@ unpack(): ChannelInstructionT {
   return new ChannelInstructionT(
     this.ixType(),
     this.bb!.createScalarList<number>(this.executeV1.bind(this), this.executeV1Length()),
-    this.bb!.createScalarList<number>(this.statusV1.bind(this), this.statusV1Length()),
     this.bb!.createScalarList<number>(this.deployV1.bind(this), this.deployV1Length()),
     this.bb!.createScalarList<number>(this.claimV1.bind(this), this.claimV1Length())
   );
@@ -210,7 +177,6 @@ unpack(): ChannelInstructionT {
 unpackTo(_o: ChannelInstructionT): void {
   _o.ixType = this.ixType();
   _o.executeV1 = this.bb!.createScalarList<number>(this.executeV1.bind(this), this.executeV1Length());
-  _o.statusV1 = this.bb!.createScalarList<number>(this.statusV1.bind(this), this.statusV1Length());
   _o.deployV1 = this.bb!.createScalarList<number>(this.deployV1.bind(this), this.deployV1Length());
   _o.claimV1 = this.bb!.createScalarList<number>(this.claimV1.bind(this), this.claimV1Length());
 }
@@ -220,7 +186,6 @@ export class ChannelInstructionT implements flatbuffers.IGeneratedObject {
 constructor(
   public ixType: ChannelInstructionIxType = ChannelInstructionIxType.ExecuteV1,
   public executeV1: (number)[] = [],
-  public statusV1: (number)[] = [],
   public deployV1: (number)[] = [],
   public claimV1: (number)[] = []
 ){}
@@ -228,14 +193,12 @@ constructor(
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const executeV1 = ChannelInstruction.createExecuteV1Vector(builder, this.executeV1);
-  const statusV1 = ChannelInstruction.createStatusV1Vector(builder, this.statusV1);
   const deployV1 = ChannelInstruction.createDeployV1Vector(builder, this.deployV1);
   const claimV1 = ChannelInstruction.createClaimV1Vector(builder, this.claimV1);
 
   return ChannelInstruction.createChannelInstruction(builder,
     this.ixType,
     executeV1,
-    statusV1,
     deployV1,
     claimV1
   );

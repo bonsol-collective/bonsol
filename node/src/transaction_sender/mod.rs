@@ -223,46 +223,6 @@ impl TransactionSender for RpcTransactionSender {
         execution_id: &str,
         requester_account: Pubkey,
         callback_exec: Option<ProgramExec>,
-        proof: &[u8],
-        execution_digest: &[u8],
-        input_digest: &[u8],
-        assumption_digest: &[u8],
-        committed_outputs: &[u8],
-        exit_code_system: u32,
-        exit_code_user: u32,
-    ) -> Result<()> {
-        let ix_data = &[]; // todo: create new instruction data here
-        let instruction = Instruction::new_with_bytes(self.bonsol_program, ix_data, accounts);
-        let (blockhash, last_valid) = self
-            .rpc_client
-            .get_latest_blockhash_with_commitment(self.rpc_client.commitment())
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to get blockhash: {:?}", e))?;
-
-        let msg = v0::Message::try_compile(&self.signer.pubkey(), &[instruction], &[], blockhash)?;
-        let tx = VersionedTransaction::try_new(VersionedMessage::V0(msg), &[&self.signer])?;
-
-        let sig = self
-            .rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                CommitmentConfig::confirmed(),
-                RpcSendTransactionConfig {
-                    skip_preflight: true,
-                    ..Default::default()
-                },
-            )
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to send transaction: {:?}", e))?;
-        self.sigs
-            .insert(sig, TransactionStatus::Pending { expiry: last_valid });
-    }
-
-    async fn submit_status(
-        &self,
-        execution_id: &str,
-        requester_account: Pubkey,
-        callback_exec: Option<ProgramExec>,
         additional_accounts: Vec<AccountMeta>,
     ) -> Result<Signature> {
         let (execution_request_data_account, _) =

@@ -3,7 +3,6 @@ pub mod claim_v1_generated;
 pub mod deploy_v1_generated;
 pub mod execution_request_v1_generated;
 pub mod input_type_generated;
-pub mod status_v1_generated;
 use std::fmt::Display;
 
 use error::ChannelSchemaError;
@@ -14,7 +13,6 @@ pub use claim_v1_generated::*;
 pub use deploy_v1_generated::*;
 pub use execution_request_v1_generated::*;
 pub use input_type_generated::*;
-pub use status_v1_generated::*;
 pub fn parse_ix_data(ix_data: &[u8]) -> Result<ChannelInstruction, ChannelSchemaError> {
     let instruction =
         root_as_channel_instruction(ix_data).map_err(|_| ChannelSchemaError::InvalidInstruction)?;
