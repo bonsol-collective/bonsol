@@ -1,0 +1,76 @@
+# Flatbuffers Patterns
+
+## Context
+- Applied when working with flatbuffers data structures in Rust
+- Focuses on efficient and safe handling of flatbuffers types
+
+## Requirements
+
+### Bytes Handling
+- When working with byte fields from flatbuffers, collect into Vec<u8> using `.bytes().collect()`
+- While this involves an allocation, it's currently the most reliable way to handle flatbuffers bytes
+- The allocation cost is usually negligible for typical use cases like URLs or small data fields
+
+### URL Handling
+- Always validate URLs are absolute when required
+- Check for proper URL format and presence of required components (scheme, host)
+- Provide detailed error messages that include the problematic URL value
+- Consider whether relative URLs should be allowed in your use case
+
+### Error Handling
+- Always check for None when accessing optional fields
+- Use appropriate error types for flatbuffers-related errors
+- Provide clear error messages for parsing failures
+- Include relevant data values in error messages for debugging
+
+## Examples
+
+<example>
+// Good: Reliable bytes handling with Vec and URL validation
+if let Some(url_bytes) = data.url() {
+    let bytes: Vec<u8> = url_bytes.bytes().collect();
+    let url_str = str::from_utf8(&bytes)?;
+    let url = Url::parse(url_str).map_err(|e| {
+        if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
+            error!("URL must be absolute: {}", url_str);
+        }
+        anyhow::anyhow!("Invalid URL: {}", e)
+    })?;
+    
+    if !url.has_host() {
+        return Err(anyhow::anyhow!("URL must have a host"));
+    }
+}
+</example>
+
+<example type="invalid">
+// Bad: Missing URL validation
+if let Some(url_bytes) = data.url() {
+    let bytes: Vec<u8> = url_bytes.bytes().collect();
+    let url_str = str::from_utf8(&bytes)?;
+    let url = Url::parse(url_str)?;  // May fail with unclear error
+}
+</example>
+
+<example>
+// Good: Proper error handling with detailed messages
+let url_bytes = data.url().ok_or_else(|| MyError::MissingField("url"))?;
+let bytes: Vec<u8> = url_bytes.bytes().collect();
+let url_str = str::from_utf8(&bytes).map_err(|e| {
+    error!("Invalid UTF-8 in URL data: {:?}", bytes);
+    MyError::InvalidEncoding(e)
+})?;
+</example>
+
+<example type="invalid">
+// Bad: Unwrap on optional field and missing validation
+let url = data.url().unwrap().bytes().collect::<Vec<u8>>();  // May panic
+</example>
+
+## Notes
+- While collecting to Vec<u8> does involve an allocation, it's currently the most straightforward 
+  and reliable way to work with flatbuffers bytes in Rust
+- For performance-critical paths where the allocation cost matters, consider alternative serialization 
+  formats or pre-allocating buffers if needed
+- When handling URLs, always consider whether relative URLs are valid in your context
+- Include sufficient logging and error context to help debug issues in production 

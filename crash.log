@@ -1,0 +1,47 @@
+Loading environment variables from ./images/8bitoracle-iching/scripts/../.env
+----------------------------------------
+Starting image ID extraction process...
+Looking for input file at: images/8bitoracle-iching/input.json
+Found input file. Contents:
+----------------------------------------
+{
+  "imageId": "2fbfc505c4b2a6f55838a8242004a6f69414b93de17a42742ca571d789e7897a",
+  "executionConfig": {
+    "verifyInputHash": false,
+    "forwardOutput": true
+  },
+  "inputs": [
+    {
+      "inputType": "PublicUrl",
+      "data": "2970c6a9dc530bbe0d8674c2f5c5b3fa9a9aaacd2ec8d0bd36fd607673b33420"
+    }
+  ],
+  "tip": 12000,
+  "expiry": 1000
+}
+----------------------------------------
+Extracting imageId from input file...
+Successfully extracted image ID: 2fbfc505c4b2a6f55838a8242004a6f69414b93de17a42742ca571d789e7897a
+----------------------------------------
+Debug mode enabled
+Setting up logging configuration...
+RUST_LOG set to: info,risc0_runner=debug,bonsol_prover::input_resolver=debug
+Configuring S3 settings...
+S3 Configuration:
+  Base URL: https://s3.kea.day
+  Bucket: 8bitoracle
+  Path format: iching-{image_id}
+  Image ID: 2fbfc505c4b2a6f55838a8242004a6f69414b93de17a42742ca571d789e7897a
+Final S3 URL will be: https://s3.kea.day/8bitoracle/iching-2fbfc505c4b2a6f55838a8242004a6f69414b93de17a42742ca571d789e7897a
+----------------------------------------
+Using local bonsol build: /home/hosermage/forked-projects/bonsol/target/debug/bonsol
+----------------------------------------
+Environment variables that will be used:
+BONSOL_IMAGE_ID=2fbfc505c4b2a6f55838a8242004a6f69414b93de17a42742ca571d789e7897a
+BONSOL_S3_ENDPOINT=https://s3.kea.day
+BONSOL_S3_BUCKET=8bitoracle
+BONSOL_S3_PATH_FORMAT=iching-{image_id}
+----------------------------------------
+Executing I Ching program...
+Execution expiry 11792
+current block 10792

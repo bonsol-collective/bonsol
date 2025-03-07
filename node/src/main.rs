@@ -52,6 +52,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .json()
         .with_timer(tracing_subscriber::fmt::time::UtcTime::rfc_3339())
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()))
         .init();
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 || args[1] != "-f" {

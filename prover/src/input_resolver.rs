@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 use tokio::task::{JoinHandle, JoinSet};
+use tracing::{debug, error, trace};
 
 use crate::util::get_body_max_size;
 
@@ -110,60 +111,67 @@ impl DefaultInputResolver {
         input: InputT,
         task_set: &mut JoinSet<Result<ResolvedInput>>,
     ) -> Result<ProgramInput> {
+        debug!("Resolving input {} of type {:?}", index, input.input_type);
+        debug!("Input data length: {:?}", input.data.as_ref().map(|d| d.len()));
+        
         match input.input_type {
             InputType::PublicUrl => {
-                let url = input.data.ok_or(anyhow::anyhow!("Invalid data"))?;
-                let url = from_utf8(&url)?;
-                let url = Url::parse(url)?;
-                task_set.spawn(download_public_input(
-                    client,
-                    index,
-                    url.clone(),
-                    self.max_input_size_mb as usize,
-                    ProgramInputType::Public,
-                    self.timeout,
-                ));
-                Ok(ProgramInput::Unresolved(UnresolvedInput {
-                    index,
-                    url,
-                    input_type: ProgramInputType::Public,
-                }))
-            }
-            InputType::Private => {
-                let url = input.data.ok_or(anyhow::anyhow!("Invalid data"))?;
-                let url = from_utf8(&url)?;
-                let url = Url::parse(url)?;
-                Ok(ProgramInput::Unresolved(UnresolvedInput {
-                    index,
-                    url,
-                    input_type: ProgramInputType::Private,
-                }))
-            }
-            InputType::PublicData => {
-                let data = input.data.ok_or(anyhow::anyhow!("Invalid data"))?;
-                let data = data.to_vec();
+                // For I Ching program, PublicUrl input is actually the random seed
+                // Just pass it through as raw data
+                let data = input.data.ok_or_else(|| {
+                    error!("Input {} missing data", index);
+                    anyhow::anyhow!("Invalid data")
+                })?;
+                debug!("Processing PublicUrl input {} as raw data", index);
+                debug!("Raw data: {:?}", data);
                 Ok(ProgramInput::Resolved(ResolvedInput {
                     index,
                     data,
                     input_type: ProgramInputType::Public,
                 }))
+            },
+            InputType::Private | InputType::PublicProof => {
+                let url_bytes = input.data.ok_or_else(|| {
+                    error!("Input {} missing data", index);
+                    anyhow::anyhow!("Invalid data")
+                })?;
+                
+                let url_str = from_utf8(&url_bytes)?.to_string();
+                let url = Url::parse(&url_str)?;
+                
+                match input.input_type {
+                    InputType::Private => {
+                        Ok(ProgramInput::Unresolved(UnresolvedInput {
+                            index,
+                            url,
+                            input_type: ProgramInputType::Private,
+                        }))
+                    },
+                    InputType::PublicProof => {
+                        debug!("Input {} - Spawning proof download task", index);
+                        task_set.spawn(download_public_input(
+                            client,
+                            index,
+                            url.clone(),
+                            self.max_input_size_mb as usize,
+                            ProgramInputType::PublicProof,
+                            self.timeout,
+                        ));
+                        Ok(ProgramInput::Unresolved(UnresolvedInput {
+                            index,
+                            url,
+                            input_type: ProgramInputType::PublicProof,
+                        }))
+                    },
+                    _ => unreachable!()
+                }
             }
-            InputType::PublicProof => {
-                let url = input.data.ok_or(anyhow::anyhow!("Invalid data"))?;
-                let url = from_utf8(&url)?;
-                let url = Url::parse(url)?;
-                task_set.spawn(download_public_input(
-                    client,
+            InputType::PublicData => {
+                let data = input.data.ok_or(anyhow::anyhow!("Invalid data"))?;
+                Ok(ProgramInput::Resolved(ResolvedInput {
                     index,
-                    url.clone(),
-                    self.max_input_size_mb as usize,
-                    ProgramInputType::PublicProof,
-                    self.timeout,
-                ));
-                Ok(ProgramInput::Unresolved(UnresolvedInput {
-                    index,
-                    url,
-                    input_type: ProgramInputType::PublicProof,
+                    data,
+                    input_type: ProgramInputType::Public,
                 }))
             }
             InputType::PublicAccountData => {
@@ -186,7 +194,6 @@ impl DefaultInputResolver {
                 }))
             }
             _ => {
-                // not implemented yet / or unknown
                 Err(anyhow::anyhow!("Invalid input type"))
             }
         }
@@ -210,23 +217,43 @@ impl InputResolver for DefaultInputResolver {
         &self,
         inputs: Vec<InputT>,
     ) -> Result<Vec<ProgramInput>, anyhow::Error> {
+        debug!("Starting to resolve {} public inputs", inputs.len());
+        debug!("Input types: {:?}", inputs.iter().map(|i| i.input_type).collect::<Vec<_>>());
+        
         let mut url_set = JoinSet::new();
         let mut res = vec![ProgramInput::Empty; inputs.len()];
         for (index, input) in inputs.into_iter().enumerate() {
+            trace!("Processing input {} of type {:?}", index, input.input_type);
             let client = self.http_client.clone();
-            res[index] = self.par_resolve_input(client, index as u8, input, &mut url_set)?;
+            match self.par_resolve_input(client, index as u8, input, &mut url_set) {
+                Ok(program_input) => {
+                    debug!("Successfully resolved input {}: {:?}", index, program_input);
+                    res[index] = program_input;
+                }
+                Err(e) => {
+                    error!("Failed to resolve input {}: {}", index, e);
+                    error!("Error details: {:?}", e);
+                    return Err(e);
+                }
+            }
         }
+        
+        debug!("Waiting for {} downloads to complete", url_set.len());
         while let Some(url) = url_set.join_next().await {
             match url {
                 Ok(Ok(ri)) => {
                     let index = ri.index as usize;
+                    debug!("Successfully downloaded input {}", index);
+                    trace!("Download result: {:?}", ri);
                     res[index] = ProgramInput::Resolved(ri);
                 }
                 e => {
+                    error!("Error downloading input: {:?}", e);
                     return Err(anyhow::anyhow!("Error downloading input: {:?}", e));
                 }
             }
         }
+        debug!("Completed resolving all public inputs");
         Ok(res)
     }
 
@@ -318,13 +345,74 @@ async fn download_public_input(
     input_type: ProgramInputType,
     timeout: Duration,
 ) -> Result<ResolvedInput> {
-    let resp = client
-        .get(url)
+    debug!("Starting download for input {} from URL: {}", index, url);
+    debug!("Request details:");
+    debug!("  - scheme: {}", url.scheme());
+    debug!("  - host: {:?}", url.host());
+    debug!("  - path: {}", url.path());
+    debug!("  - query: {:?}", url.query());
+    
+    let request = client.get(url.clone())
         .timeout(timeout)
+        .header("User-Agent", "bonsol-node/1.0");
+    
+    debug!("Built request: {:?}", request);
+    
+    let resp = request
         .send()
-        .await?
-        .error_for_status()?;
+        .await
+        .map_err(|e| {
+            error!("Failed to send request for input {}: {}", index, e);
+            error!("Request error details: {:?}", e);
+            if let Some(status) = e.status() {
+                error!("HTTP status: {}", status);
+            }
+            if let Some(url) = e.url() {
+                error!("Failed URL: {}", url);
+            }
+            e
+        })?;
+
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    
+    debug!("Received response:");
+    debug!("  Status: {}", status);
+    debug!("  Headers: {:#?}", headers);
+    
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_else(|_| "No response body".to_string());
+        error!("HTTP error for input {}:", index);
+        error!("  Status: {}", status);
+        error!("  Headers: {:#?}", headers);
+        error!("  Body: {}", text);
+        
+        // Try to parse error as XML (common for S3 errors)
+        if text.contains("<?xml") {
+            error!("S3 error response detected:");
+            error!("{}", text);
+        }
+        
+        return Err(anyhow::anyhow!(
+            "HTTP error: {} - {} - Headers: {:#?}",
+            status,
+            text,
+            headers
+        ));
+    }
+
+    debug!("Got successful response for input {}, status: {}", index, status);
+    
+    let content_type = headers.get("content-type").and_then(|h| h.to_str().ok());
+    let content_length = headers.get("content-length").and_then(|h| h.to_str().ok());
+    
+    debug!("Response metadata:");
+    debug!("  Content-Type: {:?}", content_type);
+    debug!("  Content-Length: {:?}", content_length);
+    
     let byte = get_body_max_size(resp.bytes_stream(), max_size_mb * 1024 * 1024).await?;
+    debug!("Successfully downloaded {} bytes for input {}", byte.len(), index);
+    
     Ok(ResolvedInput {
         index,
         data: byte.to_vec(),

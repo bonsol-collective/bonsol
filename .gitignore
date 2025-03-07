@@ -17,3 +17,7 @@ stark
 MyLogFile.log
 .pnpm-store
 
+
+# Environment variables
+.env
+elf/

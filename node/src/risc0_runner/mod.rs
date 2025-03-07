@@ -50,9 +50,12 @@ use {
     tokio::{
         fs::File, io::AsyncReadExt, process::Command, sync::mpsc::UnboundedSender, task::JoinHandle,
     },
-    tracing::{error, info, warn},
+    tracing::{error, info, warn, debug},
     verify_prover_version::verify_prover_version,
 };
+
+use std::str;
+use url::Url;
 
 const REQUIRED_PROVER: ProverVersion = VERSION_V1_2_1;
 
@@ -483,6 +486,8 @@ async fn handle_execution_request<'a>(
     exec: ExecutionRequestV1<'a>,
     accounts: &[Pubkey],
 ) -> Result<()> {
+    debug!("Processing execution request");
+    
     if !can_execute(exec) {
         warn!(
             "Execution request for incompatible prover version: {:?}",
@@ -492,9 +497,12 @@ async fn handle_execution_request<'a>(
         return Ok(());
     }
 
-    // current naive implementation is to accept everything we have pending capacity for on this node, but this needs work
     let inflight = in_flight_proofs.len();
+    debug!("Current in-flight proofs: {}", inflight);
+    debug!("Maximum concurrent proofs allowed: {}", config.maximum_concurrent_proofs);
+    
     emit_event!(MetricEvents::ExecutionRequest, execution_id => exec.execution_id().unwrap_or_default());
+    
     if inflight < config.maximum_concurrent_proofs as usize {
         let eid = exec
             .execution_id()
@@ -504,12 +512,63 @@ async fn handle_execution_request<'a>(
             .image_id()
             .map(|d| d.to_string())
             .ok_or(Risc0RunnerError::InvalidData)?;
+            
+        debug!("Processing execution ID: {}", eid);
+        debug!("Image ID: {}", image_id);
+        
         let expiry = exec.max_block_height();
+        debug!("Execution expiry block: {}", expiry);
+        
         let img = loaded_images.get(&image_id);
+        debug!("Image loaded status: {}", img.is_some());
+        
+        // Check deployment data from chain
+        debug!("Fetching deployment account data for image: {}", image_id);
+        let account = transaction_sender
+            .get_deployment_account(&image_id)
+            .await
+            .map_err(|e| {
+                error!("Failed to get deployment account during execution: {:?}", e);
+                Risc0RunnerError::ImageDownloadError(e)
+            })?;
+        
+        debug!("Got deployment account data, length: {}", account.data.len());
+        
+        if let Ok(deploy_data) = root_as_deploy_v1(&account.data) {
+            debug!("Successfully parsed deployment data during execution");
+            if let Some(url_bytes) = deploy_data.url() {
+                let bytes: Vec<u8> = url_bytes.bytes().collect();
+                debug!("Raw URL bytes during execution: {:?}", bytes);
+                if let Ok(url_str) = str::from_utf8(&bytes) {
+                    debug!("Raw URL string during execution: {}", url_str);
+                    // Try to parse and validate the URL
+                    match Url::parse(url_str) {
+                        Ok(parsed_url) => debug!("Parsed URL during execution: {}", parsed_url),
+                        Err(e) => {
+                            debug!("URL parsing error during execution: {:?} for URL: {}", e, url_str);
+                            if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
+                                debug!("URL missing scheme during execution");
+                            }
+                            if url_str.contains("://") {
+                                debug!("URL contains scheme but still invalid");
+                            }
+                        }
+                    }
+                } else {
+                    error!("URL contains invalid UTF-8 during execution");
+                }
+            } else {
+                error!("No URL found in deployment data during execution");
+            }
+        } else {
+            error!("Failed to parse deployment data during execution");
+        }
+        
         let img = if img.is_none() {
+            debug!("Image not found in loaded images, checking strategy: {:?}", config.missing_image_strategy);
             match config.missing_image_strategy {
                 MissingImageStrategy::DownloadAndClaim => {
-                    info!("Image not loaded, attempting to load and running claim");
+                    debug!("Attempting to download and claim image");
                     load_image(
                         config,
                         transaction_sender,
@@ -521,7 +580,7 @@ async fn handle_execution_request<'a>(
                     loaded_images.get(&image_id)
                 }
                 MissingImageStrategy::DownloadAndMiss => {
-                    info!("Image not loaded, loading and rejecting claim");
+                    debug!("Downloading image but will reject claim");
                     load_image(
                         config,
                         transaction_sender,
@@ -533,7 +592,7 @@ async fn handle_execution_request<'a>(
                     None
                 }
                 MissingImageStrategy::Fail => {
-                    info!("Image not loaded, rejecting claim");
+                    debug!("Rejecting claim due to missing image");
                     None
                 }
             }
@@ -542,32 +601,39 @@ async fn handle_execution_request<'a>(
         }
         .ok_or(Risc0RunnerError::ImgLoadError)?;
 
-        // naive compute cost estimate which is YES WE CAN DO THIS in the default amount of time
-        emit_histogram!(MetricEvents::ImageComputeEstimate, img.size  as f64, image_id => image_id.clone());
-        //ensure compute can happen before expiry
-        //execution_block + (image_compute_estimate % config.max_compute_per_block) + 1 some bogus calc
+        emit_histogram!(MetricEvents::ImageComputeEstimate, img.size as f64, image_id => image_id.clone());
         let computable_by = expiry / 2;
+        debug!("Compute deadline block: {}", computable_by);
 
         if computable_by < expiry {
-            //the way this is done can cause race conditions where so many request come in a short time that we accept
-            // them before we change the value of g so we optimistically change to inflight and we will decrement if we dont win the claim
+            debug!("Processing inputs for execution");
             let inputs = exec.input().ok_or(Risc0RunnerError::InvalidData)?;
             let program_inputs = emit_event_with_duration!(MetricEvents::InputDownload, {
+                debug!("Resolving public inputs");
                 input_resolver.resolve_public_inputs(
                     inputs.iter().map(|i| i.unpack()).collect()
                 ).await?
             }, execution_id => eid, stage => "public");
+            
+            debug!("Storing inputs in staging area");
             input_staging_area.insert(eid.clone(), program_inputs);
+            
+            debug!("Attempting to claim execution");
             let sig = transaction_sender
                 .claim(&eid, accounts[0], accounts[2], computable_by)
                 .await
                 .map_err(|e| Risc0RunnerError::TransactionError(e.to_string()));
+                
             match sig {
                 Ok(sig) => {
+                    debug!("Claim successful, signature: {}", sig);
                     let callback_program = exec
                         .callback_program_id()
                         .and_then::<[u8; 32], _>(|v| v.bytes().try_into().ok())
                         .map(Pubkey::from);
+                        
+                    debug!("Callback program: {:?}", callback_program);
+                    
                     let callback = if callback_program.is_some() {
                         Some(ProgramExec {
                             program_id: callback_program.unwrap(),
@@ -609,13 +675,18 @@ async fn handle_execution_request<'a>(
                         },
                     );
                     emit_event!(MetricEvents::ClaimAttempt, execution_id => eid);
+                    debug!("Successfully registered in-flight proof");
                 }
                 Err(e) => {
-                    info!("Error claiming: {:?}", e);
+                    error!("Error claiming: {:?}", e);
                     in_flight_proofs.remove(&eid);
                 }
             }
+        } else {
+            debug!("Skipping execution - cannot compute before expiry");
         }
+    } else {
+        debug!("Rejecting execution - maximum concurrent proofs reached");
     }
     Ok(())
 }
@@ -627,13 +698,47 @@ async fn load_image<'a>(
     image_id: &str,
     loaded_images: LoadedImageMapRef<'a>,
 ) -> Result<()> {
+    debug!("Loading image with ID: {}", image_id);
     let account = transaction_sender
         .get_deployment_account(image_id)
         .await
-        .map_err(Risc0RunnerError::ImageDownloadError)?;
-    let deploy_data = root_as_deploy_v1(&account.data)
-        .map_err(|_| anyhow::anyhow!("Failed to parse account data"))?;
+        .map_err(|e| {
+            error!("Failed to get deployment account: {:?}", e);
+            Risc0RunnerError::ImageDownloadError(e)
+        })?;
+    
+    debug!("Got deployment account data, length: {}", account.data.len());
+    let deploy_data = match root_as_deploy_v1(&account.data) {
+        Ok(data) => {
+            debug!("Successfully parsed deployment data");
+            if let Some(url_bytes) = data.url() {
+                // Print the raw URL bytes for debugging
+                let bytes: Vec<u8> = url_bytes.bytes().collect();
+                debug!("Raw URL bytes: {:?}", bytes);
+                if let Ok(url_str) = str::from_utf8(&bytes) {
+                    debug!("URL as string: {}", url_str);
+                    // Try to parse and validate the URL
+                    match Url::parse(url_str) {
+                        Ok(parsed_url) => debug!("Parsed URL: {}", parsed_url),
+                        Err(e) => error!("URL parsing error: {}", e),
+                    }
+                } else {
+                    error!("URL contains invalid UTF-8");
+                }
+            } else {
+                error!("No URL found in deployment data");
+            }
+            data
+        }
+        Err(e) => {
+            error!("Failed to parse deployment data: {:?}", e);
+            return Err(anyhow::anyhow!("Failed to parse account data").into());
+        }
+    };
+
+    debug!("Attempting to handle image deployment");
     handle_image_deployment(config, http_client, deploy_data, loaded_images).await?;
+    debug!("Image deployment handled successfully");
     Ok(())
 }
 
@@ -643,40 +748,127 @@ async fn handle_image_deployment<'a>(
     deploy: DeployV1<'a>,
     loaded_images: LoadedImageMapRef<'a>,
 ) -> Result<()> {
-    let url = deploy.url().ok_or(Risc0RunnerError::InvalidData)?;
+    let url_bytes = deploy.url().ok_or_else(|| {
+        error!("Failed to get URL from deployment data");
+        Risc0RunnerError::InvalidData
+    })?;
+    
+    // Convert URL bytes to string and validate
+    let bytes: Vec<u8> = url_bytes.bytes().collect();
+    debug!("Raw URL bytes from deployment: {:?}", bytes);
+    
+    let url_str = str::from_utf8(&bytes).map_err(|e| {
+        error!("Invalid UTF-8 in URL: {:?}", e);
+        anyhow::anyhow!("Invalid UTF-8 in URL")
+    })?;
+    
+    debug!("URL string before parsing: {}", url_str);
+    
+    // Try to fix relative URLs by prepending https:// if needed
+    let url_str = if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
+        debug!("Attempting to fix relative URL by prepending https://");
+        format!("https://{}", url_str.trim_start_matches('/'))
+    } else {
+        url_str.to_string()
+    };
+    
+    let url = Url::parse(&url_str).map_err(|e| {
+        error!("URL parsing error: {:?} for URL: {}", e, url_str);
+        if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
+            error!("URL must be absolute and start with http:// or https://");
+        }
+        anyhow::anyhow!("Invalid URL format: {}", e)
+    })?;
+
+    // Additional validation for absolute URLs
+    if !url.has_host() {
+        error!("URL must have a host: {}", url_str);
+        return Err(anyhow::anyhow!("URL must be absolute with a valid host").into());
+    }
+    
     let size = deploy.size_();
     let image_id = deploy.image_id().unwrap_or_default();
     let program_name = deploy.program_name().unwrap_or_default();
     
-    info!("Attempting to download image from URL: {}", url);
-    info!("Image ID: {}, Size: {}", image_id, size);
-    info!("Program name: {}", program_name);
+    debug!("Starting image deployment process");
+    debug!("URL (parsed): {}", url);
+    debug!("Image ID: {}", image_id);
+    debug!("Size: {}", size);
+    debug!("Program name: {}", program_name);
     
     emit_histogram!(MetricEvents::ImageDownload, size as f64, url => url.to_string());
     emit_event_with_duration!(MetricEvents::ImageDownload, {
-        // The URL from deployment data already includes the full path
-        info!("Downloading from URL: {}", url);
-        let resp = http_client.get(url).send().await?.error_for_status()?;
+        debug!("Initiating HTTP GET request to: {}", url);
+        let resp = match http_client.get(url.as_str()).send().await {
+            Ok(r) => {
+                debug!("Received HTTP response");
+                debug!("Response status: {}", r.status());
+                debug!("Response headers: {:?}", r.headers());
+                r
+            }
+            Err(e) => {
+                error!("HTTP request failed: {:?}", e);
+                return Err(e.into());
+            }
+        };
+        
+        let resp = match resp.error_for_status() {
+            Ok(r) => r,
+            Err(e) => {
+                error!("HTTP error status: {:?}", e);
+                return Err(e.into());
+            }
+        };
+        
         let min = std::cmp::min(size, (config.max_image_size_mb * 1024 * 1024) as u64) as usize;
-        info!("Downloading image, size {} min {}", size, min);
+        debug!("Download size limits - requested: {}, max: {}, using: {}", 
+            size, config.max_image_size_mb * 1024 * 1024, min);
+        
         if resp.status().is_success() {
             let stream = resp.bytes_stream();
-            let resp_data = get_body_max_size(stream, min)
-                .await
-                .map_err(|_|Risc0RunnerError::ImgTooLarge)?;
-
-            let img = Image::from_bytes(resp_data)?;
+            debug!("Starting to read response body stream");
+            
+            let resp_data = match get_body_max_size(stream, min).await {
+                Ok(data) => {
+                    debug!("Successfully read {} bytes from response", data.len());
+                    data
+                }
+                Err(e) => {
+                    error!("Failed to read response body: {:?}", e);
+                    return Err(Risc0RunnerError::ImgTooLarge.into());
+                }
+            };
+            
+            let img = match Image::from_bytes(resp_data) {
+                Ok(i) => {
+                    debug!("Successfully created image from bytes");
+                    i
+                }
+                Err(e) => {
+                    error!("Failed to create image from bytes: {:?}", e);
+                    return Err(e.into());
+                }
+            };
+            
             if let Some(bytes) = img.bytes() {
-                tokio::fs::write(Path::new(&config.risc0_image_folder).join(img.id.clone()), bytes).await?;
+                let path = Path::new(&config.risc0_image_folder).join(img.id.clone());
+                debug!("Writing image to path: {:?}", path);
+                if let Err(e) = tokio::fs::write(&path, bytes).await {
+                    error!("Failed to write image file: {:?}", e);
+                    return Err(e.into());
+                }
+                debug!("Successfully wrote image file");
             }
+            
             if img.id != image_id {
-                info!("Image ID mismatch. Expected: {}, Got: {}", image_id, img.id);
+                error!("Image ID mismatch - Expected: {}, Got: {}", image_id, img.id);
                 return Err(Risc0RunnerError::InvalidData.into());
             }
+            
             loaded_images.insert(img.id.clone(), img);
             info!("Successfully downloaded and stored image: {}", image_id);
         } else {
-            info!("Download failed with status: {}", resp.status());
+            error!("Download failed with status: {}", resp.status());
             return Err(Risc0RunnerError::InvalidData.into());
         }
         Ok(())

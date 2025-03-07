@@ -3,6 +3,7 @@ use anyhow::Result;
 use bonsol_prover::input_resolver::{DefaultInputResolver, InputResolver, ProgramInput};
 use bonsol_sdk::instructions::{ExecutionConfig, InputRef};
 use bonsol_sdk::{BonsolClient, ExecutionAccountStatus, InputType};
+use bonsol_interface::util::execution_address;
 use indicatif::ProgressBar;
 use sha2::{Digest, Sha256};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -69,6 +70,33 @@ pub async fn execution_waiter(
             .await?;
         match exec_status {
             ExecutionAccountStatus::Completed(ec) => {
+                // Get the raw account data using our new method
+                if let Some(account_data) = sdk.get_execution_account_data(&requester, &execution_id).await? {
+                    // For completed executions, data after the first byte is our journal
+                    if account_data.len() > 33 { // 1 byte exit code + 32 bytes input digest
+                        let journal_data = &account_data[1..];
+                        let (_input_digest, committed_outputs) = journal_data.split_at(32);
+                        
+                        // Try to find ASCII art (it should be after the structured output)
+                        if let Some(marker_pos) = committed_outputs.iter().position(|&x| x == 0xAA) {
+                            // Skip marker byte and 6 line values
+                            if committed_outputs.len() > marker_pos + 7 {
+                                let ascii_art = String::from_utf8_lossy(&committed_outputs[marker_pos + 7..]);
+                                indicator.finish_with_message(format!("Execution completed with exit code {}\n\nHexagram:\n{}", ec, ascii_art));
+                                return Ok(());
+                            }
+                        }
+                        
+                        // If we found no ASCII art, print the raw bytes for debugging
+                        indicator.finish_with_message(format!(
+                            "Execution completed with exit code {}.\nRaw committed outputs: {:?}", 
+                            ec,
+                            committed_outputs
+                        ));
+                        return Ok(());
+                    }
+                }
+                
                 indicator.finish_with_message(format!("Execution completed with exit code {}", ec));
                 return Ok(());
             }
@@ -190,7 +218,8 @@ pub async fn execute(
     sdk.send_txn_standard(&keypair, ixs).await?;
     indicator.finish_with_message("Waiting for execution");
     if wait {
-        execution_waiter(sdk, keypair.pubkey(), execution_id, expiry, timeout).await?;
+        execution_waiter(sdk, keypair.pubkey(), execution_id, expiry, timeout).await
+    } else {
+        Ok(())
     }
-    Ok(())
 }

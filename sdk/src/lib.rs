@@ -331,4 +331,21 @@ impl BonsolClient {
             }
         }
     }
+
+    /// Gets the raw account data for an execution request
+    pub async fn get_execution_account_data(
+        &self,
+        requester_pubkey: &Pubkey,
+        execution_id: &str,
+    ) -> Result<Option<Vec<u8>>> {
+        let (er, _) = execution_address(requester_pubkey, execution_id.as_bytes());
+        let account = self
+            .rpc_client
+            .get_account_with_commitment(&er, CommitmentConfig::confirmed())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to get account: {:?}", e))?
+            .value;
+        
+        Ok(account.map(|acc| acc.data))
+    }
 }
