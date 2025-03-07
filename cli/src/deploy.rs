@@ -4,6 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 use bonsol_sdk::{BonsolClient, ProgramInputType};
 use indicatif::ProgressBar;
+use log::debug;
 use object_store::aws::AmazonS3Builder;
 use object_store::ObjectStore;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -52,20 +53,22 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 ..
             } = s3_upload;
 
-            let dest =
-                object_store::path::Path::from(format!("{}-{}", manifest.name, manifest.image_id));
-
-            let url = endpoint.unwrap_or(format!(
-                "https://{}.s3.{}.amazonaws.com/{}",
-                bucket, region, dest
+            let dest = format!("{}-{}", manifest.name, manifest.image_id);
+            let store_path = object_store::path::Path::from(dest.clone());
+            
+            // Use conventional S3 endpoint URL format
+            let endpoint_url = endpoint.unwrap_or(format!(
+                "https://s3.{}.amazonaws.com",
+                region
             ));
-
+            
+            // Create the S3 client with the proper configuration
             let s3_client = AmazonS3Builder::new()
                 .with_bucket_name(&bucket)
                 .with_region(&region)
                 .with_access_key_id(&access_key)
                 .with_secret_access_key(&secret_key)
-                .with_endpoint(&url)
+                .with_endpoint(&endpoint_url)
                 .build()
                 .map_err(|err| {
                     BonsolCliError::S3ClientError(S3ClientError::FailedToBuildClient {
@@ -84,20 +87,28 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 })?;
 
             // get the file to see if it exists
-            if s3_client.head(&dest).await.is_ok() {
+            if s3_client.head(&store_path).await.is_ok() {
                 bar.set_message("File already exists, skipping upload");
             } else {
                 s3_client
-                    .put(&dest, loaded_binary.into())
+                    .put(&store_path, loaded_binary.into())
                     .await
                     .map_err(|err| {
-                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest, err })
+                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest: store_path.clone(), err })
                     })?;
             }
 
             bar.finish_and_clear();
-            println!("Uploaded to S3 url {}", url);
-            url
+
+            // Create a properly formatted HTTPS URL for the S3 object
+            // This follows the AWS S3 URL convention
+            let https_url = format!("https://{}.s3.{}.amazonaws.com/{}", bucket, region, dest);
+            println!("Image uploaded to S3");
+            debug!("S3 path: s3://{}/{}", bucket, dest);
+            debug!("HTTPS URL (used for download): {}", https_url);
+            
+            // Return the HTTPS URL for compatibility with the HTTP client
+            https_url
         }
         DeployArgs::Url(url_upload) => {
             let req = reqwest::get(&url_upload.url).await?;
