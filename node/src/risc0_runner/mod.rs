@@ -87,7 +87,7 @@ pub enum ClaimStatus {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct InflightProof {
+pub struct InflightRisc0SNARKProof {
     pub execution_id: String,
     pub image_id: String,
     pub status: ClaimStatus,
@@ -99,8 +99,8 @@ pub struct InflightProof {
     pub additional_accounts: Vec<AccountMeta>,
 }
 
-type InflightProofs = Arc<DashMap<String, InflightProof>>;
-type InflightProofRef<'a> = &'a DashMap<String, InflightProof>;
+type InflightRisc0SNARKProofs = Arc<DashMap<String, InflightRisc0SNARKProof>>;
+type InflightProofRef<'a> = &'a DashMap<String, InflightRisc0SNARKProof>;
 
 type LoadedImageMap = Arc<DashMap<String, Image>>;
 type LoadedImageMapRef<'a> = &'a DashMap<String, Image>;
@@ -116,7 +116,7 @@ pub struct Risc0Runner {
     txn_sender: Arc<RpcTransactionSender>,
     input_staging_area: InputStagingArea,
     self_identity: Arc<Pubkey>,
-    inflight_proofs: InflightProofs,
+    inflight_proofs: InflightRisc0SNARKProofs,
     input_resolver: Arc<dyn InputResolver + 'static>,
 }
 
@@ -321,7 +321,6 @@ impl Risc0Runner {
                             )
                             .await
                         }
-                        ChannelInstructionIxType::StatusV1 => Ok(()),
                         _ => {
                             info!("Unknown instruction type");
                             Ok(())
@@ -582,7 +581,7 @@ async fn handle_execution_request<'a>(
 
                     in_flight_proofs.insert(
                         eid.clone(),
-                        InflightProof {
+                        InflightRisc0SNARKProof {
                             execution_id: eid.clone(),
                             image_id: image_id.clone(),
                             status: ClaimStatus::Claiming,

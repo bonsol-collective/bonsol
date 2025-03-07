@@ -7,7 +7,7 @@ use {
     bonsol_interface::{
         bonsol_schema::{
             ChannelInstruction, ChannelInstructionArgs, ChannelInstructionIxType, ClaimV1,
-            ClaimV1Args, StatusTypes, StatusV1, StatusV1Args,
+            ClaimV1Args,
         },
         util::{deployment_address, execution_address, execution_claim_address},
     },
@@ -68,16 +68,9 @@ pub trait TransactionSender {
         input_digest: &[u8],
         assumption_digest: &[u8],
         committed_outputs: &[u8],
+        additional_accounts: Vec<AccountMeta>,
         exit_code_system: u32,
         exit_code_user: u32,
-    ) -> Result<Signature>;
-
-    async fn submit_status(
-        &self,
-        execution_id: &str,
-        requester_account: Pubkey,
-        callback_exec: Option<ProgramExec>,
-        additional_accounts: Vec<AccountMeta>,
     ) -> Result<Signature>;
 
     async fn get_current_block(&self) -> Result<u64>;
@@ -131,9 +124,9 @@ impl RpcTransactionSender {
     }
 }
 
-struct SubmitProofTxData<'a> {
+//* todo -- how should we serialize this
+struct ProofRisc0SNARK<'a> {
     execution_id: u64,
-    status: StatusTypes,
     proof: &'a [u8],
     execution_digest: Option<&'a [u8]>,
     input_digest: Option<&'a [u8]>,
@@ -223,7 +216,14 @@ impl TransactionSender for RpcTransactionSender {
         execution_id: &str,
         requester_account: Pubkey,
         callback_exec: Option<ProgramExec>,
+        proof: &[u8],
+        execution_digest: &[u8],
+        input_digest: &[u8],
+        assumption_digest: &[u8],
+        committed_outputs: &[u8],
         additional_accounts: Vec<AccountMeta>,
+        exit_code_system: u32,
+        exit_code_user: u32,
     ) -> Result<Signature> {
         let (execution_request_data_account, _) =
             execution_address(&requester_account, execution_id.as_bytes());
@@ -244,56 +244,16 @@ impl TransactionSender for RpcTransactionSender {
         ];
         accounts.extend(additional_accounts);
 
-        /*
-        let status = &StatusV1Args {
-            execution_id: Some(eid),                    //0-?? bytes lets say 16
-            status: StatusTypes::Completed,             //1 byte
-            proof: Some(proof_vec),                     //256 bytes
-            execution_digest: Some(execution_digest),   //32 bytes
-            input_digest: Some(input_digest),           //32 bytes
-            assumption_digest: Some(assumption_digest), //32 bytes
-            committed_outputs: Some(out),               //0-?? bytes lets say 32
-            exit_code_system,                           //4 byte
-            exit_code_user,                             //4 byte
-        };
-        */
+        //0-?? bytes lets say 16
+        //256 bytes
+        //32 bytes
+        //32 bytes
+        //32 bytes
+        //0-?? bytes lets say 32
+        //4 byte
+        //4 byte
 
-        /*
-        let mut fbb = FlatBufferBuilder::new();
-        let proof_vec = fbb.create_vector(proof);
-        let execution_digest = fbb.create_vector(execution_digest);
-        let input_digest = fbb.create_vector(input_digest);
-        let assumption_digest = fbb.create_vector(assumption_digest);
-        let eid = fbb.create_string(execution_id);
-        let out = fbb.create_vector(committed_outputs);
-        let stat = StatusV1::create(
-            &mut fbb,
-            &StatusV1Args {
-                execution_id: Some(eid),                    //0-?? bytes lets say 16
-                status: StatusTypes::Completed,             //1 byte
-                proof: Some(proof_vec),                     //256 bytes
-                execution_digest: Some(execution_digest),   //32 bytes
-                input_digest: Some(input_digest),           //32 bytes
-                assumption_digest: Some(assumption_digest), //32 bytes
-                committed_outputs: Some(out),               //0-?? bytes lets say 32
-                exit_code_system,                           //4 byte
-                exit_code_user,                             //4 byte
-            }, //total ~408 bytes plenty of room for more stuff
-        );
-        fbb.finish(stat, None);
-        let statbytes = fbb.finished_data();
-        let mut fbb2 = FlatBufferBuilder::new();
-        let off = fbb2.create_vector(statbytes);
-        let root = ChannelInstruction::create(
-            &mut fbb2,
-            &ChannelInstructionArgs {
-                ix_type: ChannelInstructionIxType::StatusV1,
-                status_v1: Some(off),
-                ..Default::default()
-            },
-        );
-        fbb2.finish(root, None);
-        */
+        // create instruction data here
 
         let ix_data = &[]; // todo: create new instruction data here
         let instruction = Instruction::new_with_bytes(self.bonsol_program, ix_data, accounts);
