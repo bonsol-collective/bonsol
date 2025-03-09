@@ -24,11 +24,13 @@ pub enum MetricEvents {
     InputDownload,
     ProofCycles,
     ProofSegments,
+    ProofSize,
     BonsolStartup,
     SignaturesInFlight,
     IncompatibleProverVersion,
     ProofSubmissionError,
     TransactionExpired,
+    ProofVerificationFailed,
 }
 
 macro_rules! emit_event {

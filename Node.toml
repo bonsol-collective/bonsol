@@ -13,3 +13,7 @@ env = "dev"
 Rpc = { rpc_url = "http://localhost:8899" }
 [signer_config]
 KeypairFile = { path = "node_keypair.json" }
+
+# Enable debug logging
+[metrics_config]
+Prometheus = {}

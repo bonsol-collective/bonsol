@@ -942,6 +942,7 @@ dependencies = [
  "bonsol-schema",
  "bytes",
  "futures-util",
+ "hex",
  "mockito",
  "reqwest 0.11.27",
  "risc0-binfmt",

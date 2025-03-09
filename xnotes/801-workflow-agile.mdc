@@ -1,0 +1,44 @@
+---
+description: @801 Must ALWAYS follow the steps outlined in this workflow to complete the project or goals fo the user
+globs: 
+---
+# Agile Workflow to be followed
+
+**Critical Rule**: First Ensure a .ai/prd.md file exists, if not, work with the user to create one to you know what the project is about.
+**Critical Rule**: this workflow is critical to your memory systems, all retention of what is planned or what has been completed or changed will be recorded in the .ai folder. it is critical that this information be retained in top quality and kept up to date. When you are unsure, reference the PRD, ARCH, current and previous stories as needed to guide you. If still unsure, dont ever guess - ask the user for help.
+
+1. When coming online, you will first check if a .ai/prd.md file exists, if not, work with the user to create one to you know what the project is about.
+2. Help Improve the .ai/prd.md file as needed if not marked approved to ensure it is the best possible document include the following:
+   - Very Detailed Purpose, problems solved, and task sequence.
+   - Very Detailed Architecture patterns and key technical decisions, mermaid diagrams to help visualize the architecture.
+   - Very Detailed Technologies, setup, and constraints.
+   - Unknowns, assumptions, and risks.
+3. Once the .ai/prd.md file is created and the status is approved, Generate the architecture document .ai/arch.md draft - which also needs to be approved.
+4. Once the .ai/arch.md is approved, create the draft of the first story in the .ai folder.
+5. Always use the [903-story.mdc](mdc:xnotes/903-story.mdc) file as a template for the story. The story will be named <story-or-task-><N>.story.md added to the .ai folder
+   - Example: .ai/story-1.story.md or .ai/task-1.story.md
+
+- Since we follow TDD, each subtask on a story will include unit tests with at least 80% quality coverage.
+
+5. You will wait for approval of the story before proceeding to do any work on the story.
+6. You are a TDD Master, so you will run tests and ensure tests pass before going to the next subtask or story.
+7. You will update the story file as subtasks are completed.
+8. Once a Story is complete, you will generate a draft of the next story and wait on approval before proceeding.
+
+### During Development
+
+- Update story files as subtasks are completed.
+- If you are unsure of the next step, ask the user for clarification.
+- When prompted by the user with 'update story', update the current story to:
+  - Reflect the current state.
+  - Clarify next steps.
+- Continue to verify the story is correct and the next steps are clear.
+
+
+## YOU DO NOT NEED TO ASK to:
+
+1. Create the story file to be worked on next if none exist.
+2. Run unit Tests during the development process until they pass.
+3. Update the story AC and tasks as they are completed.
+4. Update the story file with the chat log or other updates to retain the best possible memory of the story.
+

@@ -11,28 +11,31 @@ use utils::generate_line_value;
 
 fn line_to_ascii(line: LineValue) -> String {
     match line {
-        LineValue::OldYin => "---x---".to_string(),    // yin changing into yang
-        LineValue::YoungYin => "---  ---".to_string(), // yin, unchanging
-        LineValue::OldYang => "---o---".to_string(),   // yang changing into yin
-        LineValue::YoungYang => "--------".to_string(), // yang, unchanging
-    }
+        LineValue::OldYin => "---x---",    // yin changing into yang (7 chars)
+        LineValue::YoungYin => "--- ---",   // yin, unchanging (7 chars)
+        LineValue::OldYang => "---o---",    // yang changing into yin (7 chars)
+        LineValue::YoungYang => "-------",  // yang, unchanging (7 chars)
+    }.to_string()
 }
 
 fn hexagram_to_ascii(hexagram: &HexagramGeneration) -> String {
-    // Build ASCII art representation from top to bottom
-    let mut ascii_art = String::new();
-    for (i, &line) in hexagram.lines.iter().enumerate().rev() {
+    let mut ascii_art = String::with_capacity(47); // 6 lines * 7 chars + 5 newlines
+    
+    // Build ASCII art representation from bottom to top (lines[0] is bottom)
+    for (i, &line) in hexagram.lines.iter().enumerate() {
         env::log(&format!("Converting line {} ({:?}) to ASCII", i, line));
         let line_ascii = line_to_ascii(line);
-        env::log(&format!("Line {} ASCII representation: '{}'", i, line_ascii));
+        env::log(&format!("Line {} ASCII: '{}' (len={})", i, line_ascii, line_ascii.len()));
         
-        if i < 5 { // Add newline for all but the last line
-            ascii_art.push_str(&format!("{}\n", line_ascii));
-        } else {
-            ascii_art.push_str(&line_ascii);
+        // Add line to the beginning of the string (top lines first)
+        if i > 0 {
+            ascii_art.insert_str(0, "\n");
         }
+        ascii_art.insert_str(0, &line_ascii);
     }
-    env::log(&format!("Final ASCII art size: {} bytes", ascii_art.len()));
+    
+    env::log(&format!("Final ASCII art:\n{}", ascii_art));
+    env::log(&format!("ASCII art length: {} bytes", ascii_art.len()));
     ascii_art
 }
 

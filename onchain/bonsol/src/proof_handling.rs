@@ -2,7 +2,7 @@ use std::ops::Neg;
 
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate};
 use groth16_solana::groth16::{Groth16Verifier, Groth16Verifyingkey};
-use solana_program::hash::hashv;
+use solana_program::{hash::hashv, msg};
 
 use crate::{
     error::ChannelError,
@@ -24,6 +24,18 @@ pub fn verify_risc0_v1_0_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelE
 }
 
 pub fn verify_risc0_v1_2_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelError> {
+    msg!(
+        "Starting RISC0 v1.2.1 verification:\n\
+         - Proof size: {} bytes\n\
+         - Input size: {} bytes\n\
+         - Proof prefix: {}\n\
+         - Input prefix: {}",
+        proof.len(),
+        inputs.len(),
+        hex::encode(&proof[..32.min(proof.len())]),
+        hex::encode(&inputs[..32.min(inputs.len())])
+    );
+
     let ins: [[u8; 32]; 5] = [
         sized_range::<32>(&inputs[0..32])?,
         sized_range::<32>(&inputs[32..64])?,
@@ -31,7 +43,42 @@ pub fn verify_risc0_v1_2_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelE
         sized_range::<32>(&inputs[96..128])?,
         sized_range::<32>(&inputs[128..160])?,
     ];
-    verify_proof::<5>(proof, ins, &VERIFYINGKEY)
+
+    msg!(
+        "Input arrays prepared:\n\
+         - Array 0 (control root 0): {}\n\
+         - Array 1 (control root 1): {}\n\
+         - Array 2 (digest half 1): {}\n\
+         - Array 3 (digest half 2): {}\n\
+         - Array 4 (control ID): {}",
+        hex::encode(&ins[0]),
+        hex::encode(&ins[1]),
+        hex::encode(&ins[2]),
+        hex::encode(&ins[3]),
+        hex::encode(&ins[4])
+    );
+    
+    msg!("Starting proof verification with verifying key");
+    let result = verify_proof::<5>(proof, ins, &VERIFYINGKEY);
+    
+    match &result {
+        Ok(true) => msg!(
+            "Verification succeeded:\n\
+             - Total inputs processed: 5"
+        ),
+        Ok(false) => msg!(
+            "Verification failed (returned false):\n\
+             - Total inputs processed: 5"
+        ),
+        Err(e) => msg!(
+            "Verification error:\n\
+             - Error: {:?}\n\
+             - Total inputs processed: 5",
+            e
+        ),
+    }
+    
+    result
 }
 
 fn verify_proof<const NI: usize>(
@@ -39,31 +86,174 @@ fn verify_proof<const NI: usize>(
     inputs: [[u8; 32]; NI],
     vkey: &Groth16Verifyingkey,
 ) -> Result<bool, ChannelError> {
+    msg!("Step 1: Starting proof verification process");
+    
+    // Log input details
+    let input_concat = inputs.concat();
+    let input_slice = &[&input_concat[..]];
+    msg!(
+        "Step 1a - Input validation:\n\
+         - Number of inputs: {}\n\
+         - Total input bytes: {}\n\
+         - Input hash: {}\n\
+         - First input preview: {}",
+        NI,
+        inputs.len() * 32,
+        hex::encode(hashv(input_slice).to_bytes()),
+        hex::encode(&inputs[0])
+    );
+    
+    msg!("Step 2: Deserializing proof_a");
     let ace: Vec<u8> = toggle_endianness_256(&[&proof[0..64], &[0u8][..]].concat());
-    let proof_a: G1 = G1::deserialize_with_mode(&*ace, Compress::No, Validate::No).unwrap();
+    let proof_a: G1 = match G1::deserialize_with_mode(&*ace, Compress::No, Validate::No) {
+        Ok(pa) => {
+            msg!("Step 2a: Successfully deserialized proof_a");
+            pa
+        }
+        Err(e) => {
+            msg!(
+                "Step 2 FAILED - proof_a deserialization error:\n\
+                 - Error: {:?}\n\
+                 - Raw bytes (first 64): {}\n\
+                 - Endian-toggled (first 64): {}",
+                e,
+                hex::encode(&proof[0..64]),
+                hex::encode(&ace[0..64])
+            );
+            return Err(ChannelError::InvalidInstruction);
+        }
+    };
 
+    msg!("Step 3: Negating and reserializing proof_a");
     let mut proof_a_neg = [0u8; 65];
-    G1::serialize_with_mode(&proof_a.neg(), &mut proof_a_neg[..], Compress::No)
-        .map_err(|_| ChannelError::InvalidInstruction)?;
+    if let Err(e) = G1::serialize_with_mode(&proof_a.neg(), &mut proof_a_neg[..], Compress::No) {
+        msg!(
+            "Step 3 FAILED - proof_a negation error:\n\
+             - Error: {:?}\n\
+             - Original proof_a: {:?}",
+            e,
+            proof_a
+        );
+        return Err(ChannelError::InvalidInstruction);
+    }
+    msg!("Step 3a: Successfully negated proof_a");
 
-    let proof_a = toggle_endianness_256(&proof_a_neg[..64])
-        .try_into()
-        .map_err(|_| ChannelError::InvalidInstruction)?;
+    msg!("Step 4: Converting proof_a endianness");
+    let proof_a: [u8; 64] = match toggle_endianness_256(&proof_a_neg[..64]).try_into() {
+        Ok(pa) => {
+            msg!("Step 4a: Successfully converted proof_a endianness");
+            pa
+        }
+        Err(e) => {
+            msg!(
+                "Step 4 FAILED - proof_a endianness conversion error:\n\
+                 - Error: {:?}\n\
+                 - Negated bytes: {}",
+                e,
+                hex::encode(&proof_a_neg[..64])
+            );
+            return Err(ChannelError::InvalidInstruction);
+        }
+    };
 
-    let proof_b = proof[64..192]
-        .try_into()
-        .map_err(|_| ChannelError::InvalidInstruction)?;
+    msg!("Step 5: Extracting proof_b");
+    let proof_b: [u8; 128] = match proof[64..192].try_into() {
+        Ok(pb) => {
+            msg!("Step 5a: Successfully extracted proof_b");
+            pb
+        }
+        Err(e) => {
+            msg!(
+                "Step 5 FAILED - proof_b extraction error:\n\
+                 - Error: {:?}\n\
+                 - Raw bytes: {}",
+                e,
+                hex::encode(&proof[64..192])
+            );
+            return Err(ChannelError::InvalidInstruction);
+        }
+    };
 
-    let proof_c = proof[192..256]
-        .try_into()
-        .map_err(|_| ChannelError::InvalidInstruction)?;
+    msg!("Step 6: Extracting proof_c");
+    let proof_c: [u8; 64] = match proof[192..256].try_into() {
+        Ok(pc) => {
+            msg!("Step 6a: Successfully extracted proof_c");
+            pc
+        }
+        Err(e) => {
+            msg!(
+                "Step 6 FAILED - proof_c extraction error:\n\
+                 - Error: {:?}\n\
+                 - Raw bytes: {}",
+                e,
+                hex::encode(&proof[192..256])
+            );
+            return Err(ChannelError::InvalidInstruction);
+        }
+    };
 
-    let mut verifier: Groth16Verifier<NI> =
-        Groth16Verifier::new(&proof_a, &proof_b, &proof_c, &inputs, vkey)
-            .map_err(|_| ChannelError::InvalidProof)?;
+    msg!(
+        "Step 7: All proof components prepared:\n\
+         - proof_a hash: {}\n\
+         - proof_b hash: {}\n\
+         - proof_c hash: {}\n\
+         - Verifying key info: prepared",
+        hex::encode(hashv(&[&proof_a.to_vec()[..]]).to_bytes()),
+        hex::encode(hashv(&[&proof_b.to_vec()[..]]).to_bytes()),
+        hex::encode(hashv(&[&proof_c.to_vec()[..]]).to_bytes())
+    );
+
+    msg!("Step 8: Creating Groth16 verifier");
+    let mut verifier: Groth16Verifier<NI> = match Groth16Verifier::new(&proof_a, &proof_b, &proof_c, &inputs, vkey) {
+        Ok(v) => {
+            msg!("Step 8a: Successfully created Groth16 verifier");
+            v
+        }
+        Err(e) => {
+            msg!(
+                "Step 8 FAILED - Groth16 verifier creation error:\n\
+                 - Error: {:?}\n\
+                 - Proof components valid: {}\n\
+                 - Input size matches: {}\n\
+                 - Component sizes:\n\
+                   * proof_a: {} bytes\n\
+                   * proof_b: {} bytes\n\
+                   * proof_c: {} bytes",
+                e,
+                proof_a.len() == 64 && proof_b.len() == 128 && proof_c.len() == 64,
+                inputs.len() == NI,
+                proof_a.len(),
+                proof_b.len(),
+                proof_c.len()
+            );
+            return Err(ChannelError::InvalidProof);
+        }
+    };
+
+    msg!("Step 9: Starting final Groth16 verification");
     verifier
         .verify()
-        .map_err(|_| ChannelError::ProofVerificationFailed)
+        .map_err(|e| {
+            msg!(
+                "Step 9 FAILED - Groth16 verification error:\n\
+                 - Error: {:?}\n\
+                 - Input count: {}\n\
+                 - Total proof size: {} bytes\n\
+                 - Individual hashes:\n\
+                   * proof_a: {}\n\
+                   * proof_b: {}\n\
+                   * proof_c: {}\n\
+                 - First input preview: {}",
+                e,
+                NI,
+                proof.len(),
+                hex::encode(hashv(&[&proof_a.to_vec()[..]]).to_bytes()),
+                hex::encode(hashv(&[&proof_b.to_vec()[..]]).to_bytes()),
+                hex::encode(hashv(&[&proof_c.to_vec()[..]]).to_bytes()),
+                hex::encode(&inputs[0])
+            );
+            ChannelError::ProofVerificationFailed
+        })
 }
 
 pub fn output_digest_v1_0_1(

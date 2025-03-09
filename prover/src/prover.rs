@@ -4,10 +4,11 @@ use anyhow::Result;
 use bonsol_schema::ProgramInputType;
 use risc0_binfmt::MemoryImage;
 use risc0_zkvm::{get_prover_server, ExecutorEnv, ExecutorImpl, ProverOpts, ProverServer, Receipt};
+use tracing::info;
 
 use crate::input_resolver::ProgramInput;
 
-/// Creates a new risc0 executor environment from the provided inputs, it hadles setting up the execution env in the same way across types of provers.
+/// Creates a new risc0 executor environment from the provided inputs, it handles setting up the execution env in the same way across types of provers.
 pub fn new_risc0_exec_env(
     image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
@@ -17,8 +18,8 @@ pub fn new_risc0_exec_env(
         match input {
             ProgramInput::Resolved(ri) => {
                 if ri.input_type == ProgramInputType::PublicProof {
-                    let reciept: Receipt = bincode::deserialize(&ri.data)?;
-                    env_builder.add_assumption(reciept);
+                    let receipt: Receipt = bincode::deserialize(&ri.data)?;
+                    env_builder.add_assumption(receipt);
                 } else {
                     env_builder.write_slice(&ri.data);
                 }
@@ -34,7 +35,9 @@ pub fn new_risc0_exec_env(
 
 /// Gets the default r0 prover for this application
 /// Since the cli and the node both produce proofs there is a need for a central prover configuration.
+/// Note: This returns Rc since the prover should only be used in blocking contexts with tokio::task::spawn_blocking
 pub fn get_risc0_prover() -> Result<Rc<dyn ProverServer>> {
+    info!("Initializing RISC0 prover");
     let opts = ProverOpts::default();
     get_prover_server(&opts)
 }

@@ -3,7 +3,6 @@ use anyhow::Result;
 use bonsol_prover::input_resolver::{DefaultInputResolver, InputResolver, ProgramInput};
 use bonsol_sdk::instructions::{ExecutionConfig, InputRef};
 use bonsol_sdk::{BonsolClient, ExecutionAccountStatus, InputType};
-use bonsol_interface::util::execution_address;
 use indicatif::ProgressBar;
 use sha2::{Digest, Sha256};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;

@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use tracing::error;
-
 use {
     async_trait::async_trait,
     bonsol_interface::{
@@ -14,31 +12,30 @@ use {
     dashmap::DashMap,
     flatbuffers::FlatBufferBuilder,
     itertools::Itertools,
-    solana_rpc_client_api::config::RpcSendTransactionConfig,
+    solana_rpc_client_api::{
+        client_error::Error,
+        config::RpcSendTransactionConfig,
+    },
     solana_sdk::{
         account::Account,
         commitment_config::CommitmentConfig,
+        instruction::{AccountMeta, Instruction, InstructionError},
         message::{v0, VersionedMessage},
-        signature::Signature,
-        signer::SignerError,
+        pubkey::Pubkey,
+        signature::{Keypair, Signature},
+        signer::{Signer, SignerError},
         system_program,
-        transaction::VersionedTransaction,
+        transaction::{TransactionError, VersionedTransaction},
     },
     solana_transaction_status::TransactionStatus as TransactionConfirmationStatus,
     tokio::task::JoinHandle,
+    tracing::{error, info},
 };
 
 use {
     crate::types::ProgramExec,
     anyhow::Result,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        instruction::{AccountMeta, Instruction},
-        pubkey::Pubkey,
-        signature::Keypair,
-        signer::Signer,
-    },
-    tracing::info,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -341,5 +338,15 @@ impl TransactionSender for RpcTransactionSender {
             .get_account(&deployment_account)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to get account: {:?}", e))
+    }
+}
+
+fn extract_custom_error(error: &Error) -> Option<u32> {
+    if let Error { kind: solana_rpc_client_api::client_error::ErrorKind::TransactionError(
+        TransactionError::InstructionError(_, InstructionError::Custom(code))
+    ), .. } = error {
+        Some(*code)
+    } else {
+        None
     }
 }

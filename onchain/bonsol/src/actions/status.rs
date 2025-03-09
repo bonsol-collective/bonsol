@@ -27,6 +27,8 @@ use solana_program::{
     sysvar::Sysvar,
 };
 
+use hex;
+
 struct StatusAccounts<'a, 'b> {
     pub requester: &'a AccountInfo<'a>,
     pub exec: &'a AccountInfo<'a>,
@@ -202,9 +204,20 @@ fn verify_with_prover(
 ) -> Result<bool, ProgramError> {
     let prover_version =
         ProverVersion::try_from(er.prover_version()).unwrap_or(ProverVersion::default());
+    
+    msg!("Verifying proof with prover version: {:?}", prover_version);
+    msg!("Input digest length: {}", input_digest.len());
+    msg!("Committed outputs length: {}", co.len());
+    msg!("Assumption digest length: {}", asud.len());
+    msg!("Execution digest length: {}", exed.len());
+    msg!("System exit code: {}", st.exit_code_system());
+    msg!("User exit code: {}", st.exit_code_user());
+    
     let verified = match prover_version {
         VERSION_V1_0_1 => {
+            msg!("Using V1.0.1 verification");
             let output_digest = output_digest_v1_0_1(input_digest, co, asud);
+            msg!("Generated output digest: {}", hex::encode(&output_digest));
             let proof_inputs = prepare_inputs_v1_0_1(
                 er.image_id().unwrap(),
                 exed,
@@ -212,10 +225,13 @@ fn verify_with_prover(
                 st.exit_code_system(),
                 st.exit_code_user(),
             )?;
+            msg!("Prepared proof inputs length: {}", proof_inputs.len());
             verify_risc0_v1_0_1(proof, &proof_inputs)?
         }
         VERSION_V1_2_1 => {
+            msg!("Using V1.2.1 verification");
             let output_digest = output_digest_v1_2_1(input_digest, co, asud);
+            msg!("Generated output digest: {}", hex::encode(&output_digest));
             let proof_inputs = prepare_inputs_v1_2_1(
                 er.image_id().unwrap(),
                 exed,
@@ -223,9 +239,15 @@ fn verify_with_prover(
                 st.exit_code_system(),
                 st.exit_code_user(),
             )?;
+            msg!("Prepared proof inputs length: {}", proof_inputs.len());
             verify_risc0_v1_2_1(proof, &proof_inputs)?
         }
-        _ => false,
+        _ => {
+            msg!("Unsupported prover version");
+            false
+        }
     };
+    
+    msg!("Proof verification result: {}", verified);
     Ok(verified)
 }

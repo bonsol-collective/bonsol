@@ -116,17 +116,14 @@ impl DefaultInputResolver {
         
         match input.input_type {
             InputType::PublicUrl => {
-                // For I Ching program, PublicUrl input is actually the random seed
-                // Just pass it through as raw data
+                debug!("Processing PublicUrl input {}", index);
                 let data = input.data.ok_or_else(|| {
                     error!("Input {} missing data", index);
                     anyhow::anyhow!("Invalid data")
                 })?;
-                debug!("Processing PublicUrl input {} as raw data", index);
-                debug!("Raw data: {:?}", data);
                 Ok(ProgramInput::Resolved(ResolvedInput {
                     index,
-                    data,
+                    data: data.to_vec(),
                     input_type: ProgramInputType::Public,
                 }))
             },

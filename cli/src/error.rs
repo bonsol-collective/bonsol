@@ -35,6 +35,7 @@ pub enum BonsolCliError {
     #[error(transparent)]
     S3ClientError(#[from] S3ClientError),
 
+    #[allow(dead_code)]
     #[error("This upload method is not supported")]
     UnsupportedDeployError(),
 

@@ -12,11 +12,19 @@ pub enum LineValue {
     OldYin = 6,       // Changing yin (1/16)
 }
 
+/// Implementation of I-Ching line value operations.
+/// These methods are fundamental to I-Ching divination and will be used
+/// in future implementations of hexagram transformation and interpretation.
+#[allow(dead_code)]
 impl LineValue {
+    /// Determines if a line is in a changing state (OldYang or OldYin).
+    /// This is crucial for calculating the transformed hexagram.
     pub fn is_changing(&self) -> bool {
         matches!(self, LineValue::OldYang | LineValue::OldYin)
     }
 
+    /// Determines if a line represents yang energy (YoungYang or OldYang).
+    /// This is used for basic hexagram interpretation and line analysis.
     pub fn is_yang(&self) -> bool {
         matches!(self, LineValue::YoungYang | LineValue::OldYang)
     }

@@ -21,3 +21,11 @@ MyLogFile.log
 # Environment variables
 .env
 elf/
+*.log
+*.zip
+
+# Cursor IDE settings - track rules but ignore other IDE files
+.cursor/rules/*
+
+# Private individual user cursor rules
+.cursor/rules/_*.mdc
