@@ -1093,35 +1093,28 @@ fn risc0_prove(
             journal.bytes.clone(),
         );
 
-        // In dev mode, we create a FakeReceipt directly
+        // In dev mode, create a Receipt with FakeReceipt directly
         let receipt = Receipt::new(
             InnerReceipt::Fake(FakeReceipt::new(mock_claim)),
             journal.bytes.clone(),
         );
 
-        // Create API client for compression
+        // Get digest from the claim
+        let digest = receipt.claim()?.digest();
+
+        // Convert to succinct receipt using ApiClient
         let client = ApiClient::from_env()?;
         let opts = ProverOpts::default();
         
-        // Convert to succinct receipt using compression
         let succinct_receipt = client.compress(
             &opts,
             receipt.try_into()?,
             AssetRequest::Inline,
         )?;
 
-        // Extract the SuccinctReceipt and digest
-        let (digest, succinct) = match &succinct_receipt.inner {
-            InnerReceipt::Succinct(sr) => {
-                let digest = match &sr.claim {
-                    MaybePruned::Value(claim) => claim.digest(),
-                    MaybePruned::Pruned(_) => {
-                        error!("Unexpected pruned claim in dev mode");
-                        return Err(Risc0RunnerError::ProofGenerationError.into());
-                    }
-                };
-                (digest, sr.clone())
-            }
+        // Extract the SuccinctReceipt
+        let succinct = match &succinct_receipt.inner {
+            InnerReceipt::Succinct(sr) => sr.clone(),
             _ => {
                 error!("Expected succinct receipt after compression");
                 return Err(Risc0RunnerError::ProofGenerationError.into());
