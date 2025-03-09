@@ -22,11 +22,12 @@ use {
         sha::{Digest, Digestible},
         InnerReceipt, MaybePruned, ReceiptClaim, VerifierContext,
         FakeReceipt, ExecutorEnv, ApiClient, ProverOpts, AssetRequest,
+        Prover, get_prover_server
     },
     solana_sdk::{pubkey::Pubkey, signature::Signature, instruction::AccountMeta,},
     std::{
         convert::TryInto, env::consts::ARCH, fs, io::Cursor, path::Path, sync::Arc, time::Duration,
-        str,
+        str, rc::Rc,
     },
     utils::{check_stark_compression_tools_path, check_x86_64arch},
 };
@@ -1079,7 +1080,7 @@ fn risc0_prove(
     
     // Check if we're in dev mode
     if option_env!("RISC0_DEV_MODE").is_some() {
-        debug!("Dev mode: Creating mock proof");
+        debug!("Dev mode: Creating succinct receipt directly");
         
         // Unwrap journal early since we need it multiple times
         let journal = session.journal.ok_or_else(|| {
@@ -1087,39 +1088,28 @@ fn risc0_prove(
             anyhow::anyhow!("Journal must be provided")
         })?;
 
-        // Create the mock claim with proper digest
-        let mock_claim = ReceiptClaim::ok(
-            image_id,
-            journal.bytes.clone(),
-        );
-
-        // In dev mode, create a Receipt with FakeReceipt directly
-        let receipt = Receipt::new(
-            InnerReceipt::Fake(FakeReceipt::new(mock_claim)),
-            journal.bytes.clone(),
-        );
-
-        // Get digest from the claim
-        let digest = receipt.claim()?.digest();
-
-        // Convert to succinct receipt using ApiClient
-        let client = ApiClient::from_env()?;
-        let opts = ProverOpts::default();
+        // Create a prover with succinct options
+        let prover = get_prover_server(&ProverOpts::succinct())?;
         
-        let succinct_receipt = client.compress(
-            &opts,
-            receipt.try_into()?,
-            AssetRequest::Inline,
-        )?;
+        // Create minimal execution environment with just the journal
+        let env = ExecutorEnv::builder()
+            .write(&journal.bytes)?
+            .build()?;
 
+        // Get succinct receipt directly from prover
+        let receipt = prover.prove(env, &[])?;
+        
         // Extract the SuccinctReceipt
-        let succinct = match &succinct_receipt.inner {
-            InnerReceipt::Succinct(sr) => sr.clone(),
+        let succinct = match receipt.receipt.inner {
+            InnerReceipt::Succinct(sr) => sr,
             _ => {
-                error!("Expected succinct receipt after compression");
+                error!("Expected succinct receipt in dev mode");
                 return Err(Risc0RunnerError::ProofGenerationError.into());
             }
         };
+
+        // Get digest from the claim field
+        let digest = succinct.claim.digest();
 
         return Ok((journal, digest, succinct));
     }
