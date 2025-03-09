@@ -21,6 +21,7 @@ use {
         recursion::{identity_p254},
         sha::{Digest, Digestible},
         InnerReceipt, MaybePruned, ReceiptClaim, VerifierContext,
+        FakeReceipt, ExecutorEnv, ApiClient, ProverOpts, AssetRequest,
     },
     solana_sdk::{pubkey::Pubkey, signature::Signature, instruction::AccountMeta,},
     std::{
@@ -1072,113 +1073,130 @@ fn risc0_prove(
     memory_image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
 ) -> Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>)> {
-    let image_id = memory_image.compute_id().to_string();
+    let image_id = memory_image.compute_id();
     let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
     let session = exec.run()?;
     
-    // Obtain the default prover
+    // Check if we're in dev mode
+    if option_env!("RISC0_DEV_MODE").is_some() {
+        debug!("Dev mode: Creating mock proof");
+        
+        // Unwrap journal early since we need it multiple times
+        let journal = session.journal.ok_or_else(|| {
+            error!("Missing journal in dev mode");
+            anyhow::anyhow!("Journal must be provided")
+        })?;
+
+        // Create the mock claim with proper digest
+        let mock_claim = ReceiptClaim::ok(
+            image_id,
+            journal.bytes.clone(),
+        );
+
+        // In dev mode, we create a FakeReceipt directly
+        let receipt = Receipt::new(
+            InnerReceipt::Fake(FakeReceipt::new(mock_claim)),
+            journal.bytes.clone(),
+        );
+
+        // Create API client for compression
+        let client = ApiClient::from_env()?;
+        let opts = ProverOpts::default();
+        
+        // Convert to succinct receipt using compression
+        let succinct_receipt = client.compress(
+            &opts,
+            receipt.try_into()?,
+            AssetRequest::Inline,
+        )?;
+
+        // Extract the SuccinctReceipt and digest
+        let (digest, succinct) = match &succinct_receipt.inner {
+            InnerReceipt::Succinct(sr) => {
+                let digest = match &sr.claim {
+                    MaybePruned::Value(claim) => claim.digest(),
+                    MaybePruned::Pruned(_) => {
+                        error!("Unexpected pruned claim in dev mode");
+                        return Err(Risc0RunnerError::ProofGenerationError.into());
+                    }
+                };
+                (digest, sr.clone())
+            }
+            _ => {
+                error!("Expected succinct receipt after compression");
+                return Err(Risc0RunnerError::ProofGenerationError.into());
+            }
+        };
+
+        return Ok((journal, digest, succinct));
+    }
+    
+    // Production mode - use real prover
+    debug!("Production mode: Generating real proof");
     let prover = get_risc0_prover()?;
     let ctx = VerifierContext::default();
     
     let info = emit_event_with_duration!(MetricEvents::ProofGeneration, {
         prover.prove_session(&ctx, &session)
-    }, system => "risc0", image_id => &image_id)?;
+    }, system => "risc0", image_id => image_id.to_string())?;
     
-    emit_histogram!(MetricEvents::ProofSegments, info.stats.segments as f64, system => "risc0", image_id => &image_id);
-    emit_histogram!(MetricEvents::ProofCycles, info.stats.total_cycles as f64, system => "risc0", cycle_type => "total", image_id => &image_id);
-    emit_histogram!(MetricEvents::ProofCycles, info.stats.user_cycles as f64, system => "risc0", cycle_type => "user", image_id => &image_id);
+    emit_histogram!(MetricEvents::ProofSegments, info.stats.segments as f64, system => "risc0", image_id => image_id.to_string());
+    emit_histogram!(MetricEvents::ProofCycles, info.stats.total_cycles as f64, system => "risc0", cycle_type => "total", image_id => image_id.to_string());
+    emit_histogram!(MetricEvents::ProofCycles, info.stats.user_cycles as f64, system => "risc0", cycle_type => "user", image_id => image_id.to_string());
     
     // Validate journal structure
-    let journal_bytes = info.receipt.journal.bytes.clone();
-    if journal_bytes.len() < 32 {
-        error!("Invalid journal size");
+    let journal = info.receipt.journal.clone();
+    if journal.bytes.len() < 32 {
+        error!("Invalid journal size in production mode");
         return Err(Risc0RunnerError::ProofGenerationError.into());
     }
+
+    // Create API client for compression
+    let client = ApiClient::from_env()?;
+    let opts = ProverOpts::default();
     
-    match &info.receipt.inner {
-        InnerReceipt::Composite(ref cr) => {
-            let sr = emit_event_with_duration!(MetricEvents::ProofConversion, {
-                prover.composite_to_succinct(cr)
-            }, system => "risc0")?;
-            
-            // Get identity receipt for p254 curve
-            let ident_receipt = identity_p254(&sr)?;
-            
-            // Extract digest from claim using direct field access
+    // Convert to succinct receipt using compression
+    let succinct_receipt = client.compress(
+        &opts,
+        info.receipt.try_into()?,
+        AssetRequest::Inline,
+    )?;
+
+    // Extract the SuccinctReceipt and digest
+    let (digest, succinct) = match &succinct_receipt.inner {
+        InnerReceipt::Succinct(sr) => {
             let digest = match &sr.claim {
                 MaybePruned::Value(rc) => {
                     match &rc.output {
-                        MaybePruned::Value(op) => {
-                            match op {
-                                Some(ref output) => {
-                                    match &output.assumptions {
-                                        MaybePruned::Value(ass) => Ok(ass.digest()),
-                                        _ => Err(Risc0RunnerError::ProofGenerationError)
-                                    }
+                        MaybePruned::Value(Some(output)) => {
+                            match &output.assumptions {
+                                MaybePruned::Value(ass) => ass.digest(),
+                                _ => {
+                                    error!("Pruned assumptions in production mode");
+                                    return Err(Risc0RunnerError::ProofGenerationError.into());
                                 }
-                                None => Err(Risc0RunnerError::ProofGenerationError)
                             }
                         }
-                        _ => Err(Risc0RunnerError::ProofGenerationError)
-                    }
-                }
-                _ => Err(Risc0RunnerError::ProofGenerationError)
-            }?;
-            
-            Ok((info.receipt.journal, digest, ident_receipt))
-        }
-        InnerReceipt::Fake(_) => {
-            debug!("Dev mode: Using Fake receipt");
-            // In dev mode, extract digest from claim
-            let claim = info.receipt.claim()?;
-            let (digest, receipt_claim) = match claim {
-                MaybePruned::Value(rc) => {
-                    match &rc.output {
-                        MaybePruned::Value(op) => {
-                            match op {
-                                Some(ref output) => {
-                                    match &output.assumptions {
-                                        MaybePruned::Value(ass) => Ok((ass.digest(), rc.clone())),
-                                        _ => Err(Risc0RunnerError::ProofGenerationError)
-                                    }
-                                }
-                                None => Err(Risc0RunnerError::ProofGenerationError)
-                            }
+                        _ => {
+                            error!("Invalid output in production mode");
+                            return Err(Risc0RunnerError::ProofGenerationError.into());
                         }
-                        _ => Err(Risc0RunnerError::ProofGenerationError)
                     }
                 }
-                MaybePruned::Pruned(digest) => {
-                    // Create a basic ReceiptClaim for dev mode
-                    let mock_claim = ReceiptClaim::ok(
-                        <[u8; 32] as Into<risc0_zkvm::sha::Digest>>::into([0u8; 32]),
-                        vec![], // empty journal
-                    );
-                    Ok((digest, mock_claim))
+                MaybePruned::Pruned(_) => {
+                    error!("Pruned claim in production mode");
+                    return Err(Risc0RunnerError::ProofGenerationError.into());
                 }
-            }?;
-            
-            // Create mock receipt for dev mode
-            let cr = info.receipt.inner.composite()?;
-            let prover = get_risc0_prover()?;
-            let mock_sr = emit_event_with_duration!(MetricEvents::ProofConversion, {
-                prover.composite_to_succinct(cr)
-            }, system => "risc0")?;
-            
-            // Get identity receipt for p254 curve
-            let ident_receipt = identity_p254(&mock_sr)?;
-            
-            Ok((info.receipt.journal, digest, ident_receipt))
+            };
+            (digest, sr.clone())
         }
         _ => {
-            error!("Unexpected receipt type from prove_session");
-            emit_event!(MetricEvents::ProvingFailed,
-                error => "unexpected_receipt_type",
-                details => "Expected Composite or Fake receipt"
-            );
-            Err(Risc0RunnerError::ProofGenerationError.into())
+            error!("Expected succinct receipt after compression");
+            return Err(Risc0RunnerError::ProofGenerationError.into());
         }
-    }
+    };
+    
+    Ok((journal, digest, succinct))
 }
 
 pub struct CompressedReceipt {
