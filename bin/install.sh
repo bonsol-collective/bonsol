@@ -1,7 +1,8 @@
 #!/bin/sh
 set -e
 
-curl -L https://risczero.com/install | sh
+# Use bash for RISC Zero install as it requires bash features
+curl -L https://risczero.com/install | bash
 rzup install cargo-risczero 1.2.1
 
 # check os linux or mac
