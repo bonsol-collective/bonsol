@@ -9,6 +9,9 @@ use risc0_zkvm::{
 use types::{HexagramGeneration, LineValue};
 use utils::generate_line_value;
 
+// Constants for dev mode
+const DEV_MODE_MARKER: u8 = 0xAA;
+
 fn line_to_ascii(line: LineValue) -> String {
     match line {
         LineValue::OldYin => "---x---",    // yin changing into yang (7 chars)
@@ -42,30 +45,53 @@ fn hexagram_to_ascii(hexagram: &HexagramGeneration) -> String {
 fn main() {
     env::log("Starting I Ching hexagram generation...");
     
+    // Check if we're in dev mode
+    let is_dev_mode = option_env!("RISC0_DEV_MODE").is_some();
+    
     // Read the random seed
     let mut random_seed = [0u8; 32];
     env::read_slice(&mut random_seed);
     env::log(&format!("Received random seed ({}): {:02x?}", random_seed.len(), random_seed));
     
     // Generate hexagram
-    let hexagram = generate_hexagram(&random_seed);
+    let hexagram = if is_dev_mode {
+        // In dev mode, generate a fixed hexagram for testing
+        env::log("Dev mode: Generating fixed test hexagram");
+        HexagramGeneration {
+            lines: [
+                LineValue::OldYin,     // Line 1 (bottom)
+                LineValue::YoungYang,  // Line 2
+                LineValue::OldYang,    // Line 3
+                LineValue::YoungYin,   // Line 4
+                LineValue::OldYin,     // Line 5
+                LineValue::YoungYang,  // Line 6 (top)
+            ]
+        }
+    } else {
+        generate_hexagram(&random_seed)
+    };
+    
     env::log(&format!("Generated hexagram with lines: {:#?}", hexagram.lines));
     
     // Track total committed data size
     let mut total_committed = 0;
     
-    // Commit proofs:
-    // 1. Hash of random seed
-    let seed_digest = Impl::hash_bytes(&random_seed);
+    // 1. Hash of random seed (or mock hash in dev mode)
+    let seed_digest = if is_dev_mode {
+        // Use consistent mock digest in dev mode
+        let mock_digest = [0u8; 32];
+        Impl::hash_bytes(&mock_digest)
+    } else {
+        Impl::hash_bytes(&random_seed)
+    };
+    
     let digest_bytes = seed_digest.as_bytes();
     env::log(&format!("Generated seed digest ({} bytes): {:02x?}", digest_bytes.len(), digest_bytes));
     env::commit_slice(digest_bytes);
     total_committed += digest_bytes.len();
     
     // 2. Commit hexagram values in a structured format
-    // Format: [marker_byte, line1, line2, line3, line4, line5, line6]
-    // marker_byte is 0xAA to identify this as a hexagram result
-    let mut structured_output = vec![0xAA];
+    let mut structured_output = vec![DEV_MODE_MARKER];
     structured_output.extend(hexagram.lines.iter().map(|&l| l as u8));
     env::log(&format!("Structured output ({} bytes): {:02x?}", structured_output.len(), structured_output));
     env::commit_slice(&structured_output);

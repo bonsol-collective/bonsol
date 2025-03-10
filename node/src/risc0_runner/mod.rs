@@ -14,20 +14,25 @@ use {
         bonsol_schema::{ClaimV1, DeployV1, ExecutionRequestV1},
         prover_version::{ProverVersion, VERSION_V1_2_1},
     },
+    bonsol_prover::{
+        image::Image,
+        input_resolver::{InputResolver, ProgramInput},
+        prover::{get_risc0_prover, new_risc0_exec_env},
+        util::get_body_max_size,
+    },
     dashmap::DashMap,
     risc0_binfmt::MemoryImage,
     risc0_zkvm::{
-        ExitCode, Journal, SuccinctReceipt, Receipt,
-        recursion::{identity_p254},
+        ExitCode, Journal, Receipt,
         sha::{Digest, Digestible},
-        InnerReceipt, MaybePruned, ReceiptClaim, VerifierContext,
-        FakeReceipt, ExecutorEnv, ApiClient, ProverOpts, AssetRequest,
-        Prover, get_prover_server
+        InnerReceipt, ReceiptClaim, VerifierContext,
+        FakeReceipt, ApiClient, ProverOpts, AssetRequest,
+        MaybePruned,
     },
     solana_sdk::{pubkey::Pubkey, signature::Signature, instruction::AccountMeta,},
     std::{
         convert::TryInto, env::consts::ARCH, fs, io::Cursor, path::Path, sync::Arc, time::Duration,
-        str, rc::Rc,
+        str,
     },
     utils::{check_stark_compression_tools_path, check_x86_64arch},
 };
@@ -36,12 +41,6 @@ use {
     crate::types::{BonsolInstruction, ProgramExec},
     anyhow::Result,
     bonsol_interface::bonsol_schema::{parse_ix_data, root_as_deploy_v1, ChannelInstructionIxType},
-    bonsol_prover::{
-        image::Image,
-        input_resolver::{InputResolver, ProgramInput},
-        prover::{get_risc0_prover, new_risc0_exec_env},
-        util::get_body_max_size,
-    },
     risc0_groth16::{ProofJson, Seal},    
     tempfile::tempdir,
     thiserror::Error,
@@ -426,7 +425,7 @@ pub async fn handle_claim<'a>(
                 let mem_image = image.get_memory_image()?;
                 
                 // Generate proof
-                let result: Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>), Risc0RunnerError> = 
+                let result: Result<(Journal, Digest, Receipt), Risc0RunnerError> = 
                     tokio::task::spawn_blocking(move || {
                         risc0_prove(mem_image, inputs).map_err(|e| {
                             info!("Error generating proof: {:?}", e);
@@ -435,19 +434,22 @@ pub async fn handle_claim<'a>(
                     })
                     .await?;
 
-                let (journal, assumptions_digest, succinct_receipt) = result?;
+                let (journal, _digest, receipt) = result?;
+
+                // Extract assumptions digest before moving receipt
+                let assumptions_digest = receipt.claim()?.digest();
 
                 // Create Receipt with proper metadata
                 let journal_bytes = journal.bytes.clone();
-                let receipt = Receipt::new(
-                    InnerReceipt::Succinct(succinct_receipt),
+                let receipt_for_compression = Receipt::new(
+                    receipt.inner,  // Use the inner receipt directly
                     journal_bytes
                 );
 
                 // Compress proof
                 let compressed_receipt = risc0_compress_proof(
                     config.stark_compression_tools_path.as_str(),
-                    receipt,
+                    receipt_for_compression,
                 )
                 .await
                 .map_err(|e| {
@@ -457,6 +459,7 @@ pub async fn handle_claim<'a>(
 
                 // Submit proof
                 let (input_digest, committed_outputs) = journal.bytes.split_at(32);
+                
                 let sig = transaction_sender
                     .submit_proof(
                         &eid,
@@ -1069,49 +1072,56 @@ pub async fn risc0_compress_proof(
     }
 }
 
+// Development mode constructor for Receipt with FakeReceipt
+fn create_dev_succinct_receipt(
+    image_id: Digest,
+    journal_bytes: Vec<u8>,
+) -> Result<Receipt> {
+    // Create a mock claim that matches the format expected by Bonsol
+    let mock_claim = ReceiptClaim::ok(image_id, journal_bytes.clone());
+    
+    // Create a FakeReceipt - note it only takes one argument in v1.2.1
+    let fake_receipt = FakeReceipt::new(mock_claim);
+    
+    // Create a Receipt with the fake inner receipt
+    let receipt = Receipt::new(
+        InnerReceipt::Fake(fake_receipt),
+        journal_bytes
+    );
+    
+    Ok(receipt)
+}
+
 // proving function, no async this is cpu/gpu intesive
 fn risc0_prove(
     memory_image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
-) -> Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>)> {
+) -> Result<(Journal, Digest, Receipt)> {
     let image_id = memory_image.compute_id();
     let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
     let session = exec.run()?;
     
     // Check if we're in dev mode
     if option_env!("RISC0_DEV_MODE").is_some() {
-        debug!("Dev mode: Creating succinct receipt directly");
+        debug!("Dev mode: Creating mock proof");
         
         // Unwrap journal early since we need it multiple times
-        let journal = session.journal.ok_or_else(|| {
-            error!("Missing journal in dev mode");
-            anyhow::anyhow!("Journal must be provided")
-        })?;
+        let journal = session.journal
+            .ok_or_else(|| {
+                error!("Missing journal in dev mode");
+                anyhow::anyhow!("Journal must be provided")
+            })?;
 
-        // Create a prover with succinct options
-        let prover = get_prover_server(&ProverOpts::succinct())?;
+        // Create receipt using dev mode constructor
+        let receipt = create_dev_succinct_receipt(
+            image_id,
+            journal.bytes.clone()
+        )?;
         
-        // Create minimal execution environment with just the journal
-        let env = ExecutorEnv::builder()
-            .write(&journal.bytes)?
-            .build()?;
+        // Get the digest from the claim
+        let digest = receipt.claim()?.digest();
 
-        // Get succinct receipt directly from prover
-        let receipt = prover.prove(env, &[])?;
-        
-        // Extract the SuccinctReceipt
-        let succinct = match receipt.receipt.inner {
-            InnerReceipt::Succinct(sr) => sr,
-            _ => {
-                error!("Expected succinct receipt in dev mode");
-                return Err(Risc0RunnerError::ProofGenerationError.into());
-            }
-        };
-
-        // Get digest from the claim field
-        let digest = succinct.claim.digest();
-
-        return Ok((journal, digest, succinct));
+        return Ok((journal, digest, receipt));
     }
     
     // Production mode - use real prover
@@ -1139,47 +1149,16 @@ fn risc0_prove(
     let opts = ProverOpts::default();
     
     // Convert to succinct receipt using compression
-    let succinct_receipt = client.compress(
+    let receipt = client.compress(
         &opts,
         info.receipt.try_into()?,
         AssetRequest::Inline,
     )?;
 
-    // Extract the SuccinctReceipt and digest
-    let (digest, succinct) = match &succinct_receipt.inner {
-        InnerReceipt::Succinct(sr) => {
-            let digest = match &sr.claim {
-                MaybePruned::Value(rc) => {
-                    match &rc.output {
-                        MaybePruned::Value(Some(output)) => {
-                            match &output.assumptions {
-                                MaybePruned::Value(ass) => ass.digest(),
-                                _ => {
-                                    error!("Pruned assumptions in production mode");
-                                    return Err(Risc0RunnerError::ProofGenerationError.into());
-                                }
-                            }
-                        }
-                        _ => {
-                            error!("Invalid output in production mode");
-                            return Err(Risc0RunnerError::ProofGenerationError.into());
-                        }
-                    }
-                }
-                MaybePruned::Pruned(_) => {
-                    error!("Pruned claim in production mode");
-                    return Err(Risc0RunnerError::ProofGenerationError.into());
-                }
-            };
-            (digest, sr.clone())
-        }
-        _ => {
-            error!("Expected succinct receipt after compression");
-            return Err(Risc0RunnerError::ProofGenerationError.into());
-        }
-    };
+    // Extract the digest
+    let digest = receipt.claim()?.digest();
     
-    Ok((journal, digest, succinct))
+    Ok((journal, digest, receipt))
 }
 
 pub struct CompressedReceipt {
