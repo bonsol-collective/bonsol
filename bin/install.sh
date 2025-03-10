@@ -12,15 +12,15 @@ Linux)
     # check if nvidia-smi exists and nvcc is available
     if command -v nvidia-smi >/dev/null 2>&1 && command -v nvcc >/dev/null 2>&1; then
         echo "installing with cuda support"
-        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux
+        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux --locked
     else
         echo "installing without cuda support, proving will be slower"
         # Install without any specific features for non-CUDA systems
-        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol
+        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --locked
     fi
     ;;
 Darwin)
-    cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features mac
+    cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features mac --locked
     ;;
 *)
     echo "Unsupported operating system: $OS"
