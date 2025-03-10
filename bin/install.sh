@@ -3,7 +3,17 @@ set -e
 
 # Use bash for RISC Zero install as it requires bash features
 curl -L https://risczero.com/install | bash
-rzup install cargo-risczero 1.2.1
+
+# Source the updated PATH
+. "$HOME/.bashrc"
+
+# Use full path to rzup if PATH update didn't work
+if ! command -v rzup >/dev/null 2>&1; then
+    echo "Using full path to rzup..."
+    "$HOME/.risc0/bin/rzup" install cargo-risczero 1.2.1
+else
+    rzup install cargo-risczero 1.2.1
+fi
 
 # check os linux or mac
 OS=$(uname -s)
