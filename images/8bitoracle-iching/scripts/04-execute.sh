@@ -67,7 +67,9 @@ if [ "$DEBUG" = true ]; then
     # Focus logging on risc0_runner and input resolver
     export RUST_LOG="info,risc0_runner=debug,bonsol_prover::input_resolver=debug"
     export RUST_BACKTRACE=1
+    export RISC0_DEV_MODE=1
     echo "RUST_LOG set to: $RUST_LOG"
+    echo "RISC0_DEV_MODE enabled"
 fi
 
 # Set BONSOL_S3_ENDPOINT with base URL only (no bucket)

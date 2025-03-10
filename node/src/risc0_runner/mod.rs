@@ -356,7 +356,10 @@ pub async fn handle_claim<'a>(
 ) -> Result<()> {
     info!("Received claim event");
     let claimer = accounts[3];
-    let execution_id = claim.execution_id().ok_or(Risc0RunnerError::InvalidData)?;
+    let execution_id = claim.execution_id().ok_or_else(|| {
+        error!("Missing execution ID in claim");
+        Risc0RunnerError::InvalidData
+    })?;
     
     // Early return if not our claim
     if &claimer != self_identity {
@@ -384,16 +387,23 @@ pub async fn handle_claim<'a>(
             let result: anyhow::Result<()> = async {
                 // Get and validate image
                 let image = loaded_images.get(&claim.image_id)
-                    .ok_or(anyhow::anyhow!("Image not loaded, fatal error aborting execution"))?;
+                    .ok_or_else(|| {
+                        error!("Image not loaded: {}", claim.image_id);
+                        anyhow::anyhow!("Image not loaded, fatal error aborting execution")
+                    })?;
                 
                 if image.data.is_none() {
+                    error!("Image data unavailable for ID: {}", claim.image_id);
                     return Err(Risc0RunnerError::ImageDataUnavailable.into());
                 }
 
                 // Handle inputs
                 let mut inputs = input_staging_area
                     .get(execution_id)
-                    .ok_or(Risc0RunnerError::InvalidData)?
+                    .ok_or_else(|| {
+                        error!("No inputs found for execution ID: {}", execution_id);
+                        Risc0RunnerError::InvalidData
+                    })?
                     .value()
                     .clone();
 
@@ -402,33 +412,42 @@ pub async fn handle_claim<'a>(
                     .count();
 
                 if unresolved_count > 0 {
-                    info!("{} outstanding inputs", unresolved_count);
+                    info!("{} outstanding inputs to resolve", unresolved_count);
                     // Note: We are not guaranteed to have inputs at claim time
                     emit_event_with_duration!(MetricEvents::InputDownload, {
                         input_resolver.resolve_private_inputs(
                             execution_id,
                             &mut inputs,
                             Arc::new(transaction_sender)
-                        ).await?;
+                        ).await.map_err(|e| {
+                            error!("Failed to resolve private inputs: {:?}", e);
+                            e
+                        })?;
                     }, execution_id => execution_id, stage => "private");
                     
                     input_staging_area.insert(execution_id.to_string(), inputs);
                 }
                 
-                info!("{} inputs resolved", unresolved_count);
+                info!("All {} inputs resolved successfully", unresolved_count);
 
                 // Take ownership of inputs
                 let (eid, inputs) = input_staging_area
                     .remove(execution_id)
-                    .ok_or(Risc0RunnerError::InvalidData)?;
+                    .ok_or_else(|| {
+                        error!("Failed to take ownership of inputs for execution ID: {}", execution_id);
+                        Risc0RunnerError::InvalidData
+                    })?;
                 
-                let mem_image = image.get_memory_image()?;
+                let mem_image = image.get_memory_image().map_err(|e| {
+                    error!("Failed to get memory image: {:?}", e);
+                    e
+                })?;
                 
                 // Generate proof
                 let result: Result<(Journal, Digest, Receipt), Risc0RunnerError> = 
                     tokio::task::spawn_blocking(move || {
                         risc0_prove(mem_image, inputs).map_err(|e| {
-                            info!("Error generating proof: {:?}", e);
+                            error!("Error generating proof: {:?}", e);
                             Risc0RunnerError::ProofGenerationError
                         })
                     })
@@ -492,6 +511,7 @@ pub async fn handle_claim<'a>(
 
             // Always clean up in-flight proof on completion
             if result.is_err() {
+                error!("Removing in-flight proof due to error: {:?}", result);
                 in_flight_proofs.remove(execution_id);
             }
             
@@ -1023,16 +1043,32 @@ pub async fn risc0_compress_proof(
         InnerReceipt::Fake(_) => {
             debug!("Dev mode: Creating mock compressed receipt");
             // Get claim using method call for regular Receipt
-            let claim = receipt.claim()?;
+            let claim = receipt.claim().map_err(|e| {
+                error!("Failed to get claim from fake receipt: {:?}", e);
+                Risc0RunnerError::ProofCompressionError
+            })?;
             
             match claim {
                 MaybePruned::Value(rc) => {
+                    debug!("Dev mode: Processing receipt claim");
                     // Get exit codes even in dev mode
                     let (system, user) = match rc.exit_code {
-                        ExitCode::Halted(user_exit) => (0, user_exit),
-                        ExitCode::Paused(user_exit) => (1, user_exit),
-                        ExitCode::SystemSplit => (2, 0),
-                        ExitCode::SessionLimit => (2, 2),
+                        ExitCode::Halted(user_exit) => {
+                            debug!("Dev mode: Halted with user exit code {}", user_exit);
+                            (0, user_exit)
+                        }
+                        ExitCode::Paused(user_exit) => {
+                            debug!("Dev mode: Paused with user exit code {}", user_exit);
+                            (1, user_exit)
+                        }
+                        ExitCode::SystemSplit => {
+                            debug!("Dev mode: System split");
+                            (2, 0)
+                        }
+                        ExitCode::SessionLimit => {
+                            debug!("Dev mode: Session limit reached");
+                            (2, 2)
+                        }
                     };
                     
                     // Create minimal mock proof data
@@ -1040,11 +1076,16 @@ pub async fn risc0_compress_proof(
                     
                     emit_event!(MetricEvents::ProofCompression,
                         mode => "dev",
-                        details => "Using mock proof data"
+                        details => "Using mock proof data",
+                        system_code => system,
+                        user_code => user
                     );
                     
+                    let execution_digest = rc.post.digest().as_bytes().to_vec();
+                    debug!("Dev mode: Created compressed receipt with execution digest: {:?}", execution_digest);
+                    
                     Ok(CompressedReceipt {
-                        execution_digest: rc.post.digest().as_bytes().to_vec(),
+                        execution_digest,
                         exit_code_system: system,
                         exit_code_user: user,
                         proof: mock_proof,
@@ -1099,28 +1140,44 @@ fn risc0_prove(
 ) -> Result<(Journal, Digest, Receipt)> {
     let image_id = memory_image.compute_id();
     let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
-    let session = exec.run()?;
+    
+    // Run the session first - needed for both dev mode and production
+    debug!("Running executor session");
+    let mut session = exec.run().map_err(|e| {
+        error!("Failed to run session: {:?}", e);
+        Risc0RunnerError::ProofGenerationError
+    })?;
+    
+    // Take ownership of journal, replacing with None to maintain valid state
+    let journal = std::mem::take(&mut session.journal).ok_or_else(|| {
+        error!("Missing journal from session");
+        anyhow::anyhow!("Journal must be provided")
+    })?;
+    
+    debug!("Session completed with journal size: {}", journal.bytes.len());
     
     // Check if we're in dev mode
     if option_env!("RISC0_DEV_MODE").is_some() {
-        debug!("Dev mode: Creating mock proof");
+        debug!("Dev mode: Creating mock proof using session data");
         
-        // Unwrap journal early since we need it multiple times
-        let journal = session.journal
-            .ok_or_else(|| {
-                error!("Missing journal in dev mode");
-                anyhow::anyhow!("Journal must be provided")
-            })?;
-
         // Create receipt using dev mode constructor
         let receipt = create_dev_succinct_receipt(
             image_id,
             journal.bytes.clone()
-        )?;
+        ).map_err(|e| {
+            error!("Failed to create dev mode receipt: {:?}", e);
+            Risc0RunnerError::ProofGenerationError
+        })?;
         
         // Get the digest from the claim
-        let digest = receipt.claim()?.digest();
+        let digest = receipt.claim().map_err(|e| {
+            error!("Failed to get claim from dev mode receipt: {:?}", e);
+            Risc0RunnerError::ProofGenerationError
+        })?.digest();
 
+        debug!("Dev mode: Successfully created mock proof");
+        debug!("Journal size: {}, Digest: {:?}", journal.bytes.len(), digest);
+        
         return Ok((journal, digest, receipt));
     }
     
@@ -1128,6 +1185,9 @@ fn risc0_prove(
     debug!("Production mode: Generating real proof");
     let prover = get_risc0_prover()?;
     let ctx = VerifierContext::default();
+    
+    // Put journal back into session for proving
+    session.journal = Some(journal.clone());
     
     let info = emit_event_with_duration!(MetricEvents::ProofGeneration, {
         prover.prove_session(&ctx, &session)
@@ -1138,7 +1198,6 @@ fn risc0_prove(
     emit_histogram!(MetricEvents::ProofCycles, info.stats.user_cycles as f64, system => "risc0", cycle_type => "user", image_id => image_id.to_string());
     
     // Validate journal structure
-    let journal = info.receipt.journal.clone();
     if journal.bytes.len() < 32 {
         error!("Invalid journal size in production mode");
         return Err(Risc0RunnerError::ProofGenerationError.into());
