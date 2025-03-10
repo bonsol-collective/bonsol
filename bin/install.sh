@@ -12,12 +12,11 @@ Linux)
     # check if nvidia-smi exists and nvcc is available
     if command -v nvidia-smi >/dev/null 2>&1 && command -v nvcc >/dev/null 2>&1; then
         echo "installing with cuda support"
-        # Install with specific Solana version to ensure compatibility
-        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux --no-default-features --features gpu
+        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux
     else
         echo "installing without cuda support, proving will be slower"
-        # Install with specific Solana version to ensure compatibility
-        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --no-default-features --features cpu
+        # Install without any specific features for non-CUDA systems
+        RUSTFLAGS="-C target-cpu=native" cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol
     fi
     ;;
 Darwin)
