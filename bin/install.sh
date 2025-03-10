@@ -26,6 +26,7 @@ Linux)
     # Install flatc if not present
     if ! command -v flatc >/dev/null 2>&1; then
         echo "Installing flatc 24.3.25..."
+        CURRENT_DIR=$(pwd)
         TEMP_DIR=$(mktemp -d)
         cd "$TEMP_DIR"
         git clone https://github.com/google/flatbuffers.git
@@ -34,7 +35,7 @@ Linux)
         cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
         make
         sudo make install
-        cd ..
+        cd "$CURRENT_DIR"
         rm -rf "$TEMP_DIR"
         echo "flatc installation complete"
     fi
