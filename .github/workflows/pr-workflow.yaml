@@ -2,10 +2,6 @@ name: Pull request workflow
 
 on:
   workflow_dispatch:
-  # Uncomment if you want to trigger on pull requests
-  # pull_request:
-  #   branches:
-  #     - main
 
 permissions:
   contents: read
@@ -13,9 +9,12 @@ permissions:
   packages: read
 
 jobs:
+
   check-formatting:
+
     name: Check & Format
     runs-on: ubicloud-standard-16
+
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       volumes:
@@ -35,8 +34,10 @@ jobs:
           cargo +nightly fmt --all -- --check
 
   unit-tests:
+
     name: Unit Test
     runs-on: ubicloud-standard-16
+
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       volumes:
@@ -51,5 +52,5 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/build-node-containers.yaml@main
+    uses: ./.github/workflows/build-node-containers.yaml
 
