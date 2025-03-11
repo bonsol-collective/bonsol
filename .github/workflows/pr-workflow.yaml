@@ -2,38 +2,32 @@ name: Pull request workflow
 
 on:
   workflow_dispatch:
-#  pull_request:
-#    branches:
-#      - main
+  # Uncomment if you want to trigger on pull requests
+  # pull_request:
+  #   branches:
+  #     - main
 
 permissions:
-
   contents: read
   pull-requests: write
   packages: read
 
 jobs:
-
-   check-formatting:
+  check-formatting:
     name: Check & Format
-
     runs-on: ubicloud-standard-16
-
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
       volumes:
         - local:/workspaces/bonsol
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Check 
+      - name: Check
         shell: bash
         id: check
         run: |
           cargo check
-
       - name: Fmt
         shell: bash
         id: fmt
@@ -42,19 +36,14 @@ jobs:
 
   unit-tests:
     name: Unit Test
-
     runs-on: ubicloud-standard-16
-
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
-      options: "-it"
       volumes:
         - local:/workspaces/bonsol
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Test
         run: cargo test -- --nocapture
 
@@ -62,5 +51,5 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: bonsol-collective/bonsol/.github/workflows/build-node-containers.yaml@main
+    uses: ./.github/workflows/build-node-containers.yaml@main
 
