@@ -154,4 +154,3 @@ helm install my-release \
   --set domainFilters[0]=HOSTED_ZONE_NAME \
   .
 ```
-

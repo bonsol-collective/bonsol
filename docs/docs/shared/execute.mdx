@@ -3,8 +3,8 @@
 Being able to request a one off execution is a key feature of Bonsol. This allows you to prove computations that are impossible to run on-chain.
 You can do this with the cli, using the `bonsol execute` command.
 
-```bash 
-bonsol execute -f execution-request.json 
+```bash
+bonsol execute -f execution-request.json
 ```
 Since there are quite a few options for how you can request execution, the cli takes a json file as an argument.
 Here is an example of a valid execution request json file.
@@ -37,7 +37,7 @@ Here is an example of a valid execution request json file.
   }
 }
 ```
-Many of the fields can be overriden with cli flags, the only required fields in the execution request json are 
+Many of the fields can be overriden with cli flags, the only required fields in the execution request json are
 * "imageId"
 * "executionConfig"
 And the only way to set a callback config is through the json file.
@@ -45,26 +45,26 @@ And the only way to set a callback config is through the json file.
 For example you can keep the execution file lightweight by using the cli flags. And make a input fule for changing inputs or even pipe the json into the command.
 Also if you omit the execution id the cli will generate a random one for you.
 
-#### Waiting 
+#### Waiting
 If you pass the `--wait` flag to the cli, the cli will wait for the execution to be completed and then return the result.
 
 ```bash
 bonsol execute -f execution-request.json --wait
 ```
 When a node claims the execution, the cli will notify you with a message.
-```bash 
+```bash
 Execution 9878798-987987-987987-987987 claimed by 6zT31kLCj8yM1RnJuiCbhHyybxsEGuvr8DP2biNi6j7o
 ```
 The default timeout for the cli is to wait until the expiry block, you can change this with the `--timeout` flag.
 If execution is not completed within the timeout, the cli will return an message.
-```bash 
-Error: Execution 9878798-987987-987987-987987 timed out 
+```bash
+Error: Execution 9878798-987987-987987-987987 timed out
 ```
 If the execution request expired without being claimed, the cli will return an message.
-```bash 
-Error: Execution 9878798-987987-987987-987987 expired 
+```bash
+Error: Execution 9878798-987987-987987-987987 expired
 ```
 When everything is successful, the cli will return the result of the execution.
-```bash 
+```bash
 Execution 9878798-987987-987987-987987 completed successfully
 ```

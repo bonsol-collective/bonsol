@@ -25,5 +25,4 @@ RUN set -euxo pipefail \
 &&  apt-get update \
 &&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/* 
-
+&&  rm -rf /var/lib/apt/lists/*

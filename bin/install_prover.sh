@@ -75,7 +75,7 @@ function parse_arguments() {
     echo "JOB_TIMEOUT is set to '$JOB_TIMEOUT'"
 }
 
-if [ ! -x $(which curl) ]; then 
+if [ ! -x $(which curl) ]; then
     echo "Error: curl is required to download risc0-prover."
     exit 1
 fi
@@ -87,10 +87,9 @@ for stark_tech in stark/rapidsnark stark/stark_verify stark/stark_verify_final.z
     if [ ! -f "${INSTALL_PREFIX}/${stark_tech}" ]; then
         echo "Downloading ${stark_tech} from ${PROVER_PROVIDER_URL}/${PROVER_VERSION}"
         curl --max-time ${JOB_TIMEOUT} -o "${INSTALL_PREFIX}/${stark_tech}" "$PROVER_PROVIDER_URL/${PROVER_VERSION}/${stark_tech}"
-    else 
+    else
         echo "${INSTALL_PREFIX}/${stark_tech} already exists. Skipping download."
     fi
 done
 chmod +x "${INSTALL_PREFIX}/stark/rapidsnark"
 chmod +x "${INSTALL_PREFIX}/stark/stark_verify"
-

@@ -30,7 +30,7 @@ rustc --version
 flatc --version
 ```
 
-Great! Our tools are there. Let's run the `simple` example already provided from the README to make sure our environment is working properly.  
+Great! Our tools are there. Let's run the `simple` example already provided from the README to make sure our environment is working properly.
 
 #### Prerequisites
 If this is your first time running bonsol install the Risc0 Groth16 Prover:
@@ -92,16 +92,16 @@ To use the script, run it with the following command:
 
 ### Available Options
 
-- `--prefix <install location>`: Specifies the directory where the RISC Zero prover technologies will be installed.  
+- `--prefix <install location>`: Specifies the directory where the RISC Zero prover technologies will be installed.
   **Default**: `/opt/risc0-prover`.
 
-- `--prover-provider-url <prover provider URL>`: URL from which the prover files will be downloaded.  
+- `--prover-provider-url <prover provider URL>`: URL from which the prover files will be downloaded.
   **Default**: `http://risc0-prover-us-east-1-041119533185.s3-website-us-east-1.amazonaws.com`.
 
-- `--job-timeout <timeout>`: Maximum time allowed for each download, in seconds.  
+- `--job-timeout <timeout>`: Maximum time allowed for each download, in seconds.
   **Default**: 3600 seconds (1 hour).
 
-- `--version <prover version>`: Specifies the version of the prover to install.  
+- `--version <prover version>`: Specifies the version of the prover to install.
   **Default**: `v2024-05-17.1`.
 
 - `--help`: Displays a help message with usage instructions.
@@ -215,4 +215,3 @@ chore: update dependencies
 ```bash
 cargo run -p bonsol-cli -- --keypair $HOME/.config/solana/id.json --rpc-url http://localhost:8899 build -z images/simple
 ```
-

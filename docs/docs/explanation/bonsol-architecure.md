@@ -89,5 +89,5 @@ sequenceDiagram
             Solana->>Prover2: Pay tip minus fees
             Solana->>Solana: Distribute fees to zkprogram creator (optional)
         end
-    end    
+    end
 ```

@@ -11,7 +11,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if ! command -v nvidia-smi &> /dev/null
     then
         echo "installing without cuda support, proving will be slower"
-        cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol 
+        cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol
     else
         echo "installing with cuda support"
         cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features linux
@@ -19,4 +19,3 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features mac
 fi
-

@@ -7,8 +7,8 @@ Bonsol (乃ㄖ几丂ㄖㄥ) is an innovative ZK "co-processor" designed for the 
 ## What is Bonsol?
 
 Bonsol acts as a bridge between Solana's on-chain capabilities and off-chain computational power. It allows developers to execute computationally intensive tasks off-chain and then verify the results on-chain, leveraging the power of verifiable computation. Using bonsol developers can lower their regulatory burden, build trust with their commpunity and simplify protocol design. This is in part because with verfiable computation, the computation can be proven to be correct with regard to how it was written. This is most useful when the code that describes the computation is available to the public.
-The interseted parties can see that while the data being processed is private, the computation is correct. 
-Bonsol is deeply integrated with Solana and can be used to build a variety of use cases. You can compose other programs on top of Bonsol to add verifiable compute to your protocol, or  to add verifiable layer on top of existing primitives.  Bonsol is built atop the excellent [RISC Zero](https://github.com/risc0/risc0) zkVM, which allows developers to write arbitrary programs and generate verifiable proofs of their execution, in some cases those proofs can be zero-knowledge with regard to the inputs. 
+The interseted parties can see that while the data being processed is private, the computation is correct.
+Bonsol is deeply integrated with Solana and can be used to build a variety of use cases. You can compose other programs on top of Bonsol to add verifiable compute to your protocol, or  to add verifiable layer on top of existing primitives.  Bonsol is built atop the excellent [RISC Zero](https://github.com/risc0/risc0) zkVM, which allows developers to write arbitrary programs and generate verifiable proofs of their execution, in some cases those proofs can be zero-knowledge with regard to the inputs.
 
 ## A high level overview of how Bonsol works
 

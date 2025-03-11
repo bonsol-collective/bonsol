@@ -7,7 +7,7 @@ Bonsol is the Offchain compute framework to make everything possible on solana.
 Interact with the docs at [Bonsol.sh](https://bonsol.sh)
 
 # NOTE !!!!!
-Do not use `node_keypair.json` in production, it is for local development only. 
+Do not use `node_keypair.json` in production, it is for local development only.
 
 ## Requirements:
 * Flat buffers 24.3.25
@@ -16,7 +16,7 @@ Do not use `node_keypair.json` in production, it is for local development only.
 ## Roadmap
 Stage 1: Dawn (current stage)
 * Developer feedback
-    * New features 
+    * New features
         * Interfaces
             * More Ingesters, Senders
             * More Input Types
@@ -27,5 +27,5 @@ Stage 1: Dawn (current stage)
         * Prover Supply Integrations
 * Community Building
 
-## Contributing and Local Development 
+## Contributing and Local Development
 Please see our [Contributing Guide](https://bonsol.sh/docs/contributing) for details on how to get started building 乃ㄖ几丂ㄖㄥ.

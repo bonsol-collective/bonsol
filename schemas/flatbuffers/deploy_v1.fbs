@@ -5,7 +5,7 @@ table DeployV1 {
   owner: [uint8]; //owner of the program duplicated here since its better to copy 32 bytes than to have to cow thew whole struct
   image_id: string; //digest of the program elf file
   program_name: string;
-  url: string; //url to the program elf file probbaly on ipfs/arweave/other 
+  url: string; //url to the program elf file probbaly on ipfs/arweave/other
   size: uint64; //size of the program elf file
   inputs: [ProgramInputType]; //loaded into the program in array order
 }
