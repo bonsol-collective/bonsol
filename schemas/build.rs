@@ -18,7 +18,10 @@ fn main() {
             );
         }
     } else {
-        panic!("flatc not found. Please install flatc version {}.", FLATC_VERSION);
+        panic!(
+            "flatc not found. Please install flatc version {}.",
+            FLATC_VERSION
+        );
     }
     // Define schema directory and target directory for generated Rust code.
     let schema_dir = Path::new("flatbuffers");
