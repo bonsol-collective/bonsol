@@ -121,8 +121,10 @@ LABEL org.opencontainers.image.description="A bonsol proving node"
 
 WORKDIR /usr/opt/bonsol
 
-COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-cpu
-COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-gpu
+COPY --from=bonsol-node-cpu /app/target/release/bonsol /usr/opt/bonsol/bonsol
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-tester /usr/opt/bonsol/bonsol-tester
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-cpu
+COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-gpu
 COPY docker/bonsol-node.sh /usr/opt/bonsol/bonsol-node.sh
 
 SHELL ["/bin/bash", "-c"]

@@ -5,6 +5,8 @@
 ARG IMAGE
 ARG CUDA_VERSION=12.5
 
+FROM solanalabs/solana:v1.18.26 as solana
+
 FROM ${IMAGE}
 
 ARG CUDA_VERSION
@@ -16,6 +18,8 @@ LABEL org.opencontainers.image.description="A bonsol proving node with Stark fil
 WORKDIR /usr/opt/bonsol
 
 SHELL ["/bin/bash", "-c"]
+
+COPY --from=solana  /usr/bin/solana  /usr/bin/solana
 
 RUN set -euxo pipefail \
 &&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
