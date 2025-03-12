@@ -62,6 +62,7 @@ jobs:
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
+    needs: call-build-node-container-image
 
     container:
       image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
