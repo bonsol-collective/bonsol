@@ -126,4 +126,3 @@ jobs:
             -y
           echo "Running Tests"
           ./target/debug/bonsol-tester 500
-          
