@@ -2,21 +2,27 @@
 set -e
 
 # Use bash for RISC Zero install as it requires bash features
+echo "curling risczero"
 curl -L https://risczero.com/install | bash
 
-# Source the updated PATH
-. "$HOME/.bashrc"
+# Directly export RISC0 bin directory to PATH for current session
+echo "Updating PATH for current session..."
+export PATH="$HOME/.risc0/bin:$PATH"
 
-# Use full path to rzup if PATH update didn't work
+# Check if rzup is available in PATH after direct export
 if ! command -v rzup >/dev/null 2>&1; then
-    echo "Using full path to rzup..."
+    echo "Note: You may need to restart your shell or source your shell config file"
+    echo "to use rzup normally in the future."
+    echo "Using full path to rzup for installation..."
     "$HOME/.risc0/bin/rzup" install cargo-risczero 1.2.1
 else
+    echo "rzup found in PATH, proceeding with installation..."
     rzup install cargo-risczero 1.2.1
 fi
 
 # check os linux or mac
 OS=$(uname -s)
+echo "Detected operating system: $OS"
 case "$OS" in
 Linux)
     # Install build dependencies if needed
@@ -64,7 +70,29 @@ Darwin)
     # Install flatc if not present
     if ! command -v flatc >/dev/null 2>&1; then
         echo "Installing flatc 24.3.25..."
-        brew install flatbuffers
+        brew update
+        brew install cmake
+        cmake --version   # Should show version 3.28.3 or later
+        brew install make gcc
+        make --version   # Should show version 3.81 or later
+        # Create a temporary directory for building
+        cd /tmp
+        # Clone the FlatBuffers repository
+        git clone https://github.com/google/flatbuffers.git
+        # Enter the repository directory
+        cd flatbuffers
+        # Checkout the specific version
+        git checkout v24.3.25
+        # Build FlatBuffers
+        cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+        make
+        # Move flatc compiler to /usr/local/bin
+        sudo mv flatc /usr/local/bin/
+        # Clean up
+        cd ..
+        rm -rf flatbuffers
+        # Verify the installation
+        flatc --version   # Should show version 24.3.25
         echo "flatc installation complete"
     fi
     cargo install bonsol-cli --git https://github.com/bonsol-collective/bonsol --features mac --locked --force
