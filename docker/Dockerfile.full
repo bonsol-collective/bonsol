@@ -21,6 +21,7 @@ SHELL ["/bin/bash", "-c"]
 
 COPY --from=solana  /usr/bin/solana  /usr/bin/solana
 COPY --from=solana  /usr/bin/solana-keygen /usr/bin/solana-keygen
+COPY --from=solana  /usr/bin/solana-test-validator /usr/bin/solana-test-validator
 
 RUN set -euxo pipefail \
 &&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
