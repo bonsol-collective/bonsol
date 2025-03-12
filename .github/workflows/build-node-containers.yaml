@@ -43,7 +43,7 @@ jobs:
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image slim
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -54,7 +54,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image start
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -67,7 +67,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image full
         uses: docker/build-push-action@v6
         with:
           context: .
