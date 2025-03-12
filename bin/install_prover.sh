@@ -8,12 +8,21 @@ DEFAULT_JOB_TIMEOUT=3600
 DEFAULT_VERSION="v2024-05-17.1"
 
 # Fallback file sizes in bytes (used only if server doesn't provide size)
-declare -A FALLBACK_SIZES=(
-    ["stark/rapidsnark"]="2359296"                 # ~2.3 MB
-    ["stark/stark_verify"]="2359296"               # ~2.3 MB
-    ["stark/stark_verify_final.zkey"]="3650722201" # ~3.4 GB
-    ["stark/stark_verify.dat"]="52428800"          # ~50 MB
-)
+# Using regular arrays instead of associative arrays for compatibility with Bash 3.2
+FALLBACK_FILES=("stark/rapidsnark" "stark/stark_verify" "stark/stark_verify_final.zkey" "stark/stark_verify.dat")
+FALLBACK_SIZES=("2359296" "2359296" "3650722201" "52428800")
+
+function get_fallback_size() {
+    local file="$1"
+    for i in "${!FALLBACK_FILES[@]}"; do
+        if [ "${FALLBACK_FILES[$i]}" = "$file" ]; then
+            echo "${FALLBACK_SIZES[$i]}"
+            return 0
+        fi
+    done
+    echo "0"
+    return 1
+}
 
 function human_readable_size() {
     local bytes=$1
@@ -114,7 +123,8 @@ function parse_arguments() {
             echo ""
             echo "Minimum required disk space (using fallback sizes):"
             total_size=0
-            for size in "${FALLBACK_SIZES[@]}"; do
+            for i in "${!FALLBACK_FILES[@]}"; do
+                size="${FALLBACK_SIZES[$i]}"
                 ((total_size += size))
             done
             echo "  Total: $(human_readable_size $total_size)"
@@ -175,19 +185,23 @@ fi
 parse_arguments "$@"
 
 # Get actual file sizes from server and calculate total
-declare -A ACTUAL_SIZES
+# Using regular arrays instead of associative arrays
+ACTUAL_FILES=()
+ACTUAL_SIZES=()
 total_size=0
 echo "Checking file sizes on server..."
-for stark_tech in stark/rapidsnark stark/stark_verify stark/stark_verify_final.zkey stark/stark_verify.dat; do
+for stark_tech in "${FALLBACK_FILES[@]}"; do
     url="$PROVER_PROVIDER_URL/$PROVER_VERSION/$stark_tech"
     size=$(get_remote_file_size "$url")
     if [ -n "$size" ]; then
-        ACTUAL_SIZES[$stark_tech]=$size
+        ACTUAL_FILES+=("$stark_tech")
+        ACTUAL_SIZES+=("$size")
         ((total_size += size))
         echo "✓ ${stark_tech}: $(human_readable_size $size)"
     else
-        size="${FALLBACK_SIZES[$stark_tech]}"
-        ACTUAL_SIZES[$stark_tech]=$size
+        size=$(get_fallback_size "$stark_tech")
+        ACTUAL_FILES+=("$stark_tech")
+        ACTUAL_SIZES+=("$size")
         ((total_size += size))
         echo "! ${stark_tech}: $(human_readable_size $size) (using fallback size)"
     fi
@@ -199,9 +213,10 @@ echo "Please ensure you have enough disk space available."
 echo
 
 mkdir -p "${INSTALL_PREFIX}"/stark
-for stark_tech in stark/rapidsnark stark/stark_verify stark/stark_verify_final.zkey stark/stark_verify.dat; do
+for i in "${!ACTUAL_FILES[@]}"; do
+    stark_tech="${ACTUAL_FILES[$i]}"
+    expected_size="${ACTUAL_SIZES[$i]}"
     url="$PROVER_PROVIDER_URL/$PROVER_VERSION/$stark_tech"
-    expected_size="${ACTUAL_SIZES[$stark_tech]}"
     output_file="${INSTALL_PREFIX}/${stark_tech}"
 
     if [ -f "$output_file" ] && verify_file_integrity "$output_file" "$expected_size"; then
