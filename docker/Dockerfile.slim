@@ -27,7 +27,8 @@ COPY . .
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
-&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json \
+&&  ls -l recipe.json
 
 
 ######################################################################
@@ -39,8 +40,6 @@ FROM chef AS builder-base
 ARG FLAT_BUFFERS_VERSION
 
 WORKDIR /app/
-
-COPY . . 
 
 SHELL ["/bin/bash", "-c"]
 
@@ -68,8 +67,14 @@ FROM builder-base AS bonsol-node-cpu
 
 WORKDIR /app/
 
+COPY --from=planner /app/recipe.json recipe.json
+
 RUN set -euxo pipefail \
-&&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json \
+&&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json 
+
+COPY . . 
+
+RUN set -euxo pipefail \
 &&  cargo build --release \
 &&  ls -l /app/target/release/ 
 
@@ -79,11 +84,11 @@ RUN set -euxo pipefail \
 
 FROM builder-base AS bonsol-node-gpu
 
-ARG RUST_VERSION
-ARG FLAT_BUFFERS_VERSION
 ARG CUDA_VERSION
 
 WORKDIR /app/
+
+COPY --from=planner /app/recipe.json recipe.json
 
 SHELL ["/bin/bash", "-c"]
 
@@ -94,11 +99,14 @@ RUN set -euxo pipefail \
 &&  apt-get update \
 &&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
 &&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
-&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
+&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json 
+
+COPY . . 
+
+RUN set -euxo pipefail \
 &&  cargo build -p bonsol-node --features=cuda --release \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/* \
-&&  ls -l /app/target/release/ 
+&&  rm -rf /var/lib/apt/lists/*
 
 
 ######################################################################
@@ -106,8 +114,6 @@ RUN set -euxo pipefail \
 ######################################################################
 
 FROM rust:${RUST_VERSION}-slim
-
-ARG CUDA_VERSION
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
@@ -117,10 +123,6 @@ WORKDIR /usr/opt/bonsol
 
 COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-cpu
 COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-gpu
-COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify /usr/opt/bonsol/stark/stark_verify
-COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify.dat /usr/opt/bonsol/stark/stark_verify.dat
-COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /app/stark_verify_final.zkey /usr/opt/bonsol/stark/stark_verify_final.zkey
-COPY --from=risczero/risc0-groth16-prover:v2024-05-17.1 /usr/local/sbin/rapidsnark /usr/opt/bonsol/stark/rapidsnark
 COPY docker/bonsol-node.sh /usr/opt/bonsol/bonsol-node.sh
 
 SHELL ["/bin/bash", "-c"]
@@ -136,12 +138,6 @@ RUN set -euxo pipefail \
       libsodium-dev \
       nasm \
       m4 \
-#&&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
-#&&  dpkg -i cuda-keyring_1.1-1_all.deb \
-#&&  rm cuda-keyring_1.1-1_all.deb \
-#&&  add-apt-repository contrib \
-#&&  apt-get update \
-#&&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/* 
 
