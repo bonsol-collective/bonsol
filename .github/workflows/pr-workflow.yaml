@@ -98,6 +98,8 @@ jobs:
 
       - name: E2E Test
         run: |
+          git clone https://github.com/bonsol-collective/bonsol.git
+          cd bonsol
           solana-keygen new -s --no-bip39-passphrase -f
           solana-test-validator \
             --ledger ./ledger \
