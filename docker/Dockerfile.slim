@@ -76,9 +76,7 @@ COPY . .
 
 RUN set -euxo pipefail \
 &&  cargo build --release \
-&&  ls -l /app/target/release/ \
-&&  find / -name bonsol.so \
-&&  find / -name callback_example.so
+&&  cargo build-sbf
 
 ###################################################################### 
 # Build bonsol node gpu version
@@ -123,6 +121,8 @@ LABEL org.opencontainers.image.description="A bonsol proving node"
 
 WORKDIR /usr/opt/bonsol
 
+COPY --from=bonsol-node-cpu /app/target/deploy/bonsol.so /usr/opt/bonsol/bonsol.so
+COPY --from=bonsol-node-cpu /app/target/deploy/callback_example.so /usr/opt/bonsol/callback_example.so
 COPY --from=bonsol-node-cpu /app/target/release/bonsol /usr/opt/bonsol/bonsol
 COPY --from=bonsol-node-cpu /app/target/release/bonsol-tester /usr/opt/bonsol/bonsol-tester
 COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-cpu
