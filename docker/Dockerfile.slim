@@ -82,7 +82,7 @@ RUN set -euxo pipefail \
 # Build bonsol artifacts
 ######################################################################
 
-FROM builder-base AS bonsol-artifacts
+FROM ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0 AS bonsol-artifacts
 
 WORKDIR /app/
 
