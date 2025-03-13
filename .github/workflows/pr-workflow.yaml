@@ -62,6 +62,7 @@ jobs:
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
+    needs: call-build-node-container-image
 
     container:
       image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
@@ -97,6 +98,8 @@ jobs:
 
       - name: E2E Test
         run: |
+          git clone https://github.com/bonsol-collective/bonsol.git
+          cd bonsol
           solana-keygen new -s --no-bip39-passphrase -f
           solana-test-validator \
             --ledger ./ledger \

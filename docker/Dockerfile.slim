@@ -76,7 +76,9 @@ COPY . .
 
 RUN set -euxo pipefail \
 &&  cargo build --release \
-&&  ls -l /app/target/release/
+&&  ls -l /app/target/release/ \
+&&  find / -name bonsol.so \
+&&  find / -name callback_example.so
 
 ######################################################################
 # Build bonsol node gpu version
