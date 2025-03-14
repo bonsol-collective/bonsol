@@ -94,10 +94,10 @@ jobs:
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
           echo "Starting node"
-          bonsol-node -f ./Node.toml 1>&1 &
+          /usr/opt/bonsol/bonsol-node-cpu -f ./Node.toml 1>&1 &
           sleep 15
           echo "Deploying"
-          bonsol \
+          /usr/opt/bonsol/bonsol \
             --keypair ~/.config/solana/id.json \
             --rpc-url http://127.0.0.1:8899 \
             deploy \
