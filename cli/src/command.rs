@@ -95,6 +95,13 @@ pub struct UrlUploadArgs {
     #[arg(help = "Specify a URL endpoint to deploy to", long, required = true)]
     pub url: String,
 
+    #[arg(
+        help = "Whether to post the binary to the URL endpoint",
+        long,
+        default_value = "true"
+    )]
+    pub post: bool,
+
     #[command(flatten)]
     pub shared_args: SharedDeployArgs,
 }

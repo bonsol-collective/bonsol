@@ -100,18 +100,42 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
             url
         }
         DeployArgs::Url(url_upload) => {
-            let req = reqwest::get(&url_upload.url).await?;
-            let bytes = req.bytes().await?;
-            if bytes != loaded_binary {
-                return Err(BonsolCliError::OriginBinaryMismatch {
-                    url: url_upload.url,
-                    binary_path: manifest.binary_path,
+            let url = if url_upload.post {
+                // Post the binary to the URL endpoint
+                // TODO: use command args to determine the method/URL
+                let url = format!(
+                    "{}/{}-{}",
+                    url_upload.url.trim_end_matches("/"),
+                    manifest.name,
+                    manifest.image_id
+                );
+                let client = reqwest::Client::new();
+                client
+                    .post(&url)
+                    .header("Content-Type", "application/octet-stream")
+                    .body(loaded_binary.clone())
+                    .send()
+                    .await?;
+
+                url
+            } else {
+                // Not posting assumes the data is already at the URL, check it
+                let req = reqwest::get(&url_upload.url).await?;
+                let bytes = req.bytes().await?;
+                if bytes != loaded_binary {
+                    return Err(BonsolCliError::OriginBinaryMismatch {
+                        url: url_upload.url,
+                        binary_path: manifest.binary_path,
+                    }
+                    .into());
                 }
-                .into());
-            }
+
+                url_upload.url
+            };
 
             bar.finish_and_clear();
-            url_upload.url
+            println!("Program available at URL {}", url);
+            url
         }
     };
 
