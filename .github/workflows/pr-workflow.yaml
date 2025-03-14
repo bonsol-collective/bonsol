@@ -94,10 +94,10 @@ jobs:
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
           echo "Starting node"
-          ./target/release/bonsol-node -f ./Node.toml 1>&1 &
+          bonsol-node -f ./Node.toml 1>&1 &
           sleep 15
           echo "Deploying"
-          ./target/debug/bonsol \
+          bonsol \
             --keypair ~/.config/solana/id.json \
             --rpc-url http://127.0.0.1:8899 \
             deploy \
@@ -106,5 +106,5 @@ jobs:
             --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
             -y
           echo "Running Tests"
-          ./target/debug/bonsol-tester 500
+          bonsol-tester 500
 
