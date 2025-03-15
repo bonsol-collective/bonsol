@@ -106,5 +106,5 @@ jobs:
             --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
             -y
           echo "Running Tests"
-          bonsol-tester 500
+          /usr/opt/bonsol/bonsol-tester 500
 
