@@ -94,6 +94,10 @@ jobs:
           solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
+          pwd
+          ls -l ./stark/stark_verify
+          echo "======="
+          ls -l 
           echo "Starting node"
           /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
           sleep 15
