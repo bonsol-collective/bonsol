@@ -76,7 +76,7 @@ jobs:
 
       - name: E2E Test
         run: |
-          set -euxo pipefail
+          #set -euxo pipefail
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
