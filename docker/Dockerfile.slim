@@ -27,9 +27,7 @@ COPY . .
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
-&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json \
-&&  ls -l recipe.json
-
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 
 ######################################################################
 # Build bonsol node common build environment
