@@ -75,8 +75,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: E2E Test
+        shell: bash
         run: |
-          #set -euxo pipefail
+          set -euxo pipefail
           cd /usr/opt/bonsol/
           echo "Using image ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}"
           git clone https://github.com/bonsol-collective/bonsol.git src
@@ -96,11 +97,6 @@ jobs:
           solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
-          echo "Current dir: $(pwd)"
-          find / -name stark_verify
-          ls -l ./stark/stark_verify
-          echo "======="
-          ls -l 
           echo "Starting node"
           /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
           sleep 15
