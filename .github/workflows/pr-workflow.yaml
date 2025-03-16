@@ -77,6 +77,7 @@ jobs:
       - name: E2E Test
         run: |
           #set -euxo pipefail
+          echo "Using image ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}"
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
@@ -94,7 +95,8 @@ jobs:
           solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
-          pwd
+          echo "Current dir: $(pwd)"
+          find / -name stark_verify
           ls -l ./stark/stark_verify
           echo "======="
           ls -l 
