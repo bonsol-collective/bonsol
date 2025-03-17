@@ -6,7 +6,7 @@ if [ ! -d "schemas" ]; then
   exit 1
 fi
 
-if [ ! -x $(which flatc) ]; then
+if [ ! -x "$(which flatc)" ]; then
   echo "Flatbuffers compiler is required"
   exit 1
 fi
