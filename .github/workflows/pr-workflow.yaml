@@ -13,7 +13,7 @@ permissions:
 
 jobs:
 
-  Check pre-commit:
+  check_pre-commit:
 
     name: Run pre-commit checks
     runs-on: ubuntu-latest
