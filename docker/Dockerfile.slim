@@ -27,9 +27,7 @@ COPY . .
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
-&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json \
-&&  ls -l recipe.json
-
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 
 ######################################################################
 # Build bonsol node common build environment
@@ -75,8 +73,21 @@ RUN set -euxo pipefail \
 COPY . . 
 
 RUN set -euxo pipefail \
-&&  cargo build --release \
-&&  ls -l /app/target/release/ 
+&&  cargo build --release
+
+######################################################################
+# Build bonsol artifacts
+######################################################################
+
+FROM ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0 AS bonsol-artifacts
+
+WORKDIR /app/
+
+
+RUN set -euxo pipefail \
+&&  git clone https://github.com/bonsol-collective/bonsol.git \
+&&  cd bonsol \
+&&  cargo build-sbf
 
 ###################################################################### 
 # Build bonsol node gpu version
@@ -121,8 +132,12 @@ LABEL org.opencontainers.image.description="A bonsol proving node"
 
 WORKDIR /usr/opt/bonsol
 
-COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-cpu
-COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-gpu
+COPY --from=bonsol-artifacts /app/bonsol/target/deploy/bonsol.so /usr/opt/bonsol/bonsol.so
+COPY --from=bonsol-artifacts /app/bonsol/target/deploy/callback_example.so /usr/opt/bonsol/callback_example.so
+COPY --from=bonsol-node-cpu /app/target/release/bonsol /usr/opt/bonsol/bonsol
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-tester /usr/opt/bonsol/bonsol-tester
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-cpu
+COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-gpu
 COPY docker/bonsol-node.sh /usr/opt/bonsol/bonsol-node.sh
 
 SHELL ["/bin/bash", "-c"]

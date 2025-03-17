@@ -1,8 +1,28 @@
-![bonsol-header](gitbook/.gitbook/assets/bonsol.png)
+---
+icon: hand-wave
+cover: .gitbook/assets/bonsol.png
+coverY: 0
+layout:
+  cover:
+    visible: true
+    size: full
+  title:
+    visible: true
+  description:
+    visible: false
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+---
 
-# Bonsol
+# Welcome
 
-Welcome to the official repository for Bonsol, the verifiable computation framework designed to extend Solana's computational boundaries. Our mission is to allow developers to build complex, computationally-intensive applications on Solana without being constrained by its native limitations.
+## Welcome to Bonsol
+
+Welcome to the official documentation for Bonsol, the verifiable computation framework designed to extend Solana's computational boundaries. Our mission is to allow developers to build complex, computationally-intensive applications on Solana without being constrained by its native limitations.
 
 ## What is Bonsol?
 
@@ -48,6 +68,5 @@ Bonsol enables a wide range of applications previously impossible on Solana:
 Bonsol is a community-driven initiative. We're building the Bonsol Collective, a collaborative ecosystem of people, projects, and companies working together to extend Solana's capabilities.
 
 * [GitHub](https://github.com/bonsol-collective/bonsol/) - Contribute to our open-source codebase
-* [Documentation](https://bonsol.gitbook.io/docs) - Learn how to build on Bonsol
 * [Twitter](https://x.com/Bonsol_Labs) - Follow us for the latest updates
 * [Telegram](https://t.me/bonsolsh) - Join our community discussions
