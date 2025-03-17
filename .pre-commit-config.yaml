@@ -16,9 +16,10 @@ repos:
     hooks:
     -   id: shellcheck
 
-#-   repo: https://github.com/openstack/bashate
-#    rev: 2.1.1
-#    hooks:
-#    -   id: shellcheck
-#        types: [shell]
-#
+-   repo: https://github.com/thoughtworks/talisman
+    rev: 'v1.32.1'  # Update me!
+    hooks:
+      # both pre-commit and pre-push supported
+      # -   id: talisman-push
+      - id: talisman-commit
+        entry: cmd --githook pre-commit

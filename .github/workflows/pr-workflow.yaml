@@ -24,7 +24,7 @@ jobs:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.2
       - name: Check
         shell: bash
         id: check
@@ -47,7 +47,7 @@ jobs:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.2
       - name: Test
         run: cargo test -- --nocapture
 
@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.2
 
       - name: E2E Test
         shell: bash
