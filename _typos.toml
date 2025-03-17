@@ -4,4 +4,5 @@ extend-ignore-identifiers-re = [
     ".*groth16.*",
     ".*Groth16.*",
     ".*GROTH16.*",
+    "vk_gamme_g2",
 ]

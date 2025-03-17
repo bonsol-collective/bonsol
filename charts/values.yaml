@@ -32,7 +32,7 @@ provernode:
   fullnameOverride:
 
 ## @param provernode.image.repository bonsol container image registry
-## @param provernode.image.tag provernode image tage
+## @param provernode.image.tag provernode image tag
 ## @param provernode.image.pullPolicy provernode image pull policy
 ## @param provernode.image.imagePullSecrets provernode image pull secrets
 ## Image tag used if for an image that uses only CPU. If you want to utilize
@@ -148,7 +148,7 @@ tester:
   fullnameOverride:
 
 ## @param tester.image.repository bonsol container image registry
-## @param tester.image.tag tester image tage
+## @param tester.image.tag tester image tag
 ## @param tester.image.pullPolicy tester image pull policy
 ## @param tester.image.imagePullSecrets tester image pull secrets
 ## Image tag used if for an image that uses only CPU. If you want to utilize
