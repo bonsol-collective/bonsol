@@ -10,3 +10,15 @@ repos:
             )$
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
+
+-   repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+    -   id: shellcheck
+
+#-   repo: https://github.com/openstack/bashate
+#    rev: 2.1.1
+#    hooks:
+#    -   id: shellcheck
+#        types: [shell]
+#
