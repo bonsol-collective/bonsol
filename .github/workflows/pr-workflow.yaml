@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2
+        uses: actions/checkout@v4
 
       - name: Install Python
         uses: actions/setup-python@v4
@@ -44,7 +44,7 @@ jobs:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2
+        uses: actions/checkout@v4
       - name: Check
         shell: bash
         id: check
@@ -67,7 +67,7 @@ jobs:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2
+        uses: actions/checkout@v4
       - name: Test
         run: cargo test -- --nocapture
 
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2
+        uses: actions/checkout@v4
 
       - name: E2E Test
         shell: bash
