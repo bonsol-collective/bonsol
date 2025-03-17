@@ -1,5 +1,5 @@
 # Manually Provision a Bonsol Node
-Bonsol has a fully featured docker image and helm chart that can be used to run a Bonsol node on kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](/docs/how-to/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and tast the sour air of hot solder. We need to feed the bare metal between our fingertips.
+Bonsol has a fully featured docker image and helm chart that can be used to run a Bonsol node on kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](/docs/how-to/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and task the sour air of hot solder. We need to feed the bare metal between our fingertips.
 
 ## Prerequisites
 * A keypair for the node, you need some SOL to pay for the transactions
@@ -17,7 +17,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-t
 ```
 Ensure cargo is on the path
 
-On your local machine you will need to run a docker imahge to get the neede groth16 witness generator and snark binary. This script will download them from the internet and save them in the current directory use `--prefix` to change the output directory
+On your local machine you will need to run a docker imahge to get the need groth16 witness generator and snark binary. This script will download them from the internet and save them in the current directory use `--prefix` to change the output directory
 ```bash
 ./bin/setup.sh
 ```
@@ -91,7 +91,7 @@ ulimit -s unlimited //this is required for the c++ groth16 witness generator it 
 #from within the bonsol root dir
 ./target/release/relay -f Node.toml
 ```
-### Runnig the Node with systemd
+### Running the Node with systemd
 You can use the following systemd service file to run the node.
 ```toml
 [Unit]

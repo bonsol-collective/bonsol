@@ -126,7 +126,7 @@ pub fn process_status_v1<'a>(
                 seeds.push(&b);
                 let mut ainfos = vec![sa.exec.clone(), sa.callback_program.clone()];
                 ainfos.extend(sa.extra_accounts.iter().cloned());
-                // ER is the signer, it is reuired to save the execution id in the calling program
+                // ER is the signer, it is required to save the execution id in the calling program
                 let mut accounts = vec![AccountMeta::new_readonly(*sa.exec.key, true)];
                 if let Some(extra_accounts) = er.callback_extra_accounts() {
                     if extra_accounts.len() != sa.extra_accounts.len() {

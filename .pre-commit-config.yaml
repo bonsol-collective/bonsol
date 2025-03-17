@@ -23,3 +23,8 @@ repos:
       # -   id: talisman-push
       - id: talisman-commit
         entry: cmd --githook pre-commit
+
+- repo: https://github.com/crate-ci/typos
+  rev: v1.30.2
+  hooks:
+    - id: typos

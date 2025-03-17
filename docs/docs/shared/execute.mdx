@@ -33,16 +33,16 @@ Here is an example of a valid execution request json file.
   "executionConfig": {
     "verifyInputHash": true,
     "forwardOutput": true,
-    "inputHash": "<hex encoded sha256 hash of the input data>" //sha256 hash of the input data if ommited the hash will be calculated
+    "inputHash": "<hex encoded sha256 hash of the input data>" //sha256 hash of the input data if omitted the hash will be calculated
   }
 }
 ```
-Many of the fields can be overriden with cli flags, the only required fields in the execution request json are
+Many of the fields can be overridden with cli flags, the only required fields in the execution request json are
 * "imageId"
 * "executionConfig"
 And the only way to set a callback config is through the json file.
 
-For example you can keep the execution file lightweight by using the cli flags. And make a input fule for changing inputs or even pipe the json into the command.
+For example you can keep the execution file lightweight by using the cli flags. And make a input full for changing inputs or even pipe the json into the command.
 Also if you omit the execution id the cli will generate a random one for you.
 
 #### Waiting

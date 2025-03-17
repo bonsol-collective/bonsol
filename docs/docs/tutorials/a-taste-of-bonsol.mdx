@@ -10,7 +10,7 @@ The best way to learn about Bonsol is to use it. In this tutorial we will walk y
 But first checkout the interactive demo to get started.
 
 ## Bonsol PoW Token
-The following example is showcase of how you could use bonsol to build a Proof of Work Token on Solana. A proof of work system is a form of verifiable compute, which is the very thing that Bonsol was built for. Bonsol allows you to prove almost any kind of computation, with native verification on solana. That verification can be used to interact with other programs, and in this case, mint a token. Before we show you how this was built go ahead and use the interactive demo to mint yourself som PowPow tokens.
+The following example is showcase of how you could use bonsol to build a Proof of Work Token on Solana. A proof of work system is a form of verifiable compute, which is the very thing that Bonsol was built for. Bonsol allows you to prove almost any kind of computation, with native verification on solana. That verification can be used to interact with other programs, and in this case, mint a token. Before we show you how this was built go ahead and use the interactive demo to mint yourself some PowPow tokens.
 This fun little demo simulates the minig process for a Pow token, every pattern is different.
 
 :::info
@@ -21,7 +21,7 @@ This is a demo, if you experience an issue please put an issue on the PoW exampl
 
 Congratulations! You have minted yourself some PowPow tokens.
 Lets take a moment to break down what happened in this example.
-When you clicked the Mint button you sent a transaction to the Solana blockchain. You sent it to the Bonsol PoW example program which then sent a message to the Bonsol program to request a proof. A node in the prover network claimed that compute and rand the sequence for you, and then sent you a proof. The Bonsol program then verified the proof and minted you and the node that provider the proof some PowPow tokens according to the difficulty of the sequence. While this is a contrived example it is a non trivial one that shows the folowing:
+When you clicked the Mint button you sent a transaction to the Solana blockchain. You sent it to the Bonsol PoW example program which then sent a message to the Bonsol program to request a proof. A node in the prover network claimed that compute and rand the sequence for you, and then sent you a proof. The Bonsol program then verified the proof and minted you and the node that provider the proof some PowPow tokens according to the difficulty of the sequence. While this is a contrived example it is a non trivial one that shows the following:
 - Building a solana program that uses Bonsol
 - Using Bonsol to prove a computation
 - Builsing a Bonsol zk program
@@ -31,12 +31,12 @@ When you clicked the Mint button you sent a transaction to the Solana blockchain
 Since this is a turotial we will break down each of these steps in detail. Starting with the creation of an Anchor program that uses Bonsol.
 
 ## Getting Started Quickly
-If you want to skip all the mindless setup and get stright into a fully setup environment, try our GitPod for this demo here.
+If you want to skip all the mindless setup and get straight into a fully setup environment, try our GitPod for this demo here.
 
 [PowPow GitPod](https://gitpod.io/#https://github.com/bonsolcollective/bonsol-powpow)
 
 ## Building an Anchor Program that uses Bonsol
-Get the latest version of anchor using `avm` and ensure you are using the correct version of rust and solana. At the time of writing this tutorial the version of anchor is 0.30.1 with the reccomended rust version is 1.81.0 and the solana version is 2.0.23.
+Get the latest version of anchor using `avm` and ensure you are using the correct version of rust and solana. At the time of writing this tutorial the version of anchor is 0.30.1 with the recommended rust version is 1.81.0 and the solana version is 2.0.23.
 
 NOTE ANCHOR IS NOTORIOUSLY BAD WITH VERSIONING ISSUES SO YOUR MILEAGE MAY VARY HERE
 
@@ -66,9 +66,9 @@ This will create a new directory called `powpow` and initialize a new anchor wor
 ... //other files
 ```
 
-In lib.rs we will build out our program that requests execution from Bonsol and recieves the callback.
+In lib.rs we will build out our program that requests execution from Bonsol and receives the callback.
 You can see the full code for this example [here](https://github.com/bonsolcollective/bonsol-powpow/tree/main/programs/bonsol-pow-pow/src/lib.rs).
-We highly reccomend reading that code as the docs may drift from the implementation. The following will be a close approximation of the code.
+We highly recommend reading that code as the docs may drift from the implementation. The following will be a close approximation of the code.
 
 Here is a diagram of how the program works.
 
@@ -101,7 +101,7 @@ use bonsol_interface::instructions::{
 ...
 ```
 Here we import various macros and interfaces need to interact with the Bonsol program.
-The `execute` macro will request the execution of a desired program with specified inputs and the `callback` macro will recieve the callback from the Bonsol program.
+The `execute` macro will request the execution of a desired program with specified inputs and the `callback` macro will receive the callback from the Bonsol program.
 The `BonsolChannel` interface is used to interact with the Bonsol program via anchor and the `DeploymentAccountV1` and `ExecutionRequestV1` allow convenient access to the accounts needed to interact with the Bonsol program.
 
 ```rust
@@ -279,7 +279,7 @@ The callback function is called by the Bonsol program after the proof is verifie
 we verify the callback in the callback macro and provide the output as the data parameter.
 The callback macro will check that the execution id matches the one in the pow_record account and that the callback program id is the same as the program id of the Bonsol program.
 If all the checks pass it will return the output as a ```Vec<u8>``` and the Bonsol program will forward it to the callback program.
-In this case the callback program is the PowPow program, which upon recieving the output will mint the tokens based on the difficulty.
+In this case the callback program is the PowPow program, which upon receiving the output will mint the tokens based on the difficulty.
 Thats all for the solana program. Now we will move on to proving the collatz sequence using a zk program.
 
 ## Proving the Collatz Sequence
@@ -289,7 +289,7 @@ The first thing we did was to create a program that calculates the collatz seque
 if the number is even, divide it by 2, if the number is odd, multiply it by 3 and add 1.
 ```
 The Collatz sequence comes from a conjecture that still has not been proven. The conjecture is that every starting number will eventually reach 1.
-While many mathemeticians have tried to produce a proof that every number will end in 1 so far there has not been a complete proof. Could there be some numbers that produce infinte loops?
+While many mathematicians have tried to produce a proof that every number will end in 1 so far there has not been a complete proof. Could there be some numbers that produce infinite loops?
 Anyway here is how we made the program.
 
 <InitNewBonsol />

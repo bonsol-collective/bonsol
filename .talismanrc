@@ -1,0 +1,4 @@
+fileignoreconfig:
+- filename: node/src/risc0_runner/mod.rs
+  checksum: 59439ae8edf4de6406c44d47f6420d79de678525c5949b24b89fd1008cff4373
+version: ""

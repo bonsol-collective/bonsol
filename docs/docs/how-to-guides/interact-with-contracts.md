@@ -19,7 +19,7 @@ In a standard solana program you will need to craft a transaction with at least 
 
 You can can ensure you have the correct accounts by using the provided derivation functions.
 
-In rust as long as you know the IMAGE_ID and EXECUTION_REQEUST_ID you can use the following derivation functions to ensure you have the correct accounts.
+In rust as long as you know the IMAGE_ID and EXECUTION_REQUEST_ID you can use the following derivation functions to ensure you have the correct accounts.
 
 ```rust
 use bonsol_interface::{execution_address, deployment_address};
@@ -43,9 +43,9 @@ const EXECUTION_REQUEST_ACCOUNT = executionAddress(REQUESTER, EXECUTION_ID);
 ```
 
 
-### Creating an Execuition Request
+### Creating an Execution Request
 
-To create an execuition request you will need to provide the following information:
+To create an execution request you will need to provide the following information:
 * The requester
 * The image id
 * The execution id
