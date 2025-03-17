@@ -75,9 +75,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: E2E Test
+        shell: bash
         run: |
-          git clone https://github.com/bonsol-collective/bonsol.git
-          cd bonsol
+          set -euxo pipefail
+          cd /usr/opt/bonsol/
+          echo "Using image ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}"
+          git clone https://github.com/bonsol-collective/bonsol.git src
+          cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
           solana-test-validator \
             --ledger ./ledger \
@@ -94,17 +98,17 @@ jobs:
           solana -u http://localhost:8899 airdrop 1
           ulimit -s unlimited
           echo "Starting node"
-          bonsol-node -f ./Node.toml 1>&1 &
+          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
           sleep 15
           echo "Deploying"
-          bonsol \
+          /usr/opt/bonsol/bonsol \
             --keypair ~/.config/solana/id.json \
             --rpc-url http://127.0.0.1:8899 \
             deploy \
             url \
-            -m cli/src/tests/test_data/test_manifest.json \
+            -m src/cli/src/tests/test_data/test_manifest.json \
             --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
             -y
           echo "Running Tests"
-          bonsol-tester 500
+          /usr/opt/bonsol/bonsol-tester 500
 
