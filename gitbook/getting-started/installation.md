@@ -16,7 +16,7 @@ Interested in contributing? Head over to the [Broken link](broken-reference "men
 
 * [Rust](https://solana.com/docs/intro/installation#install-rust)
 * [Solana CLI](https://solana.com/docs/intro/installation#install-the-solana-cli)
-* [Docker](https://docs.docker.com/get-started/get-docker/)
+* [Docker](https://docs.docker.com/engine/install/)
 * [FlatBuffers v24.3.25](https://github.com/google/flatbuffers/tree/v24.3.25) ([see notes](installation.md#notes))
 * [Anchor CLI](https://solana.com/docs/intro/installation#install-anchor-cli) (optional, if you want to write your Solana programs in Anchor)
 
@@ -150,7 +150,7 @@ FlatBuffers is a cross-platform serialization library. Build it from source on L
 
 <summary>Linux</summary>
 
-Ensure you have the build requirements.&#x20;
+Ensure you have the build requirements.
 
 ```bash
 # Update package lists
@@ -205,7 +205,7 @@ flatc --version   # Should show version 24.3.25
 
 <summary>macOS</summary>
 
-Ensure you have the build requirements.&#x20;
+Ensure you have the build requirements.
 
 ```bash
 # Update package lists (macOS uses Homebrew instead of apt)
