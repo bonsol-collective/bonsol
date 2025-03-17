@@ -8,7 +8,7 @@ env:
   CONTAINER_TAG:   "1.0.0"
 
 jobs:
-  build:
+  build-ci-container:
     permissions:
       contents: read
       packages: write
