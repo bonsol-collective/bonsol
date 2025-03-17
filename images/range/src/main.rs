@@ -22,7 +22,7 @@ fn main() {
 
 fn commit_to_range(x: i32, accuracy: u32, round_to_power_of_ten: bool, random_value: u64) -> (i32, i32) {
     let random_offset = (random_value % (2 * accuracy as u64 + 1) as u64) as i32 - accuracy as i32;
-    
+
     let lower_bound = x - accuracy as i32 + random_offset;
     let upper_bound = x + accuracy as i32 + random_offset;
 

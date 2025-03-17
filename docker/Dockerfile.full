@@ -33,5 +33,4 @@ RUN set -euxo pipefail \
       cuda-toolkit-${CUDA_VERSION} \
       git \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/* 
-
+&&  rm -rf /var/lib/apt/lists/*

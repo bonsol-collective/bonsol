@@ -57,7 +57,7 @@ To create an execuition request you will need to provide the following informati
 
 Here is an example of how to create an execution request, taken from the PowPoW example.
 
-```rust 
+```rust
 use bonsol_interface::instructions::{
     execute_v1, CallbackConfig, ExecutionConfig, Input,
 };
@@ -108,7 +108,7 @@ pub fn your_instruction(
   data_stripped, // the data that was passed in the transaction without the instruction prefix
  )?;
 
- //output can be used to do anything you want with the output of the execution, if the callback method errors then the transaction will still succeed in order to pay the prover but the 
+ //output can be used to do anything you want with the output of the execution, if the callback method errors then the transaction will still succeed in order to pay the prover but the
  ...
 ```
 
@@ -136,5 +136,3 @@ pub struct MineToken<'info> {
     ...
 }
 ```
-
-

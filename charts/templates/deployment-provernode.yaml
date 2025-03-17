@@ -45,7 +45,7 @@ spec:
             value: {{ $v | quote }}
           {{- end }}
           {{- end }}
-          ports:  
+          ports:
           - containerPort: 9000
           resources:
             {{- toYaml (default (dict) .Values.provernode.resources) | nindent 12 }}
@@ -55,7 +55,7 @@ spec:
               mountPath: {{ .Values.signer.path }}
               subPath: {{ base .Values.signer.path }}
             - name: images
-              mountPath: /opt/bonsol/risc0_images 
+              mountPath: /opt/bonsol/risc0_images
             - name: config
               mountPath: {{ .Values.provernode.config.filename }}
               subPath: {{ base .Values.provernode.config.filename }}

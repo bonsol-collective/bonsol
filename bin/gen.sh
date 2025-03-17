@@ -18,4 +18,4 @@ sed -i.bak '
   }
 ' "schemas-ts/account.ts" && rm "schemas-ts/account.ts.bak"
 
-pnpm --filter bonsol-schemas run build 
+pnpm --filter bonsol-schemas run build

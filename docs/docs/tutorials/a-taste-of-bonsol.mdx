@@ -13,7 +13,7 @@ But first checkout the interactive demo to get started.
 The following example is showcase of how you could use bonsol to build a Proof of Work Token on Solana. A proof of work system is a form of verifiable compute, which is the very thing that Bonsol was built for. Bonsol allows you to prove almost any kind of computation, with native verification on solana. That verification can be used to interact with other programs, and in this case, mint a token. Before we show you how this was built go ahead and use the interactive demo to mint yourself som PowPow tokens.
 This fun little demo simulates the minig process for a Pow token, every pattern is different.
 
-:::info 
+:::info
 This is a demo, if you experience an issue please put an issue on the PoW example repo [here](https://github.com/bonsolcollective/bonsol-powpow/issues).
 :::
 
@@ -24,7 +24,7 @@ Lets take a moment to break down what happened in this example.
 When you clicked the Mint button you sent a transaction to the Solana blockchain. You sent it to the Bonsol PoW example program which then sent a message to the Bonsol program to request a proof. A node in the prover network claimed that compute and rand the sequence for you, and then sent you a proof. The Bonsol program then verified the proof and minted you and the node that provider the proof some PowPow tokens according to the difficulty of the sequence. While this is a contrived example it is a non trivial one that shows the folowing:
 - Building a solana program that uses Bonsol
 - Using Bonsol to prove a computation
-- Builsing a Bonsol zk program 
+- Builsing a Bonsol zk program
 - Creating a callback that bonsol Calls after the proof is verified
 - Interacting with Bonsol on the frontend
 
@@ -66,7 +66,7 @@ This will create a new directory called `powpow` and initialize a new anchor wor
 ... //other files
 ```
 
-In lib.rs we will build out our program that requests execution from Bonsol and recieves the callback. 
+In lib.rs we will build out our program that requests execution from Bonsol and recieves the callback.
 You can see the full code for this example [here](https://github.com/bonsolcollective/bonsol-powpow/tree/main/programs/bonsol-pow-pow/src/lib.rs).
 We highly reccomend reading that code as the docs may drift from the implementation. The following will be a close approximation of the code.
 
@@ -78,7 +78,7 @@ sequenceDiagram;
   participant BSC as Bonsol Smart Contract(PowPow);
   participant R as Relayers;
   participant ZK as ZK Computation;
-  
+
   SC->>BSC: Call Bonsol Smart Contract(PowPow);
   BSC->>R: Emit event;
   R->>ZK: Listen and initiate ZK computation;
@@ -100,7 +100,7 @@ use bonsol_interface::instructions::{
 };
 ...
 ```
-Here we import various macros and interfaces need to interact with the Bonsol program. 
+Here we import various macros and interfaces need to interact with the Bonsol program.
 The `execute` macro will request the execution of a desired program with specified inputs and the `callback` macro will recieve the callback from the Bonsol program.
 The `BonsolChannel` interface is used to interact with the Bonsol program via anchor and the `DeploymentAccountV1` and `ExecutionRequestV1` allow convenient access to the accounts needed to interact with the Bonsol program.
 
@@ -144,7 +144,7 @@ pub struct MineToken<'info> {
 }
 
 ```
-This is the anchor account struct that allows us to mine the tokens. 
+This is the anchor account struct that allows us to mine the tokens.
 
 ```rust
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -275,18 +275,18 @@ pub fn bonsol_callback(ctx: Context<BonsolCallback>, data: Vec<u8>) -> Result<()
 }
 ```
 
-The callback function is called by the Bonsol program after the proof is verified and it forwards the output as instruction data, 
-we verify the callback in the callback macro and provide the output as the data parameter. 
-The callback macro will check that the execution id matches the one in the pow_record account and that the callback program id is the same as the program id of the Bonsol program. 
-If all the checks pass it will return the output as a ```Vec<u8>``` and the Bonsol program will forward it to the callback program. 
+The callback function is called by the Bonsol program after the proof is verified and it forwards the output as instruction data,
+we verify the callback in the callback macro and provide the output as the data parameter.
+The callback macro will check that the execution id matches the one in the pow_record account and that the callback program id is the same as the program id of the Bonsol program.
+If all the checks pass it will return the output as a ```Vec<u8>``` and the Bonsol program will forward it to the callback program.
 In this case the callback program is the PowPow program, which upon recieving the output will mint the tokens based on the difficulty.
 Thats all for the solana program. Now we will move on to proving the collatz sequence using a zk program.
 
 ## Proving the Collatz Sequence
-The first thing we did was to create a program that calculates the collatz sequence for a given number. The collatz sequence is a sequence of numbers that are generated by applying the following rule to a starting number: 
+The first thing we did was to create a program that calculates the collatz sequence for a given number. The collatz sequence is a sequence of numbers that are generated by applying the following rule to a starting number:
 
 ```
-if the number is even, divide it by 2, if the number is odd, multiply it by 3 and add 1. 
+if the number is even, divide it by 2, if the number is odd, multiply it by 3 and add 1.
 ```
 The Collatz sequence comes from a conjecture that still has not been proven. The conjecture is that every starting number will eventually reach 1.
 While many mathemeticians have tried to produce a proof that every number will end in 1 so far there has not been a complete proof. Could there be some numbers that produce infinte loops?
@@ -333,7 +333,7 @@ fn calculate_sequence(num: &[u8]) -> (Vec<BigUint>, BigUint, BigUint) {
 }
 ```
 
-A few things stand out here. 
+A few things stand out here.
 First, reading inputs uses the `env::read_slice` function. This function reads a slice of bytes from the execution context and stores it in the provided buffer. In this case, we are reading the signature of the user who called the `mine_token` function.
 Second, we hash the input and commit to it using the `env::commit_slice` function. This function commits a slice of bytes to the execution context. In this case, we are committing the hash of the signature.
 This is required by bonsol because it verifies the inputs to the risc0 zkvm.

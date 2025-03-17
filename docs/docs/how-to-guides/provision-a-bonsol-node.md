@@ -5,7 +5,7 @@ Bonsol has a fully featured docker image and helm chart that can be used to run 
 * A keypair for the node, you need some SOL to pay for the transactions
 * A Dragons mouth compatible rpc provider endpoint [Dragons Mouth Docs](https://docs.triton.one/project-yellowstone/dragons-mouth-grpc-subscriptions) click here to get one from [Triton One](https://triton.one/triton-rpc/)
 * Docker on your local machine (not required on the node)
-* The node will do better if it has a gpu with cuda installed, which will require nvidia drivers and tools. 
+* The node will do better if it has a gpu with cuda installed, which will require nvidia drivers and tools.
 
 :::note
 Ansible role coming soon
@@ -37,8 +37,8 @@ scp -i <your_ssh_key> -r stark/* <node_user>@<node ip>:/opt/bonsol/stark
 ```
 You will put the path in the `stark_compression_tools_path` in the config file.
 
-## Upload the keypair to the node 
-You will need to upload the keypair to the node. 
+## Upload the keypair to the node
+You will need to upload the keypair to the node.
 ```bash
 scp -r <keypair path> <node ip>:/opt/bonsol/keys/
 ```
@@ -72,7 +72,7 @@ maximum_concurrent_proofs = 1
 max_image_size_mb = 4
 image_compression_ttl_hours = 24
 env = "dev"
-stark_compression_tools_path = "<the path to the stark directory>" 
+stark_compression_tools_path = "<the path to the stark directory>"
 missing_image_strategy = "DownloadAndClaim"
 [metrics_config]
   Prometheus = {}

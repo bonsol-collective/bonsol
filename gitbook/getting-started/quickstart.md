@@ -115,10 +115,10 @@ Verify you're on devnet:
 ```bash
 $ solana config get
 Config File: /Users/<user>/.config/solana/cli/config.yml
-RPC URL: https://api.devnet.solana.com 
+RPC URL: https://api.devnet.solana.com
 WebSocket URL: wss://api.devnet.solana.com/ (computed)
-Keypair Path: /Users/<user>/.config/solana/id.json 
-Commitment: confirmed 
+Keypair Path: /Users/<user>/.config/solana/id.json
+Commitment: confirmed
 ```
 
 The `deploy` command uploads your newly built verifiable program to make it accessible to the prover network. We currently support S3-compatible storage hosts.
@@ -182,7 +182,7 @@ $ bonsol execute -f execution-request.json --wait
 Execution expiry 35436
 current block 34436
   Claimed by 5RChCvEt8z5Uq9DF2yv2sJeazgm1SFmJChm1mrHH35oU at slot 34469, committed 17718
-  Execution completed with exit code Success    
+  Execution completed with exit code Success
 ```
 
 * If the execution is not completed within the timeout period, you'll receive a timeout message.

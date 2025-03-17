@@ -39,7 +39,7 @@ Identity: Bdudyg3GB4Gw3we7g9RCLBnL3E9TJ1N2bfsZTFAaocv6
 Genesis Hash: HWEv5jLYLrzdxsEXcc56dkSV96b7h8cYwSPgKyR77a6Q
 Version: 2.1.14
 Shred Version: 64458
-⠉ 00:18:59 | Processed Slot: 2789 | Confirmed Slot: 2789 | Finalized Slot: 2758 | Full Snapshot Slot: 2700 | Incremental Snapshot Slot: - | Transactions: 2788 | ◎499.986060000        
+⠉ 00:18:59 | Processed Slot: 2789 | Confirmed Slot: 2789 | Finalized Slot: 2758 | Full Snapshot Slot: 2700 | Incremental Snapshot Slot: - | Transactions: 2788 | ◎499.986060000
 ```
 
 > :bulb: Note: Keep this terminal window open as the validator needs to run throughout the tutorial.
@@ -226,7 +226,7 @@ $ bonsol execute -f charts/input_files/simple_execution_request.json --wait
 
 Execution expiry 13235
 current block 13135
-  Waiting for execution                                                                                                    
+  Waiting for execution
   Claimed by 5RChCvEt8z5Uq9DF2yv2sJeazgm1SFmJChm1mrHH35oU at slot 13168, committed 6617
 ```
 
@@ -244,8 +244,8 @@ Once the proof generates, you'll see the notification at your CLI:
 bonsol execute -f charts/input_files/simple_execution_request.json --wait
 Execution expiry 34380
 current block 24380
-  Waiting for execution                                                                                                    
-  Execution completed with exit code Success   
+  Waiting for execution
+  Execution completed with exit code Success
 ```
 
 You can check your prover logs for the corresponding on-chain transaction:

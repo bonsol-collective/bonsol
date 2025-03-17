@@ -13,4 +13,3 @@ data:
     {{- tpl ($root.Files.Get (printf "input_files/%s" (base $f) ) ) $root  | nindent 4 }}
   {{- end }}
 {{- end }}
-
