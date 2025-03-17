@@ -13,6 +13,26 @@ permissions:
 
 jobs:
 
+  Check pre-commit:
+
+    name: Run pre-commit checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit in check mode
+        run: pre-commit run --all-files
+
   check-formatting:
 
     name: Check & Format
