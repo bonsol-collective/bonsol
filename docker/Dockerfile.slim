@@ -108,16 +108,16 @@ RUN set -euxo pipefail \
 &&  dpkg -i cuda-keyring_1.1-1_all.deb \
 &&  add-apt-repository contrib \
 &&  apt-get update \
-&&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
+&&  apt-get -y install --no-install-recommends cuda-toolkit-${CUDA_VERSION} \
 &&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
-&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json
+&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
 RUN set -euxo pipefail \
-&&  cargo build -p bonsol-node --features=cuda --release \
-&&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/*
+&&  cargo build -p bonsol-node --features=cuda --release
 
 
 ######################################################################

@@ -39,7 +39,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:

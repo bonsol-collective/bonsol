@@ -3,4 +3,6 @@ fileignoreconfig:
   checksum: 59439ae8edf4de6406c44d47f6420d79de678525c5949b24b89fd1008cff4373
 - filename: charts/README.md
   checksum: 72fc2bed57d1f2124d7ea66ef1586141da52d2e3736aac253cda1da072678c22
+- filename: .pre-commit-config.yaml
+  checksum: 80d9c50573e73a7273a825ce15e6ac1d4c5ee6820dbfa505aa50a44e4f2d7e89
 version: ""
