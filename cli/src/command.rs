@@ -249,7 +249,10 @@ pub enum PdaCommand {
     },
 
     Claim {
-        #[arg(short = 'e', long)]
-        execution_address: String,
+        #[arg(short = 'r', long)]
+        requester: String,
+
+        #[arg(short = 'i', long)]
+        execution_id: String,
     },
 }

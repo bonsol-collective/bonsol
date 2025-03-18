@@ -19,6 +19,7 @@ pub struct ClaimStateV1 {
     pub block_commitment: u64,
 }
 
+#[derive(Debug)]
 pub struct ClaimStateHolder {
     data: Vec<u8>,
 }
