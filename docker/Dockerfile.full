@@ -29,7 +29,7 @@ RUN set -euxo pipefail \
 &&  rm cuda-keyring_1.1-1_all.deb \
 &&  add-apt-repository contrib \
 &&  apt-get update \
-&&  apt-get -y install \
+&&  apt-get -y install --no-install-recommends \
       cuda-toolkit-${CUDA_VERSION} \
       git \
 &&  apt-get clean \
