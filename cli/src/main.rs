@@ -19,6 +19,7 @@ mod deploy;
 mod estimate;
 mod execute;
 mod init;
+mod pda;
 mod prove;
 
 #[cfg(all(test, feature = "integration-tests"))]
@@ -153,6 +154,10 @@ async fn main() -> anyhow::Result<()> {
                 stdin,
             )
             .await
+        }
+        Command::Pda(pda_command) => {
+            let rpc_url = load_solana_config(config, rpc_url, keypair)?.0;
+            Ok(pda::get_pda(rpc_url, pda_command).await?)
         }
         Command::Init { project_name, dir } => init::init_project(&project_name, dir),
     }

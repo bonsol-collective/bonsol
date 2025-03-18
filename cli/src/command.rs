@@ -228,4 +228,28 @@ pub enum Command {
         #[arg(short = 'n', long)]
         project_name: String,
     },
+
+    #[command(subcommand, about = "Get program-derived addresses")]
+    Pda(PdaCommand),
+}
+
+#[derive(Subcommand, Debug)]
+pub enum PdaCommand {
+    Deployment {
+        #[arg(short = 'i', long)]
+        image_id: String,
+    },
+
+    Execution {
+        #[arg(short = 'r', long)]
+        requester: String,
+
+        #[arg(short = 'i', long)]
+        execution_id: String,
+    },
+
+    Claim {
+        #[arg(short = 'e', long)]
+        execution_address: String,
+    },
 }
