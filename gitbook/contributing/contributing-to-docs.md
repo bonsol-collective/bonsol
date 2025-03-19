@@ -45,7 +45,7 @@ Use a descriptive name that indicates what you're documenting.
 
 1. Create your new markdown file in the appropriate subdirectory in `gitbook/`
 2. Add a reference to your new file in `gitbook/SUMMARY.md` to make it appear in the navigation
-   
+
 Example SUMMARY.md addition:
 ```markdown
 ## Getting Started
@@ -76,7 +76,7 @@ Simply edit the relevant markdown files in the `gitbook/` directory.
 
 ### 4. Preview Your Changes
 
-You can also use standard Markdown previewers to check your content. 
+You can also use standard Markdown previewers to check your content.
 
 ### 5. Create a Pull Request
 
@@ -85,7 +85,7 @@ You can also use standard Markdown previewers to check your content.
    git add gitbook/
    git commit -m "docs: add documentation for X feature"
    ```
-   
+
    Follow our [commit message guidelines](contributor-guidelines.md#commit-message-guidelines) with the type "docs".
 
 2. Push to your fork:
@@ -135,4 +135,4 @@ To reference another page in the documentation:
 
 If you have any questions about contributing to documentation, please open an issue on GitHub or contact the team through our community channels.
 
-Thank you for helping improve Bonsol's documentation! 
+Thank you for helping improve Bonsol's documentation!
