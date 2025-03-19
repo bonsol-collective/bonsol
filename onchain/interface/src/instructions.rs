@@ -252,7 +252,7 @@ pub fn execute_v1_with_accounts<'a>(
 ) -> Result<Instruction, ClientError> {
     config.validate()?;
     let mut fbb = FlatBufferBuilder::new();
-    let mut callback_pubkey = None; // aviod clone
+    let mut callback_pubkey = None; // avoid clone
     let (callback_program_id, callback_instruction_prefix, extra_accounts) =
         if let Some(cb) = callback {
             callback_pubkey = Some(cb.program_id);

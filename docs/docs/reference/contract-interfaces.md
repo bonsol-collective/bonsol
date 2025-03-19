@@ -19,8 +19,5 @@ Nevertheless here is how you can use the `bonsol-interface` crate outside of a s
 bonsol-interface = { git = "https://github.com/Bonsol-Collective/bonsol", branch = "main" }
 ```
 
-## Usage 
+## Usage
 See the [Interact with Bonsol Contracts/Programs](/docs/how-to/interact-with-contracts) section for more information on how to interact with Bonsol programs.
-
-
-

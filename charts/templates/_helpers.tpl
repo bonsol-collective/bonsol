@@ -117,4 +117,3 @@ Path to execution request
 {{- define "bonsol-tester.executionReqPath" -}}
 /input_files/simple_execution_request.json
 {{- end }}
-

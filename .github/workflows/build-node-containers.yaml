@@ -4,33 +4,23 @@ on:
   workflow_call:
 
 jobs:
-  build-and-push:
+  build-node-container-image:
     runs-on: ubicloud-standard-16
-
-    strategy:
-      matrix:
-#        flavor: [standard, cuda]
-        flavor: [citest]
 
     permissions:
       contents: read
       packages: write
 
     steps:
-#      - name: Free Disk Space (Ubuntu)
-#        uses: jlumbroso/free-disk-space@main
-#        with:
-#          tool-cache: true
-#          docker-images: false
 
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -39,26 +29,53 @@ jobs:
       # Set different tags based on whether this is a tag push or main branch push
       # Tags:
       # - PR     - commit number
-      # - Relase - version number
+      # - Release - version number
 
       - name: Set Docker Tags
         id: docker_tags
         run: |
+          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
-            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             # For main branch pushes, use flavor-{commit_sha}
-            echo "TAGS=ghcr.io/bonsol-collective/bonsol-node:${{ matrix.flavor }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image slim
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          file: docker/Dockerfile.${{ matrix.flavor }}
-          tags: ${{ steps.docker_tags.outputs.TAGS }}
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
           platforms: linux/amd64
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Docker Image start
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: docker/Dockerfile.stark
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Docker Image full
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: docker/Dockerfile.full
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

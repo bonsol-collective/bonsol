@@ -45,7 +45,7 @@ RUN cmake -G "Unix Makefiles" && make -j && make install
 RUN strip /usr/local/bin/flatc
 
 # Stage 2: Bonsol Dev
-FROM ghcr.io/anagrambuild/risczero:latest
+FROM ghcr.io/anagrambuild/risczero:v1.0.3_2
 
 # flatbuffers
 COPY --from=flatc-build /usr/local/bin/flatc /usr/local/bin/flatc

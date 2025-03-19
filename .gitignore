@@ -17,3 +17,5 @@ stark
 MyLogFile.log
 .pnpm-store
 
+*.mdc
+*.env
