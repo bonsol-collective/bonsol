@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "bonsol-provernode.labels" . | nindent 4 }}
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   ports:
   - name: prometheus
     port: 9000

@@ -1,0 +1,8 @@
+[default]
+extend-ignore-identifiers-re = [
+    # *sigh* this just isn't worth the cost of fixing
+    ".*groth16.*",
+    ".*Groth16.*",
+    ".*GROTH16.*",
+    "vk_gamme_g2",
+]

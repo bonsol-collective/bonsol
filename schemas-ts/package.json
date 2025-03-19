@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc"
-  },  
+  },
   "module": "dist/index.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

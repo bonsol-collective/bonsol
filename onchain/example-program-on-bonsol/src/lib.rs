@@ -61,7 +61,7 @@ fn main<'a>(
                 None,
             )?;
             let tip = 1000;
-            let expiration = Clock::get()?.slot + expiration; //high experation since we run this on potatoes in CI
+            let expiration = Clock::get()?.slot + expiration; //high expiration since we run this on potatoes in CI
             let ix = execute_v1(
                 requester.key,
                 payer.key,

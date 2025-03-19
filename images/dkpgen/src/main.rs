@@ -9,7 +9,7 @@ fn main() {
     let ivmsg = Vec::new();
     env::read_slice(&mut ivmsg);
     let ivmsg = String::from_utf8(ivmsg).unwrap();
-   
+
     //todo
 
     env::read_slice(&mut [0u8; 32]);
