@@ -124,7 +124,7 @@ ignore = [
   { id = "RUSTSEC-2021-0139", reason = """
     Unmaintained dependency of dependency: `ansi_term`.
 
-    The maintainer has advised that this crate is deprecated and will not receive any maintenance. 
+    The maintainer has advised that this crate is deprecated and will not receive any maintenance.
     The crate does not seem to have much dependencies and may or may not be ok to use as-is.
 
     Cause:    `ansi_term` is unmaintained

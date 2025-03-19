@@ -1,0 +1,162 @@
+ARG RUST_VERSION=1.81.0
+ARG FLAT_BUFFERS_VERSION=24.3.25
+ARG CUDA_VERSION=12.5
+
+######################################################################
+# Cargo chef container
+######################################################################
+
+FROM rust:${RUST_VERSION} AS chef
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  cargo install cargo-chef
+
+
+######################################################################
+# Cargo chef prepare
+######################################################################
+
+FROM chef AS planner
+
+WORKDIR /app
+
+COPY . .
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
+
+######################################################################
+# Build bonsol node common build environment
+######################################################################
+
+FROM chef AS builder-base
+
+ARG FLAT_BUFFERS_VERSION
+
+WORKDIR /app/
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  apt-get update --fix-missing \
+&&  apt-get install -y --no-install-recommends \
+      pkg-config \
+      libssl-dev \
+      software-properties-common \
+      build-essential \
+      cmake \
+&&  git clone -b v${FLAT_BUFFERS_VERSION} https://github.com/google/flatbuffers.git \
+&&  cd flatbuffers \
+&&  cmake -G "Unix Makefiles" \
+&&  make install \
+&&  cargo install sccache --locked \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
+
+######################################################################
+# Build bonsol node cpu version
+######################################################################
+
+FROM builder-base AS bonsol-node-cpu
+
+WORKDIR /app/
+
+COPY --from=planner /app/recipe.json recipe.json
+
+RUN set -euxo pipefail \
+&&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
+
+COPY . .
+
+RUN set -euxo pipefail \
+&&  cargo build --release
+
+######################################################################
+# Build bonsol artifacts
+######################################################################
+
+FROM ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0 AS bonsol-artifacts
+
+WORKDIR /app/
+
+
+RUN set -euxo pipefail \
+&&  git clone https://github.com/bonsol-collective/bonsol.git \
+&&  cd bonsol \
+&&  cargo build-sbf
+
+######################################################################
+# Build bonsol node gpu version
+######################################################################
+
+FROM builder-base AS bonsol-node-gpu
+
+ARG CUDA_VERSION
+
+WORKDIR /app/
+
+COPY --from=planner /app/recipe.json recipe.json
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
+&&  dpkg -i cuda-keyring_1.1-1_all.deb \
+&&  add-apt-repository contrib \
+&&  apt-get update \
+&&  apt-get -y install --no-install-recommends cuda-toolkit-${CUDA_VERSION} \
+&&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
+&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN set -euxo pipefail \
+&&  cargo build -p bonsol-node --features=cuda --release
+
+
+######################################################################
+# Create an optimized container with Bonsol node
+######################################################################
+
+FROM rust:${RUST_VERSION}-slim
+
+LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+LABEL org.opencontainers.image.title="bonsol-node"
+LABEL org.opencontainers.image.description="A bonsol proving node"
+
+WORKDIR /usr/opt/bonsol
+
+COPY --from=bonsol-artifacts /app/bonsol/target/deploy/bonsol.so /usr/opt/bonsol/bonsol.so
+COPY --from=bonsol-artifacts /app/bonsol/target/deploy/callback_example.so /usr/opt/bonsol/callback_example.so
+COPY --from=bonsol-node-cpu /app/target/release/bonsol /usr/opt/bonsol/bonsol
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-tester /usr/opt/bonsol/bonsol-tester
+COPY --from=bonsol-node-cpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-cpu
+COPY --from=bonsol-node-gpu /app/target/release/bonsol-node /usr/opt/bonsol/bonsol-node-gpu
+COPY docker/bonsol-node.sh /usr/opt/bonsol/bonsol-node.sh
+
+SHELL ["/bin/bash", "-c"]
+
+RUN set -euxo pipefail \
+&&  mkdir -p /usr/opt/bonsol/stark \
+&&  apt-get update \
+&&  apt-get install -y --no-install-recommends \
+      software-properties-common \
+      wget \
+      ca-certificates \
+      libgmp-dev \
+      libsodium-dev \
+      nasm \
+      m4 \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
+
+
+EXPOSE 9000
+
+ENTRYPOINT ["/usr/opt/bonsol/bonsol-node.sh"]

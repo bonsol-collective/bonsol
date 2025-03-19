@@ -263,7 +263,10 @@ impl BonsolClient {
                     return Ok(());
                 }
                 Some(Err(e)) => {
-                    return Err(anyhow::anyhow!("Transaction Falure Cannot Recover {:?}", e));
+                    return Err(anyhow::anyhow!(
+                        "Transaction Failure Cannot Recover {:?}",
+                        e
+                    ));
                 }
                 None => {
                     rt -= 1;

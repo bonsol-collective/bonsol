@@ -1,14 +1,19 @@
-name: Release
+name: Release workflow
+
 on:
   push:
     tags:
-      - "*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
 concurrency:
   group: "release"
   cancel-in-progress: true
+
 jobs:
-  build:
+  create-release:
+
     runs-on: ubuntu-latest
+
     steps:
       - name: GitHub Release
         uses: actions/create-release@v1

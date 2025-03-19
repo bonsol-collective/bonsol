@@ -11,7 +11,7 @@ import Prove from '../shared/prove.mdx';
 The bonsol cli is a command line interface for interacting with bonsol programs, building, and deploying zk programs.
 <Prereq />
 
-## Installation 
+## Installation
 To install the bonsol cli you can use the following command.
 
 ```bash

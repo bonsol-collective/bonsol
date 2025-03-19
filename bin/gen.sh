@@ -6,7 +6,7 @@ if [ ! -d "schemas" ]; then
   exit 1
 fi
 
-if [ ! -x $(which flatc) ]; then
+if [ ! -x "$(which flatc)" ]; then
   echo "Flatbuffers compiler is required"
   exit 1
 fi
@@ -18,4 +18,4 @@ sed -i.bak '
   }
 ' "schemas-ts/account.ts" && rm "schemas-ts/account.ts.bak"
 
-pnpm --filter bonsol-schemas run build 
+pnpm --filter bonsol-schemas run build

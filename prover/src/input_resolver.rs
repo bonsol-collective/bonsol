@@ -46,9 +46,9 @@ impl ProgramInput {
 }
 
 /// Input resolvers are responsible for downloading and resolving inputs
-/// Private inputs must be resoloved post claim and therefore are seperated from public inputs
+/// Private inputs must be resoloved post claim and therefore are separated from public inputs
 /// Public inputs are resolved in parallel and are resolved as soon as possible, Private inputs are currently always remote.
-/// The output of resolve_public_inputs is a vec of ProgramInputs and that must be passed to the private input resolver if any private inputs are present in the excecution request
+/// The output of resolve_public_inputs is a vec of ProgramInputs and that must be passed to the private input resolver if any private inputs are present in the execution request
 #[async_trait]
 pub trait InputResolver: Send + Sync {
     /// Returns true if the input resolver supports the input type
