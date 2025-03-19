@@ -47,7 +47,7 @@ if [ ! -f "${INSTALL_PREFIX}/stark/stark_verify" ]; then
     exit 1
 fi
 
-pnpx snarkjs zkey export verificationkey ${INSTALL_PREFIX}/stark/stark_verify_final.zkey verification_key.json
+pnpx snarkjs zkey export verificationkey "${INSTALL_PREFIX}"/stark/stark_verify_final.zkey verification_key.json
 if [ ! -d vkey ]
 then
     mkdir vkey

@@ -1,11 +1,11 @@
 # Manually Provision a Bonsol Node
-Bonsol has a fully featured docker image and helm chart that can be used to run a Bonsol node on kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](/docs/how-to/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and tast the sour air of hot solder. We need to feed the bare metal between our fingertips.
+Bonsol has a fully featured docker image and helm chart that can be used to run a Bonsol node on kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](/docs/how-to/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and task the sour air of hot solder. We need to feed the bare metal between our fingertips.
 
 ## Prerequisites
 * A keypair for the node, you need some SOL to pay for the transactions
 * A Dragons mouth compatible rpc provider endpoint [Dragons Mouth Docs](https://docs.triton.one/project-yellowstone/dragons-mouth-grpc-subscriptions) click here to get one from [Triton One](https://triton.one/triton-rpc/)
 * Docker on your local machine (not required on the node)
-* The node will do better if it has a gpu with cuda installed, which will require nvidia drivers and tools. 
+* The node will do better if it has a gpu with cuda installed, which will require nvidia drivers and tools.
 
 :::note
 Ansible role coming soon
@@ -17,7 +17,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-t
 ```
 Ensure cargo is on the path
 
-On your local machine you will need to run a docker imahge to get the neede groth16 witness generator and snark binary. This script will download them from the internet and save them in the current directory use `--prefix` to change the output directory
+On your local machine you will need to run a docker imahge to get the need groth16 witness generator and snark binary. This script will download them from the internet and save them in the current directory use `--prefix` to change the output directory
 ```bash
 ./bin/setup.sh
 ```
@@ -37,8 +37,8 @@ scp -i <your_ssh_key> -r stark/* <node_user>@<node ip>:/opt/bonsol/stark
 ```
 You will put the path in the `stark_compression_tools_path` in the config file.
 
-## Upload the keypair to the node 
-You will need to upload the keypair to the node. 
+## Upload the keypair to the node
+You will need to upload the keypair to the node.
 ```bash
 scp -r <keypair path> <node ip>:/opt/bonsol/keys/
 ```
@@ -72,7 +72,7 @@ maximum_concurrent_proofs = 1
 max_image_size_mb = 4
 image_compression_ttl_hours = 24
 env = "dev"
-stark_compression_tools_path = "<the path to the stark directory>" 
+stark_compression_tools_path = "<the path to the stark directory>"
 missing_image_strategy = "DownloadAndClaim"
 [metrics_config]
   Prometheus = {}
@@ -91,7 +91,7 @@ ulimit -s unlimited //this is required for the c++ groth16 witness generator it 
 #from within the bonsol root dir
 ./target/release/relay -f Node.toml
 ```
-### Runnig the Node with systemd
+### Running the Node with systemd
 You can use the following systemd service file to run the node.
 ```toml
 [Unit]

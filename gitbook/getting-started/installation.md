@@ -105,8 +105,8 @@ Commands:
   deploy    Deploy a program with various storage options, such as S3, or manually with a URL
   build     Build a ZK program
   estimate  Estimate the execution cost of a ZK RISC0 program
-  execute   
-  prove     
+  execute
+  prove
   init      Initialize a new project
   help      Print this message or the help of the given subcommand(s)
 
