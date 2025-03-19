@@ -8,7 +8,7 @@ env:
   CONTAINER_TAG:   "1.0.0"
 
 jobs:
-  build:
+  build-ci-container:
     permissions:
       contents: read
       packages: write
@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 

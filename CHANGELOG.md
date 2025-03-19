@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Fixed
+* Fix S3 path duplication in deploy command causing provers to be unable to download images
+
+## [0.4.5] - 2024-02-26
+
 ### Changed
 * `bonsol` cli option requirements and error messages updated for added clarity
 * **Breaking**: `bonsol deploy` cli subcommand requirements updated. Please refer to the docs, or use `bonsol deploy --help` for more info.
@@ -47,5 +52,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 * Docker Cuda options enabled.
 
 ### Fixed
-* Fixed a bug that used block height instead of slot on the cli to determing expiry, leading to short claim expiry.
+* Fixed a bug that used block height instead of slot on the cli to determining expiry, leading to short claim expiry.
 * Fixed `libsodium`, cli fixes and docker harness.

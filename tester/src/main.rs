@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
     let timeout = args.get(1).map(|s| s.parse::<u64>().unwrap()).unwrap_or(60);
     example_bonsol_program_test(&bonsol_client, &rpc_client, &signer, timeout).await?;
     example_sdk_test(&bonsol_client, &rpc_client, &signer, timeout).await?;
-    example_sdk_no_callback_test(&bonsol_client, &rpc_client, &signer, timeout).await?; 
+    example_sdk_no_callback_test(&bonsol_client, &rpc_client, &signer, timeout).await?;
     Ok(())
 }
 
