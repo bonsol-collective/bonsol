@@ -3,7 +3,10 @@ use bonsol_schema::{
     DeployV1Args, ExecutionRequestV1, ExecutionRequestV1Args, InputBuilder, InputType,
     ProgramInputType, ProverVersion,
 };
+use bytemuck::{Pod, Zeroable};
 use flatbuffers::{FlatBufferBuilder, WIPOffset};
+
+use num_enum::TryFromPrimitive;
 
 use crate::error::ClientError;
 use crate::util::{deployment_address, execution_address};
@@ -19,6 +22,43 @@ use {
     solana_sdk::instruction::AccountMeta, solana_sdk::instruction::Instruction,
     solana_sdk::pubkey::Pubkey, solana_sdk::system_program,
 };
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
+pub enum BonsolInstruction {
+    SubmitAndVerifyProof = 0,
+}
+
+// a SubmitAndVerifyRisc0SnarkProof requires a execution id of 128 bits
+// and committed_outputs of [u8; 32]
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct SubmitAndVerifyRisc0SNARKProof {
+    execution_id: u128, // 16 bytes
+    proof: [u8; 256],
+    execution_digest: [u8; 32],
+    input_digest: [u8; 32],
+    assumption_digest: [u8; 32],
+    committed_outputs: [u8; 32],
+
+    exit_code_system: u32,
+    exit_code_user: u32,
+}
+
+pub fn submit_proof_verify_v1(
+    signer: &Pubkey,
+    program_name: &str,
+) -> Result<Instruction, ClientError> {
+    let ix_data = &[0];
+    let accounts = vec![
+        AccountMeta::new(signer.to_owned(), true),
+        AccountMeta::new(signer.to_owned(), true),
+        // AccountMeta::new(deployment_account, false), // todo: fix this deployment account
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+    Ok(Instruction::new_with_bytes(crate::ID, ix_data, accounts))
+}
 
 pub fn deploy_v1(
     signer: &Pubkey,

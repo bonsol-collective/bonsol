@@ -14,9 +14,17 @@ pub use deploy_v1_generated::*;
 pub use execution_request_v1_generated::*;
 pub use input_type_generated::*;
 pub fn parse_ix_data(ix_data: &[u8]) -> Result<ChannelInstruction, ChannelSchemaError> {
+    // todo: this is hacky and will have to do till we remove flatbuffers entirely but theres
+    // currently no other way in determining which instruction type to use
+
     let instruction =
-        root_as_channel_instruction(ix_data).map_err(|_| ChannelSchemaError::InvalidInstruction)?;
-    Ok(instruction)
+        root_as_channel_instruction(ix_data).map_err(|_| ChannelSchemaError::InvalidInstruction);
+
+    if instruction.is_err() {
+        return instruction;
+    }
+
+    Ok(instruction.unwrap())
 }
 
 #[derive(ToPrimitive, FromPrimitive, PartialEq)]

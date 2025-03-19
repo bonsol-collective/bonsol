@@ -857,6 +857,7 @@ dependencies = [
  "bytemuck",
  "flatbuffers",
  "hex",
+ "num_enum",
  "serde",
  "sha3 0.10.8",
  "solana-program 2.0.23",

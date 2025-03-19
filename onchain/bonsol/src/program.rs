@@ -19,11 +19,6 @@ pub fn program<'a>(
         ChannelInstructionIxType::ExecuteV1 => {
             process_execute_v1(accounts, ix)?;
         }
-        /*
-        ChannelInstructionIxType::VerifyProofV1 => {
-            process_proof_v1(accounts, ix)?;
-        }
-        */
         _ => return Err(ChannelError::InvalidInstruction.into()),
     };
     Ok(())
