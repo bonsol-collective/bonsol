@@ -157,7 +157,7 @@ impl Risc0Runner {
         })
     }
 
-    // TODO: break up pipleine into smaller domains to make it easier to test
+    // TODO: break up pipeline into smaller domains to make it easier to test
     // Break into Image handling, Input handling, Execution Request
     // Inputs and Image should be service used by this prover.
     pub fn start(&mut self) -> Result<UnboundedSender<BonsolInstruction>> {
@@ -353,7 +353,7 @@ pub async fn handle_claim<'a>(
     loaded_images: LoadedImageMapRef<'a>,
     input_staging_area: InputStagingAreaRef<'a>,
     claim: ClaimV1<'a>,
-    accounts: &[Pubkey], // need to create cannonical parsing of accounts per instruction type for my flatbuffer model or use shank
+    accounts: &[Pubkey], // need to create canonical parsing of accounts per instruction type for my flatbuffer model or use shank
 ) -> Result<()> {
     info!("Received claim event");
     let claimer = accounts[3];
@@ -421,10 +421,10 @@ pub async fn handle_claim<'a>(
                 })
                 .await?;
                 match result {
-                    Ok((journal, assumptions_digest, reciept)) => {
+                    Ok((journal, assumptions_digest, receipt)) => {
                         let compressed_receipt = risc0_compress_proof(
                             config.stark_compression_tools_path.as_str(),
-                            reciept,
+                            receipt,
                         )
                         .await
                         .map_err(|e| {
@@ -700,7 +700,7 @@ fn risc0_prove(
     Err(Risc0RunnerError::ProofGenerationError.into())
 }
 
-pub struct CompressedReciept {
+pub struct CompressedReceipt {
     pub execution_digest: Vec<u8>,
     pub exit_code_system: u32,
     pub exit_code_user: u32,
@@ -710,9 +710,9 @@ pub struct CompressedReciept {
 /// This is a temporary solution until the wasm groth16 prover or a rust impl is working
 async fn risc0_compress_proof(
     tools_path: &str,
-    succint_receipt: SuccinctReceipt<ReceiptClaim>,
-) -> Result<CompressedReciept> {
-    let sealbytes = succint_receipt.get_seal_bytes();
+    succinct_receipt: SuccinctReceipt<ReceiptClaim>,
+) -> Result<CompressedReceipt> {
+    let sealbytes = succinct_receipt.get_seal_bytes();
     if !(ARCH == "x86_64" || ARCH == "x86") {
         panic!("X86 only");
     }
@@ -758,7 +758,7 @@ async fn risc0_compress_proof(
     proof_fd.read_to_end(&mut bytes).await?;
     let proof: ProofJson = serde_json::from_slice(&bytes)?;
     let seal: Seal = proof.try_into()?;
-    let claim = succint_receipt.claim;
+    let claim = succinct_receipt.claim;
     if let MaybePruned::Value(rc) = claim {
         let (system, user) = match rc.exit_code {
             ExitCode::Halted(user_exit) => (0, user_exit),
@@ -766,7 +766,7 @@ async fn risc0_compress_proof(
             ExitCode::SystemSplit => (2, 0),
             ExitCode::SessionLimit => (2, 2),
         };
-        Ok(CompressedReciept {
+        Ok(CompressedReceipt {
             execution_digest: rc.post.digest().as_bytes().to_vec(),
             exit_code_system: system,
             exit_code_user: user,
