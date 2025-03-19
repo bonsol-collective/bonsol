@@ -1,9 +1,10 @@
 use std::fs::{self, File};
-use std::path::Path;
+use std::path::Path as StdPath;
 
 use anyhow::Result;
 use bonsol_sdk::{BonsolClient, ProgramInputType};
 use indicatif::ProgressBar;
+use log::debug;
 use object_store::aws::AmazonS3Builder;
 use object_store::ObjectStore;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -15,6 +16,10 @@ use crate::command::{DeployArgs, S3UploadArgs, SharedDeployArgs};
 use crate::common::ZkProgramManifest;
 use crate::error::{BonsolCliError, S3ClientError, ZkManifestError};
 
+fn get_s3_path(manifest_name: &str, image_id: &str) -> String {
+    format!("{}-{}", manifest_name, image_id)
+}
+
 pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -> Result<()> {
     let bar = ProgressBar::new_spinner();
     let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::confirmed());
@@ -23,7 +28,7 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
         auto_confirm,
     } = deploy_args.shared_args();
 
-    let manifest_file = File::open(Path::new(&manifest_path)).map_err(|err| {
+    let manifest_file = File::open(StdPath::new(&manifest_path)).map_err(|err| {
         BonsolCliError::ZkManifestError(ZkManifestError::FailedToOpen {
             manifest_path: manifest_path.clone(),
             err,
@@ -52,20 +57,22 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 ..
             } = s3_upload;
 
-            let dest =
-                object_store::path::Path::from(format!("{}-{}", manifest.name, manifest.image_id));
-
-            let url = endpoint.unwrap_or(format!(
-                "https://{}.s3.{}.amazonaws.com/{}",
-                bucket, region, dest
+            let dest = format!("{}-{}", manifest.name, manifest.image_id);
+            let store_path = object_store::path::Path::from(dest.clone());
+            
+            // Use conventional S3 endpoint URL format
+            let endpoint_url = endpoint.clone().unwrap_or(format!(
+                "https://s3.{}.amazonaws.com",
+                region
             ));
-
+            
+            // Create the S3 client with the proper configuration
             let s3_client = AmazonS3Builder::new()
                 .with_bucket_name(&bucket)
                 .with_region(&region)
                 .with_access_key_id(&access_key)
                 .with_secret_access_key(&secret_key)
-                .with_endpoint(&url)
+                .with_endpoint(&endpoint_url)
                 .build()
                 .map_err(|err| {
                     BonsolCliError::S3ClientError(S3ClientError::FailedToBuildClient {
@@ -84,20 +91,31 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                 })?;
 
             // get the file to see if it exists
-            if s3_client.head(&dest).await.is_ok() {
+            if s3_client.head(&store_path).await.is_ok() {
                 bar.set_message("File already exists, skipping upload");
             } else {
                 s3_client
-                    .put(&dest, loaded_binary.into())
+                    .put(&store_path, loaded_binary.into())
                     .await
                     .map_err(|err| {
-                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest, err })
+                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest: store_path.clone(), err })
                     })?;
             }
 
             bar.finish_and_clear();
-            println!("Uploaded to S3 url {}", url);
-            url
+
+            // Create the download URL using the provided endpoint or AWS S3 URL convention
+            let https_url = if let Some(ep) = endpoint {
+                format!("{}/{}/{}", ep, bucket, dest)
+            } else {
+                format!("https://{}.s3.{}.amazonaws.com/{}", bucket, region, dest)
+            };
+            println!("Image uploaded to S3");
+            debug!("S3 path: s3://{}/{}", bucket, dest);
+            debug!("HTTPS URL (used for download): {}", https_url);
+            
+            // Return the HTTPS URL for compatibility with the HTTP client
+            https_url
         }
         DeployArgs::Url(url_upload) => {
             let req = reqwest::get(&url_upload.url).await?;

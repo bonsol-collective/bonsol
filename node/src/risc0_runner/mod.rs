@@ -645,8 +645,17 @@ async fn handle_image_deployment<'a>(
 ) -> Result<()> {
     let url = deploy.url().ok_or(Risc0RunnerError::InvalidData)?;
     let size = deploy.size_();
+    let image_id = deploy.image_id().unwrap_or_default();
+    let program_name = deploy.program_name().unwrap_or_default();
+    
+    info!("Attempting to download image from URL: {}", url);
+    info!("Image ID: {}, Size: {}", image_id, size);
+    info!("Program name: {}", program_name);
+    
     emit_histogram!(MetricEvents::ImageDownload, size as f64, url => url.to_string());
     emit_event_with_duration!(MetricEvents::ImageDownload, {
+        // The URL from deployment data already includes the full path
+        info!("Downloading from URL: {}", url);
         let resp = http_client.get(url).send().await?.error_for_status()?;
         let min = std::cmp::min(size, (config.max_image_size_mb * 1024 * 1024) as u64) as usize;
         info!("Downloading image, size {} min {}", size, min);
@@ -660,10 +669,15 @@ async fn handle_image_deployment<'a>(
             if let Some(bytes) = img.bytes() {
                 tokio::fs::write(Path::new(&config.risc0_image_folder).join(img.id.clone()), bytes).await?;
             }
-            if img.id != deploy.image_id().unwrap_or_default() {
+            if img.id != image_id {
+                info!("Image ID mismatch. Expected: {}, Got: {}", image_id, img.id);
                 return Err(Risc0RunnerError::InvalidData.into());
             }
             loaded_images.insert(img.id.clone(), img);
+            info!("Successfully downloaded and stored image: {}", image_id);
+        } else {
+            info!("Download failed with status: {}", resp.status());
+            return Err(Risc0RunnerError::InvalidData.into());
         }
         Ok(())
     }, url => url.to_string())
