@@ -9,14 +9,14 @@ icon: bullseye-arrow
 # Installation
 
 {% hint style="info" %}
-Interested in contributing? Head over to the [Broken link](broken-reference "mention") section to learn more.
+Interested in contributing? Head over to the [broken-reference](broken-reference/ "mention") section to learn more.
 {% endhint %}
 
 ## Requirements
 
 * [Rust](https://solana.com/docs/intro/installation#install-rust)
 * [Solana CLI](https://solana.com/docs/intro/installation#install-the-solana-cli)
-* [Docker](https://docs.docker.com/engine/install/)
+* [Docker](https://docs.docker.com/engine/install/) ([WSL notes](installation.md#docker-setup-for-wsl))
 * [FlatBuffers v24.3.25](https://github.com/google/flatbuffers/tree/v24.3.25) ([see notes](installation.md#notes))
 * [Anchor CLI](https://solana.com/docs/intro/installation#install-anchor-cli) (optional, if you want to write your Solana programs in Anchor)
 
@@ -141,6 +141,87 @@ zsh: command not found: bonsol
 ```
 
 ## Notes
+
+### Docker Setup for WSL
+
+For Bonsol development in WSL, we strongly recommend installing Docker directly in your WSL environment rather than using Docker Desktop for Windows.
+
+<details>
+
+<summary>Docker in WSL</summary>
+
+#### 1. Install Prerequisites
+
+```
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+```
+
+#### 2. Add Docker's Official GPG Key
+
+```
+# Create directory for keyrings
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# Download and add GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Set permissions
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+```
+
+#### 3. Add Docker Repository
+
+```
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+#### 4. Install Docker
+
+```
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+#### 5. Configure User Permissions
+
+```
+# Add your user to docker group
+sudo usermod -aG docker $USER
+
+# Apply changes to current session
+newgrp docker
+```
+
+#### 6. Verify Installation
+
+```
+docker --version
+docker compose version
+```
+
+### Notes
+
+* Docker daemon starts automatically with WSL
+* No Docker Desktop required
+* GUI features available through Docker Desktop later if needed
+* Compatible with all Bonsol development requirements
+
+### Troubleshooting
+
+If you encounter permission issues after installation:
+
+1. Ensure you've logged out and back in after adding your user to the docker group
+2. Or run `newgrp docker` to apply changes in current session
+
+If Docker daemon isn't starting:
+
+```
+sudo service docker start
+```
+
+</details>
 
 ### FlatBuffers v24.3.25
 
