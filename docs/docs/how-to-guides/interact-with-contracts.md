@@ -19,7 +19,7 @@ In a standard solana program you will need to craft a transaction with at least 
 
 You can can ensure you have the correct accounts by using the provided derivation functions.
 
-In rust as long as you know the IMAGE_ID and EXECUTION_REQEUST_ID you can use the following derivation functions to ensure you have the correct accounts.
+In rust as long as you know the IMAGE_ID and EXECUTION_REQUEST_ID you can use the following derivation functions to ensure you have the correct accounts.
 
 ```rust
 use bonsol_interface::{execution_address, deployment_address};
@@ -43,9 +43,9 @@ const EXECUTION_REQUEST_ACCOUNT = executionAddress(REQUESTER, EXECUTION_ID);
 ```
 
 
-### Creating an Execuition Request
+### Creating an Execution Request
 
-To create an execuition request you will need to provide the following information:
+To create an execution request you will need to provide the following information:
 * The requester
 * The image id
 * The execution id
@@ -57,7 +57,7 @@ To create an execuition request you will need to provide the following informati
 
 Here is an example of how to create an execution request, taken from the PowPoW example.
 
-```rust 
+```rust
 use bonsol_interface::instructions::{
     execute_v1, CallbackConfig, ExecutionConfig, Input,
 };
@@ -108,7 +108,7 @@ pub fn your_instruction(
   data_stripped, // the data that was passed in the transaction without the instruction prefix
  )?;
 
- //output can be used to do anything you want with the output of the execution, if the callback method errors then the transaction will still succeed in order to pay the prover but the 
+ //output can be used to do anything you want with the output of the execution, if the callback method errors then the transaction will still succeed in order to pay the prover but the
  ...
 ```
 
@@ -136,5 +136,3 @@ pub struct MineToken<'info> {
     ...
 }
 ```
-
-

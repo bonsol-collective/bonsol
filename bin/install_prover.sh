@@ -82,16 +82,16 @@ function download_with_resume() {
     while [ $retry_count -lt $max_retries ]; do
         if [ -f "$temp_file" ]; then
             echo "Resuming previous download..."
-            curl --max-time ${JOB_TIMEOUT} -C - --progress-bar -o "$temp_file" "$url"
+            curl --max-time "${JOB_TIMEOUT}" -C - --progress-bar -o "$temp_file" "$url"
         else
-            curl --max-time ${JOB_TIMEOUT} --progress-bar -o "$temp_file" "$url"
+            curl --max-time "${JOB_TIMEOUT}" --progress-bar -o "$temp_file" "$url"
         fi
 
         if verify_file_integrity "$temp_file" "$expected_size"; then
             mv "$temp_file" "$output_file"
             return 0
         else
-            echo "Download incomplete or corrupted, retrying... ($(($retry_count + 1))/$max_retries)"
+            echo "Download incomplete or corrupted, retrying... ($((retry_count + 1))/$max_retries)"
             ((retry_count++))
         fi
     done
@@ -197,13 +197,13 @@ for stark_tech in "${FALLBACK_FILES[@]}"; do
         ACTUAL_FILES+=("$stark_tech")
         ACTUAL_SIZES+=("$size")
         ((total_size += size))
-        echo "✓ ${stark_tech}: $(human_readable_size $size)"
+        echo "✓ ${stark_tech}: $(human_readable_size "$size")"
     else
         size=$(get_fallback_size "$stark_tech")
         ACTUAL_FILES+=("$stark_tech")
         ACTUAL_SIZES+=("$size")
         ((total_size += size))
-        echo "! ${stark_tech}: $(human_readable_size $size) (using fallback size)"
+        echo "! ${stark_tech}: $(human_readable_size "$size") (using fallback size)"
     fi
 done
 
@@ -220,7 +220,7 @@ for i in "${!ACTUAL_FILES[@]}"; do
     output_file="${INSTALL_PREFIX}/${stark_tech}"
 
     if [ -f "$output_file" ] && verify_file_integrity "$output_file" "$expected_size"; then
-        echo "✓ ${stark_tech} already exists and is valid ($(human_readable_size $expected_size))"
+        echo "✓ ${stark_tech} already exists and is valid ($(human_readable_size "$expected_size"))"
         continue
     fi
 

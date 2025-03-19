@@ -8,7 +8,7 @@ signer:
   path: /opt/bonsol/keys/signer.json
   keypair: ""
 
-## @param rpc.url URL of Solana RPC service 
+## @param rpc.url URL of Solana RPC service
 ## @param rpc.token token granting access to RPC service
 ##
 
@@ -32,7 +32,7 @@ provernode:
   fullnameOverride:
 
 ## @param provernode.image.repository bonsol container image registry
-## @param provernode.image.tag provernode image tage
+## @param provernode.image.tag provernode image tag
 ## @param provernode.image.pullPolicy provernode image pull policy
 ## @param provernode.image.imagePullSecrets provernode image pull secrets
 ## Image tag used if for an image that uses only CPU. If you want to utilize
@@ -43,7 +43,7 @@ provernode:
   image:
     repository: ghcr.io/anagrambuild/bonsol-node
     tag: cuda-main-0.2.1
-    pullPolicy: "IfNotPresent" 
+    pullPolicy: "IfNotPresent"
     imagePullSecrets: []
 
 ## @param provernode.replicaCount Desired number of prover node replicas
@@ -92,7 +92,7 @@ provernode:
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
 ## @param provernode.resources the resources limits and/or requests for the container
-## Define limits with gpu in order to run the container on GPU node. Make sure that you are using 
+## Define limits with gpu in order to run the container on GPU node. Make sure that you are using
 ## container image with CUDA support to utilize GPU.
 ##   limits:
 ##     nvidia.com/gpu: 1
@@ -148,7 +148,7 @@ tester:
   fullnameOverride:
 
 ## @param tester.image.repository bonsol container image registry
-## @param tester.image.tag tester image tage
+## @param tester.image.tag tester image tag
 ## @param tester.image.pullPolicy tester image pull policy
 ## @param tester.image.imagePullSecrets tester image pull secrets
 ## Image tag used if for an image that uses only CPU. If you want to utilize
@@ -159,7 +159,7 @@ tester:
   image:
     repository: docker.io/zerocomputing/bonsol-tester
     tag: 0.4.0
-    pullPolicy: "IfNotPresent" 
+    pullPolicy: "IfNotPresent"
     imagePullSecrets: []
 
 ## @param tester.replicaCount Desired number of prover node replicas
@@ -208,7 +208,7 @@ tester:
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
 ## @param tester.resources the resources limits and/or requests for the container
-## Define limits with gpu in order to run the container on GPU node. Make sure that you are using 
+## Define limits with gpu in order to run the container on GPU node. Make sure that you are using
 ## container image with CUDA support to utilize GPU.
 ##   limits:
 ##     nvidia.com/gpu: 1
@@ -220,4 +220,3 @@ tester:
 ## key value is the value of the environment variable
 ##
   env: {}
-

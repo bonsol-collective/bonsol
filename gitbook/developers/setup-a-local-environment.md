@@ -79,7 +79,7 @@ cd bonsol
 ./bin/validator.sh
 
 # Or run the local validator with the reset option
-./bin/validator.sh -r 
+./bin/validator.sh -r
 ```
 {% endstep %}
 

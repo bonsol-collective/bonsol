@@ -47,5 +47,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 * Docker Cuda options enabled.
 
 ### Fixed
-* Fixed a bug that used block height instead of slot on the cli to determing expiry, leading to short claim expiry.
+* Fixed a bug that used block height instead of slot on the cli to determining expiry, leading to short claim expiry.
 * Fixed `libsodium`, cli fixes and docker harness.
