@@ -8,7 +8,7 @@ on:
 
 # Allow one concurrent deployment
 env:
-  S3_BUCKET_NAME: "risc0-prover-us-east-1-041119533185"
+  S3_BUCKET_NAME: "risc0-prover-artifacts"
   PROVER_TAG: "v2024-05-17.1"
   AWS_REGION: "us-east-1"
   AWS_ROLE: "arn:aws:iam::516174096100:role/GithubBonsolCI"
