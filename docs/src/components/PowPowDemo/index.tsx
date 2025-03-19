@@ -84,7 +84,7 @@ function CollatzDemo() {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     ctx.beginPath();
     ctx.strokeStyle = '#00ff00';
     ctx.lineWidth = 2;
@@ -98,7 +98,7 @@ function CollatzDemo() {
     for (let i = 0; i <= currentIndex; i++) {
       const diff = Number(sequenceRef.current[i]) - Number(sequenceRef.current[0]);
       const angle = (i / sequenceRef.current.length ) * (Math.PI * Number(sequenceRef.current[i])) * (diff - sequenceRef.current.length);
-      
+
       const radius = maxRadius * (Math.log(Number(sequenceRef.current[i])) / Math.log(Number(sequenceRef.current[0])));
       const x = (centerX + Math.sin(angle) * radius);
       const y = (centerY + Math.cos(angle) * radius);
@@ -147,17 +147,17 @@ function CollatzDemo() {
         <UnifiedWalletButton />
       </div>
       <div style={{ fontFamily: 'monospace' }}>Current Solana Slot: {currentSlot}</div>
-      <button 
-        onClick={handleGenerateClick} 
-        style={{ 
-          marginTop: '10px', 
-          marginBottom: '10px', 
-          backgroundColor: '#00ff00', 
-          color: '#000', 
-          border: 'none', 
-          padding: '10px', 
-          fontFamily: 'monospace', 
-          cursor: 'pointer' 
+      <button
+        onClick={handleGenerateClick}
+        style={{
+          marginTop: '10px',
+          marginBottom: '10px',
+          backgroundColor: '#00ff00',
+          color: '#000',
+          border: 'none',
+          padding: '10px',
+          fontFamily: 'monospace',
+          cursor: 'pointer'
         }}
       >
         Generate Collatz Sequence

@@ -3,7 +3,7 @@ ARG FLAT_BUFFERS_VERSION=24.3.25
 ARG CUDA_VERSION=12.5
 
 ######################################################################
-# Cargo chef container 
+# Cargo chef container
 ######################################################################
 
 FROM rust:${RUST_VERSION} AS chef
@@ -27,9 +27,7 @@ COPY . .
 SHELL ["/bin/bash", "-c"]
 
 RUN set -euxo pipefail \
-&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json \
-&&  ls -l recipe.json
-
+&&  cargo chef prepare --bin bonsol-node --recipe-path recipe.json
 
 ######################################################################
 # Build bonsol node common build environment
@@ -70,9 +68,9 @@ WORKDIR /app/
 COPY --from=planner /app/recipe.json recipe.json
 
 RUN set -euxo pipefail \
-&&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json 
+&&  cargo chef cook --bin bonsol-node --release --recipe-path recipe.json
 
-COPY . . 
+COPY . .
 
 RUN set -euxo pipefail \
 &&  cargo build --release
@@ -91,7 +89,7 @@ RUN set -euxo pipefail \
 &&  cd bonsol \
 &&  cargo build-sbf
 
-###################################################################### 
+######################################################################
 # Build bonsol node gpu version
 ######################################################################
 
@@ -110,16 +108,16 @@ RUN set -euxo pipefail \
 &&  dpkg -i cuda-keyring_1.1-1_all.deb \
 &&  add-apt-repository contrib \
 &&  apt-get update \
-&&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
+&&  apt-get -y install --no-install-recommends cuda-toolkit-${CUDA_VERSION} \
 &&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
-&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json 
-
-COPY . . 
-
-RUN set -euxo pipefail \
-&&  cargo build -p bonsol-node --features=cuda --release \
+&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN set -euxo pipefail \
+&&  cargo build -p bonsol-node --features=cuda --release
 
 
 ######################################################################
@@ -156,10 +154,9 @@ RUN set -euxo pipefail \
       nasm \
       m4 \
 &&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/* 
+&&  rm -rf /var/lib/apt/lists/*
 
 
 EXPOSE 9000
 
 ENTRYPOINT ["/usr/opt/bonsol/bonsol-node.sh"]
-
