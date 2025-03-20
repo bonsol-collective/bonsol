@@ -1,3 +1,12 @@
+![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+
+![GitHub Tag](https://img.shields.io/github/v/tag/bonsol-collective/bonsol) ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/bonsol-collective/bonsol/main)
+![GitHub branch status](https://img.shields.io/github/checks-status/bonsol-collective/bonsol/main) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/bonsol-collective/bonsol)
+
+
+
+
+
 ![bonsol-header](gitbook/.gitbook/assets/bonsol.png)
 
 # Bonsol
