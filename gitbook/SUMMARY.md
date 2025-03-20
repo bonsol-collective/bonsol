@@ -1,30 +1,28 @@
 # Table of contents
 
-* [Welcome](README.md)
+- [Welcome](README.md)
 
 ## Core Concepts
 
-* [Introduction](core-concepts/introduction.md)
-* [Architecture](core-concepts/architecture.md)
+- [Introduction](core-concepts/introduction.md)
+- [Architecture](core-concepts/architecture.md)
 
 ## Getting Started
 
-* [Installation](getting-started/installation.md)
-* [Quickstart](getting-started/quickstart.md)
-
-***
-
-* [CLI Commands](cli-commands.md)
+- [Installation](getting-started/installation.md)
+- [Quickstart](getting-started/quickstart.md)
+- [CLI Commands](cli-commands.md)
 
 ## Developers
 
-* [Setup a local environment](developers/setup-a-local-environment.md)
-* [Tutorial: Simple Program](developers/tutorial-simple-program.md)
+- [Setup a local environment](developers/setup-a-local-environment.md)
+- [Tutorials](developers/tutorials/README.md)
+  - [A Simple First Program](developers/tutorials/simple-program.md)
 
 ## Provers
 
-* [Setup a prover node](provers/setup-a-prover-node.md)
+- [Setup a prover node](provers/setup-a-prover-node.md)
 
 ## Contributing
 
-* [Contributor guidelines](contributing/contributor-guidelines.md)
+- [Contributor guidelines](contributing/contributor-guidelines.md)
