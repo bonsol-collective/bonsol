@@ -51,7 +51,7 @@ solana-rpc-client = { workspace = true }
 solana-sdk = { workspace = true }
 tera = "1.17.1"
 thiserror = "1.0.65"
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"

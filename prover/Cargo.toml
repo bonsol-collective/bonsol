@@ -29,7 +29,7 @@ solana-rpc-client.workspace = true
 solana-rpc-client-api.workspace = true
 solana-account-decoder.workspace = true
 solana-sdk.workspace = true
-tokio = "1.36.0"
+tokio = { workspace = true }
 
 [dev-dependencies]
 mockito = "1.5.0"
