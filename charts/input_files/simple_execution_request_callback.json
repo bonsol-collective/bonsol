@@ -1,5 +1,5 @@
 {
-  "imageId": "68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960",
+  "imageId": "e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31",
   "executionConfig": {
     "verifyInputHash": false,
     "forwardOutput": true
@@ -15,13 +15,23 @@
     }
   ],
   "tip": 12000,
-  "expiry": 100,
+  "expiry": 1000,
   "callbackConfig": {
     "programId": "exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG",
-    "instructionPrefix": [1],
+    "instructionPrefix": [2],
     "extraAccounts": [
       {
-        "pubkey": "exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG",
+        "pubkey": "3b6DR2gbTJwrrX27VLEZ2FJcHrDvTSLKEcTLVhdxCoaf",
+        "isSigner": false,
+        "isWritable": true
+      },
+      {
+        "pubkey": "g7dD1FHSemkUQrX1Eak37wzvDjscgBW2pFCENwjLdMX",
+        "isSigner": false,
+        "isWritable": false
+      },
+      {
+        "pubkey": "FHab8zDcP1DooZqXHWQowikqtXJb1eNHc46FEh1KejmX",
         "isSigner": false,
         "isWritable": false
       }
