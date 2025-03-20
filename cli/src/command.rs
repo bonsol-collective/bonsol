@@ -96,8 +96,8 @@ pub struct UrlUploadArgs {
     pub url: String,
 
     #[arg(
-        long = "no-post", 
-        help = "Skip posting the binary to the URL endpoint and assume it's already there", 
+        long = "no-post",
+        help = "Skip posting the binary to the URL endpoint and assume it's already there",
         action = clap::ArgAction::SetTrue
     )]
     pub no_post: bool,
