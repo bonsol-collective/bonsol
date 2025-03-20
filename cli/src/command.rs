@@ -96,11 +96,11 @@ pub struct UrlUploadArgs {
     pub url: String,
 
     #[arg(
-        help = "Whether to post the binary to the URL endpoint",
-        long,
-        default_value = "true"
+        long = "no-post", 
+        help = "Skip posting the binary to the URL endpoint and assume it's already there", 
+        action = clap::ArgAction::SetTrue
     )]
-    pub post: bool,
+    pub no_post: bool,
 
     #[command(flatten)]
     pub shared_args: SharedDeployArgs,
