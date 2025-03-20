@@ -1,0 +1,37 @@
+name: Unittest coverage report
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+  packages: read
+
+jobs:
+
+  unittest-report:
+
+    name: Unit tests
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute unittests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L https://github.com/mozilla/grcov/releases/download/v0.8.20/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar -xvf - -C /usr/local.bin
+          ls -l /usr/local/bin
+          pwd
+          find / -name onchain
+          CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw' cargo test
+          grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/html
