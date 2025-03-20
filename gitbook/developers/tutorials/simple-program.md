@@ -172,6 +172,8 @@ This simple program demonstrates private input validation, where only the prover
    - A cryptographic digest of both inputs
    - A result (1 for match, 0 for no match)
 
+> :bulb: Note: Calls to `println!` inside the ZK program can be seen in the prover logs, which can be useful for debugging.
+
 ## Building the ZK program
 
 Now that we understand the program, let's build it:

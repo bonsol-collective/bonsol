@@ -18,6 +18,8 @@
 - [Setup a local environment](developers/setup-a-local-environment.md)
 - [Tutorials](developers/tutorials/README.md)
   - [A Simple First Program](developers/tutorials/simple-program.md)
+  - [Using Callbacks](developers/tutorials/using-callbacks.md)
+  - [Using Callbacks From Programs](developers/tutorials/using-callbacks-from-programs.md)
 
 ## Provers
 
