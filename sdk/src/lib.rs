@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Display};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -39,6 +40,23 @@ pub struct BonsolClient {
 pub enum ExecutionAccountStatus {
     Completed(ExitCode),
     Pending(ExecutionRequestV1T),
+}
+
+impl Debug for ExecutionAccountStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExecutionAccountStatus::Completed(code) => {
+                write!(
+                    f,
+                    "ExecutionAccountStatus::Completed: {:?}",
+                    code.to_string()
+                )
+            }
+            ExecutionAccountStatus::Pending(req) => {
+                write!(f, "ExecutionAccountStatus::Pending: {:?}", req)
+            }
+        }
+    }
 }
 
 impl BonsolClient {
