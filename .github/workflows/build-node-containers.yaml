@@ -75,6 +75,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Tag slim image with unqualified name (fork PR)
+        if: ${{ inputs.is_fork }}
+        run: docker tag ${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }} bonsol-node-slim:latest
+
       - name: Build and Load Docker Image stark (fork PR)
         if: ${{ inputs.is_fork }}
         uses: docker/build-push-action@v6
