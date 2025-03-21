@@ -59,42 +59,66 @@ jobs:
           echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
 
-      - name: Build Docker Image slim
+      # For fork PRs: use standard Docker build to ensure images are available in the local Docker daemon
+      - name: Build images for fork PR using standard Docker
+        if: ${{ inputs.is_fork }}
+        run: |
+          echo "Building Docker images for fork PR"
+          
+          # Build the slim image first
+          echo "Building slim image..."
+          docker build -t bonsol-node-slim:latest -f ./docker/Dockerfile.slim .
+          
+          # Build the stark image that depends on the slim image
+          echo "Building stark image..."
+          docker build -t bonsol-node-stark:latest -f ./docker/Dockerfile.stark . \
+            --build-arg IMAGE=bonsol-node-slim:latest
+          
+          # Build the full image that depends on the stark image
+          echo "Building full cuda image..."
+          docker build -t bonsol-node-stark-cuda:latest -f ./docker/Dockerfile.full . \
+            --build-arg IMAGE=bonsol-node-stark:latest
+          
+          # List the built images to verify
+          docker images | grep bonsol-node
+
+      # For non-fork PRs: continue using buildx with push
+      - name: Build Docker Image slim (non-fork PR)
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ !inputs.is_fork }}
-          load: ${{ inputs.is_fork }}
+          push: true
           file: docker/Dockerfile.slim
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_SLIM_IMAGE || steps.docker_tags.outputs.SLIM_IMAGE }}
+          tags: ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build Docker Image stark
+      - name: Build Docker Image stark (non-fork PR)
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ !inputs.is_fork }}
-          load: ${{ inputs.is_fork }}
+          push: true
           file: docker/Dockerfile.stark
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_IMAGE || steps.docker_tags.outputs.STARK_IMAGE }}
+          tags: ${{ steps.docker_tags.outputs.STARK_IMAGE }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_SLIM_IMAGE || steps.docker_tags.outputs.SLIM_IMAGE }}
+            IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build Docker Image full
+      - name: Build Docker Image full (non-fork PR)
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ !inputs.is_fork }}
-          load: ${{ inputs.is_fork }}
+          push: true
           file: docker/Dockerfile.full
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE || steps.docker_tags.outputs.STARK_CUDA_IMAGE }}
+          tags: ${{ steps.docker_tags.outputs.STARK_CUDA_IMAGE }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_IMAGE || steps.docker_tags.outputs.STARK_IMAGE }}
+            IMAGE=${{ steps.docker_tags.outputs.STARK_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
