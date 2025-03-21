@@ -58,7 +58,7 @@ jobs:
           echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
-          
+
       - name: Build Docker Image slim
         uses: docker/build-push-action@v6
         with:
