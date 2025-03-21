@@ -15,27 +15,11 @@ jobs:
 
   unittest-report:
 
-    name: Unit tests
+    name: Prepare
     runs-on: ubuntu-latest
 
-    container:
-#      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
-      image: ubuntu:22.04
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-#      - name: Execute unittests
-#        shell: bash
-#        run: |
-#          set -euxo pipefail
-#          curl -L https://github.com/mozilla/grcov/releases/download/v0.8.20/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar -jxvf - -C /usr/local/bin
-#          rustup component add llvm-tools-preview
-#          CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw' cargo test
-#          grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/html
-
-      - name: Execute unittests
+      - name: Unit Tests
         shell: bash
         run: |
           set -euxo pipefail
@@ -44,12 +28,32 @@ jobs:
           mkdir -p ./target/coverage/html
           echo "<!doctype html><html><head></head><body><h2>Coverage Report</h2></body></html>" > ./target/coverage/html/index.html
 
-      - name: Publish results
-        uses: peaceiris/actions-gh-pages@v4
-        # If you're changing the branch from main,
-        # also change the `main` in `refs/heads/main`
-        # below accordingly.
+      - name: Setup Pages
         if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/coverage/html
+          # location of the coverage artifacts
+          path: "./target/coverage/html/"
+
+  deploy-coverage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: test
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      # environment created automatically by GitHub
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
