@@ -24,8 +24,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Always login to GitHub Container Registry to access base images
+      # This is needed for both fork and non-fork PRs to access base images
       - name: Login to GitHub Container Registry
-        if: ${{ !inputs.is_fork }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -58,31 +59,58 @@ jobs:
           echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
-
-      # For fork PRs: use standard Docker build to ensure images are available in the local Docker daemon
-      - name: Build images for fork PR using standard Docker
+      
+      # For fork PRs: build images and load them into Docker daemon (not push to registry)
+      # Use docker/build-push-action but with load: true and push: false
+      - name: Build and Load Docker Image slim (fork PR)
         if: ${{ inputs.is_fork }}
-        run: |
-          echo "Building Docker images for fork PR"
-          
-          # Build the slim image first
-          echo "Building slim image..."
-          docker build -t bonsol-node-slim:latest -f ./docker/Dockerfile.slim .
-          
-          # Build the stark image that depends on the slim image
-          echo "Building stark image..."
-          docker build -t bonsol-node-stark:latest -f ./docker/Dockerfile.stark . \
-            --build-arg IMAGE=bonsol-node-slim:latest
-          
-          # Build the full image that depends on the stark image
-          echo "Building full cuda image..."
-          docker build -t bonsol-node-stark-cuda:latest -f ./docker/Dockerfile.full . \
-            --build-arg IMAGE=bonsol-node-stark:latest
-          
-          # List the built images to verify
-          docker images | grep bonsol-node
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      # For non-fork PRs: continue using buildx with push
+      - name: Build and Load Docker Image stark (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.stark
+          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Load Docker Image full (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.full
+          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Verify images are available in Docker daemon for fork PRs
+      - name: Verify Docker images (fork PR)
+        if: ${{ inputs.is_fork }}
+        run: docker images | grep bonsol-node
+
+      # For non-fork PRs: build and push images to registry
       - name: Build Docker Image slim (non-fork PR)
         if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6

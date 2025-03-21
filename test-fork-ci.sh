@@ -5,6 +5,17 @@ echo "🧪 Testing Fork PR CI workflow locally"
 echo "======================================"
 echo "This script simulates how the CI workflow builds Docker images for fork PRs"
 
+# First ensure we're logged in to GitHub Container Registry
+# You need to have a GitHub token with read:packages scope
+if [[ -z "${GITHUB_TOKEN}" ]]; then
+  echo "⚠️ GITHUB_TOKEN not set - attempting to use Docker credentials if already logged in"
+  echo "If this fails, please set GITHUB_TOKEN environment variable and run this script again:"
+  echo "export GITHUB_TOKEN=your_token_here"
+else
+  echo "🔑 Logging in to GitHub Container Registry..."
+  echo "${GITHUB_TOKEN}" | docker login ghcr.io -u $USER --password-stdin
+fi
+
 # Clean up any existing images
 echo "🧹 Cleaning up existing test images..."
 docker rmi -f bonsol-node-slim:latest bonsol-node-stark:latest bonsol-node-stark-cuda:latest 2>/dev/null || true
