@@ -33,10 +33,10 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v4
         with:
-          # location of the coverage artifacts
+          name: my-artifact
           path: "./target/coverage/html/"
 
   deploy-coverage:
