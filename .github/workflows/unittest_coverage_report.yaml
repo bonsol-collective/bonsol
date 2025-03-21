@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
+#      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
+      image: ubuntu:22.04
 
     steps:
       - name: Checkout
