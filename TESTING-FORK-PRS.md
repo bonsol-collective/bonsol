@@ -30,7 +30,7 @@ This script:
 2. Test locally with `test-fork-ci.sh`
 3. If the local test passes, create a PR and confirm it works with the real CI process
 
-## Fork PR Workflow 
+## Fork PR Workflow
 
 For fork PRs, the CI workflow:
 
@@ -42,7 +42,7 @@ For fork PRs, the CI workflow:
 
 If images fail to build:
 
-1. Check authentication: 
+1. Check authentication:
    ```bash
    export GITHUB_TOKEN=your_token_here
    ```
@@ -55,4 +55,4 @@ If images fail to build:
 3. Verify Docker engine is running:
    ```bash
    docker info
-   ``` 
+   ```
