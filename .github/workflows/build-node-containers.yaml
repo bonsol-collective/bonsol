@@ -59,7 +59,7 @@ jobs:
           echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
-      
+
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but with load: true and push: false
       - name: Build and Load Docker Image slim (fork PR)
