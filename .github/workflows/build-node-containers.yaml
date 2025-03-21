@@ -40,7 +40,6 @@ jobs:
       - name: Set Docker Tags
         id: docker_tags
         run: |
-          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
             echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -48,10 +47,17 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
-          # Set local image names for fork PRs
-          echo "SLIM_LOCAL_NAME=bonsol-node:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "STARK_LOCAL_NAME=bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "STARK_CUDA_LOCAL_NAME=bonsol-node:stark-cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+          # Registry and image names for non-fork PRs
+          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
+          echo "SLIM_IMAGE=ghcr.io/bonsol-collective/bonsol-node:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "STARK_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "STARK_CUDA_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+          # Local image names for fork PRs - use consistent naming without registry prefix
+          echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
+          echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
+          echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
 
       - name: Build Docker Image slim
         uses: docker/build-push-action@v6
@@ -60,7 +66,7 @@ jobs:
           push: ${{ !inputs.is_fork }}
           load: ${{ inputs.is_fork }}
           file: docker/Dockerfile.slim
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.SLIM_LOCAL_NAME || format('{0}:slim-{1}', steps.docker_tags.outputs.REGISTRY, steps.docker_tags.outputs.TAG) }}
+          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_SLIM_IMAGE || steps.docker_tags.outputs.SLIM_IMAGE }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -72,10 +78,10 @@ jobs:
           push: ${{ !inputs.is_fork }}
           load: ${{ inputs.is_fork }}
           file: docker/Dockerfile.stark
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.STARK_LOCAL_NAME || format('{0}:stark-{1}', steps.docker_tags.outputs.REGISTRY, steps.docker_tags.outputs.TAG) }}
+          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_IMAGE || steps.docker_tags.outputs.STARK_IMAGE }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.SLIM_LOCAL_NAME || format('{0}:slim-{1}', steps.docker_tags.outputs.REGISTRY, steps.docker_tags.outputs.TAG) }}
+            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_SLIM_IMAGE || steps.docker_tags.outputs.SLIM_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -86,9 +92,9 @@ jobs:
           push: ${{ !inputs.is_fork }}
           load: ${{ inputs.is_fork }}
           file: docker/Dockerfile.full
-          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.STARK_CUDA_LOCAL_NAME || format('{0}:stark-cuda-{1}', steps.docker_tags.outputs.REGISTRY, steps.docker_tags.outputs.TAG) }}
+          tags: ${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE || steps.docker_tags.outputs.STARK_CUDA_IMAGE }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.STARK_LOCAL_NAME || format('{0}:stark-{1}', steps.docker_tags.outputs.REGISTRY, steps.docker_tags.outputs.TAG) }}
+            IMAGE=${{ inputs.is_fork && steps.docker_tags.outputs.LOCAL_STARK_IMAGE || steps.docker_tags.outputs.STARK_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
