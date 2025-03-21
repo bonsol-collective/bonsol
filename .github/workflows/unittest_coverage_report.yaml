@@ -39,7 +39,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ls -la
+          apt update
+          apt install git
           mkdir -p ./target/coverage/html
           echo "<!doctype html><html><head></head><body><h2>Coverage Report</h2></body></html>" > ./target/coverage/html/index.html
 
