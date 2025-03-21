@@ -124,7 +124,7 @@ RUN set -euxo pipefail \
 # Create an optimized container with Bonsol node
 ######################################################################
 
-FROM rust:${RUST_VERSION}-slim
+FROM rust:${RUST_VERSION}-slim AS slim
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"

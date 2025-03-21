@@ -7,7 +7,7 @@ ARG CUDA_VERSION=12.5
 
 FROM solanalabs/solana:v1.18.26 as solana
 
-FROM ${IMAGE}
+FROM ${IMAGE} AS full
 
 ARG CUDA_VERSION
 
