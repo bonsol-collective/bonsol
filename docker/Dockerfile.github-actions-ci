@@ -55,6 +55,7 @@ USER root
 ARG PACKAGE=bonsol
 ARG SOLANA=1.18.22
 ARG RUST_VERSION=1.81.0
+ARG GRCOV_VERSION=v0.8.20
 
 WORKDIR /workspaces/${PACKAGE}
 
@@ -94,7 +95,9 @@ RUN set -euxo pipefail \
 &&  rustup component add rustfmt --toolchain nightly \
 &&  rustup toolchain install ${RUST_VERSION} \
 &&  rustup default ${RUST_VERSION} \
-&&  cargo install sccache --locked
+&&  cargo install sccache --locked \
+&&  curl -L https://github.com/mozilla/grcov/releases/download/${GRCOV_VERSION}/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar -jxvf - -C /usr/local/bin \
+&&  rustup component add llvm-tools-preview
 
 COPY docker/ci-entry.sh /usr/local/bin/ci-entry.sh
 
