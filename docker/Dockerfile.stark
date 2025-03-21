@@ -6,7 +6,7 @@ ARG RISC0_VERSION="v2024-05-17.1"
 
 FROM risczero/risc0-groth16-prover:${RISC0_VERSION} AS risczero
 
-FROM ${IMAGE}
+FROM ${IMAGE} AS stark
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
