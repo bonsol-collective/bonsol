@@ -3,13 +3,10 @@
 ######################################################################
 
 ARG IMAGE
-ARG CUDA_VERSION=12.5
-
-FROM solanalabs/solana:v1.18.26 as solana
 
 FROM ${IMAGE} AS full
 
-ARG CUDA_VERSION
+ARG CUDA_VERSION=12.5
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"
@@ -19,9 +16,9 @@ WORKDIR /usr/opt/bonsol
 
 SHELL ["/bin/bash", "-c"]
 
-COPY --from=solana  /usr/bin/solana  /usr/bin/solana
-COPY --from=solana  /usr/bin/solana-keygen /usr/bin/solana-keygen
-COPY --from=solana  /usr/bin/solana-test-validator /usr/bin/solana-test-validator
+COPY --from=solanalabs/solana:v1.18.26  /usr/bin/solana  /usr/bin/solana
+COPY --from=solanalabs/solana:v1.18.26  /usr/bin/solana-keygen /usr/bin/solana-keygen
+COPY --from=solanalabs/solana:v1.18.26  /usr/bin/solana-test-validator /usr/bin/solana-test-validator
 
 RUN set -euxo pipefail \
 &&  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
