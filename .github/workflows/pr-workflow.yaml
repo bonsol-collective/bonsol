@@ -105,7 +105,7 @@ jobs:
     needs: [call-build-node-container-image, check-fork-pr]
 
     container:
-      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node:stark-cuda-' || 'ghcr.io/bonsol-collective/bonsol-node:stark-cuda-' }}${{ github.sha }}
+      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
@@ -119,7 +119,7 @@ jobs:
         run: |
           set -euxo pipefail
           cd /usr/opt/bonsol/
-          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node:stark-cuda-' || 'ghcr.io/bonsol-collective/bonsol-node:stark-cuda-' }}${{ github.sha }}"
+          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
