@@ -47,13 +47,13 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
-          
+
           # Registry and image names for non-fork PRs
           echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
           echo "SLIM_IMAGE=ghcr.io/bonsol-collective/bonsol-node:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "STARK_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "STARK_CUDA_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
-          
+
           # Local image names for fork PRs - use consistent naming without registry prefix
           echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
           echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
