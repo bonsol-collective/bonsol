@@ -1,0 +1,23 @@
+[package]
+name = "callback-example-runner"
+edition = "2021"
+version = {workspace = true}
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1.0.86"
+# anyhow = {workspace = true}
+bonsol-sdk = { workspace = true }
+risc0-zkvm = { git = "https://github.com/anagrambuild/risc0", branch = "v1.0.1-bonsai-fix", default-features = false, features = [
+  "std",
+] }
+solana-cli-config = { workspace = true }
+solana-rpc-client = { workspace = true }
+solana-sdk = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+
+[dependencies.sha2]
+git = "https://github.com/risc0/RustCrypto-hashes"
+tag = "sha2-v0.10.6-risczero.0"

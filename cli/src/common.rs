@@ -8,8 +8,6 @@ use bonsol_prover::input_resolver::{ProgramInput, ResolvedInput};
 use bonsol_sdk::instructions::CallbackConfig;
 use bonsol_sdk::{InputT, InputType, ProgramInputType};
 use clap::Args;
-use rand::distributions::Alphanumeric;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use solana_rpc_client::nonblocking::rpc_client;
 use solana_sdk::instruction::AccountMeta;
@@ -429,15 +427,6 @@ fn proof_parse_stdin(input: &str) -> Result<Vec<ProgramInput>> {
         entries.push(proof_parse_entry(entries.len() as u8, &current_entry)?);
     }
     Ok(entries)
-}
-
-pub fn rand_id(chars: usize) -> String {
-    let mut rng = rand::thread_rng();
-    (&mut rng)
-        .sample_iter(Alphanumeric)
-        .take(chars)
-        .map(char::from)
-        .collect()
 }
 
 #[cfg(test)]
