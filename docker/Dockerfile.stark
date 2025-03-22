@@ -18,3 +18,4 @@ COPY --from=risczero /app/stark_verify /usr/opt/bonsol/stark/stark_verify
 COPY --from=risczero /app/stark_verify.dat /usr/opt/bonsol/stark/stark_verify.dat
 COPY --from=risczero /app/stark_verify_final.zkey /usr/opt/bonsol/stark/stark_verify_final.zkey
 COPY --from=risczero /usr/local/sbin/rapidsnark /usr/opt/bonsol/stark/rapidsnark
+COPY --from=risczero /app/stark_verify stark/prover.sh

@@ -17,8 +17,8 @@ pub fn new_risc0_exec_env(
         match input {
             ProgramInput::Resolved(ri) => {
                 if ri.input_type == ProgramInputType::PublicProof {
-                    let reciept: Receipt = bincode::deserialize(&ri.data)?;
-                    env_builder.add_assumption(reciept);
+                    let receipt: Receipt = bincode::deserialize(&ri.data)?;
+                    env_builder.add_assumption(receipt);
                 } else {
                     env_builder.write_frame(&ri.data);
                 }

@@ -20,17 +20,17 @@ example:
 bonsol -k ./keypair.json -u http://localhost:8899 ...
 ```
 
-### Build 
+### Build
 You can build a bonsol program with the following command
 
 ```
 bonsol -k ./keypair.json -u http://localhost:8899  build -z {path to program folder}
 ```
-In the above example the program folder is the folder that contains the Cargo.toml file. So if you have a program in the folder `my-program` you would run the command 
+In the above example the program folder is the folder that contains the Cargo.toml file. So if you have a program in the folder `my-program` you would run the command
 ```bonsol -k ./keypair.json -u http://localhost:8899  build -z ./my-program```
 
 The output of the build command is a manifest.json file which is placed in the root of the program folder. The manifest.json file contains needed information for deployment.
- 
+
  The Cargo.toml file must have the following metadata
  ```
  [package.metadata.zkprogram]

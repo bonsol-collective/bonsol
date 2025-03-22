@@ -27,4 +27,5 @@
 
 ## Contributing
 
-- [Contributor guidelines](contributing/contributor-guidelines.md)
+* [Contributor guidelines](contributing/contributor-guidelines.md)
+* [Contributing to Documentation](contributing/contributing-to-docs.md)

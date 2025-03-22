@@ -13,18 +13,38 @@ permissions:
 
 jobs:
 
+  check_pre-commit:
+
+    name: Run pre-commit checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit in check mode
+        run: pre-commit run --all-files
+
   check-formatting:
 
     name: Check & Format
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Check
         shell: bash
         id: check
@@ -42,44 +62,64 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test
         run: cargo test -- --nocapture
+
+  check-fork-pr:
+    name: Check if PR is from fork
+    runs-on: ubuntu-latest
+    outputs:
+      is_fork: ${{ steps.check.outputs.is_fork }}
+    steps:
+      - name: Check if PR is from fork
+        id: check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "PR is from a fork repository"
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+            echo "PR is from the same repository"
+          fi
 
   call-build-node-container-image:
     permissions:
       contents: read
       packages: write
+    needs: check-fork-pr
     uses: ./.github/workflows/build-node-containers.yaml
+    with:
+      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
   e2e-test:
 
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
-    needs: call-build-node-container-image
+    needs: [call-build-node-container-image, check-fork-pr]
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
+      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: E2E Test
         shell: bash
         run: |
           set -euxo pipefail
           cd /usr/opt/bonsol/
-          echo "Using image ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}"
+          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
@@ -111,4 +151,3 @@ jobs:
             -y
           echo "Running Tests"
           /usr/opt/bonsol/bonsol-tester 500
-

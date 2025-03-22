@@ -127,6 +127,16 @@ impl Risc0Runner {
         txn_sender: Arc<RpcTransactionSender>,
         input_resolver: Arc<dyn InputResolver + 'static>,
     ) -> Result<Risc0Runner> {
+        if !check_x86_64arch() {
+            warn!("Bonsol node will not compress STARKs to SNARKs after successful risc0vm\nproving due to stark compression tooling requiring x86_64 architectures - virtualization will also fail");
+        }
+
+        check_stark_compression_tools_path(&config.stark_compression_tools_path)?;
+
+        if !std::path::Path::new(&config.risc0_image_folder).exists() {
+            fs::create_dir_all(&config.risc0_image_folder)?;
+        }
+
         let dir = fs::read_dir(&config.risc0_image_folder)?;
         let loaded_images = DashMap::new();
         for entry in dir {
@@ -137,12 +147,6 @@ impl Risc0Runner {
                 loaded_images.insert(img.id.clone(), img);
             }
         }
-
-        if !check_x86_64arch() {
-            warn!("Bonsol node will not compress STARKs to SNARKs after successful risc0vm\nproving due to stark compression tooling requiring x86_64 architectures - virtualization will also fail");
-        }
-
-        check_stark_compression_tools_path(&config.stark_compression_tools_path)?;
 
         Ok(Risc0Runner {
             config: Arc::new(config),
@@ -157,7 +161,7 @@ impl Risc0Runner {
         })
     }
 
-    // TODO: break up pipleine into smaller domains to make it easier to test
+    // TODO: break up pipeline into smaller domains to make it easier to test
     // Break into Image handling, Input handling, Execution Request
     // Inputs and Image should be service used by this prover.
     pub fn start(&mut self) -> Result<UnboundedSender<BonsolInstruction>> {
@@ -353,7 +357,7 @@ pub async fn handle_claim<'a>(
     loaded_images: LoadedImageMapRef<'a>,
     input_staging_area: InputStagingAreaRef<'a>,
     claim: ClaimV1<'a>,
-    accounts: &[Pubkey], // need to create cannonical parsing of accounts per instruction type for my flatbuffer model or use shank
+    accounts: &[Pubkey], // need to create canonical parsing of accounts per instruction type for my flatbuffer model or use shank
 ) -> Result<()> {
     info!("Received claim event");
     let claimer = accounts[3];
@@ -421,10 +425,10 @@ pub async fn handle_claim<'a>(
                 })
                 .await?;
                 match result {
-                    Ok((journal, assumptions_digest, reciept)) => {
+                    Ok((journal, assumptions_digest, receipt)) => {
                         let compressed_receipt = risc0_compress_proof(
                             config.stark_compression_tools_path.as_str(),
-                            reciept,
+                            receipt,
                         )
                         .await
                         .map_err(|e| {
@@ -700,7 +704,7 @@ fn risc0_prove(
     Err(Risc0RunnerError::ProofGenerationError.into())
 }
 
-pub struct CompressedReciept {
+pub struct CompressedReceipt {
     pub execution_digest: Vec<u8>,
     pub exit_code_system: u32,
     pub exit_code_user: u32,
@@ -710,9 +714,9 @@ pub struct CompressedReciept {
 /// This is a temporary solution until the wasm groth16 prover or a rust impl is working
 async fn risc0_compress_proof(
     tools_path: &str,
-    succint_receipt: SuccinctReceipt<ReceiptClaim>,
-) -> Result<CompressedReciept> {
-    let sealbytes = succint_receipt.get_seal_bytes();
+    succinct_receipt: SuccinctReceipt<ReceiptClaim>,
+) -> Result<CompressedReceipt> {
+    let sealbytes = succinct_receipt.get_seal_bytes();
     if !(ARCH == "x86_64" || ARCH == "x86") {
         panic!("X86 only");
     }
@@ -758,7 +762,7 @@ async fn risc0_compress_proof(
     proof_fd.read_to_end(&mut bytes).await?;
     let proof: ProofJson = serde_json::from_slice(&bytes)?;
     let seal: Seal = proof.try_into()?;
-    let claim = succint_receipt.claim;
+    let claim = succinct_receipt.claim;
     if let MaybePruned::Value(rc) = claim {
         let (system, user) = match rc.exit_code {
             ExitCode::Halted(user_exit) => (0, user_exit),
@@ -766,7 +770,7 @@ async fn risc0_compress_proof(
             ExitCode::SystemSplit => (2, 0),
             ExitCode::SessionLimit => (2, 2),
         };
-        Ok(CompressedReciept {
+        Ok(CompressedReceipt {
             execution_digest: rc.post.digest().as_bytes().to_vec(),
             exit_code_system: system,
             exit_code_user: user,

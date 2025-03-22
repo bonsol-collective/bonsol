@@ -42,10 +42,10 @@ done
 
 set -x
 
-if [ ! -x $(which cargo) ]; then
+if [ ! -x "$(which cargo)" ]; then
     echo "Rust and cargo must be installed"
     exit 1
-fi    
+fi
 
 cargo build-sbf && solana-test-validator \
     --limit-ledger-size 0 \

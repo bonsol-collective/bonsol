@@ -5,7 +5,7 @@ on:
 
 env:
   CONTAINER_IMAGE: "ghcr.io/bonsol-collective/bonsol-ci-env"
-  CONTAINER_TAG:   "1.0.0"
+  CONTAINER_TAG:   "1.1.0"
 
 jobs:
   build-ci-container:
@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
