@@ -80,14 +80,14 @@ jobs:
       - name: Build stark
         run: |
           docker buildx build \
-            --build-arg IMAGE=$LOCAL_SLIM_IMAGE \
+            --build-arg IMAGE=${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }} \
             --file docker/Dockerfile.stark \
             --load .
 
       - name: Build full
         run: |
           docker buildx build \
-            --build-arg IMAGE=LOCAL_STARK_IMAGE \
+            --build-arg IMAGE=${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }} \
             --file docker/Dockerfile.full \
             --load .
 
