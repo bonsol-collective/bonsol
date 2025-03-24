@@ -55,14 +55,24 @@ jobs:
           echo "STARK_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "STARK_CUDA_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
+          # Create the combined Dockerfile differently based on fork status
           TARGET=Dockerfile.combined
-          cp docker/Dockerfile.slim $TARGET
-          sed 's|${IMAGE}|slim|' docker/Dockerfile.stark >> $TARGET
-          sed 's|${IMAGE}|stark|' docker/Dockerfile.full >> $TARGET
+          if [[ "${{ inputs.is_fork }}" == "true" ]]; then
+            # For fork PRs, use a standalone build that doesn't depend on registry access
+            cp docker/Dockerfile.slim $TARGET
+            # Use the internal reference for fork builds (no registry)
+            sed 's|${IMAGE}|bonsol-node-slim:latest|' docker/Dockerfile.stark >> $TARGET
+            sed 's|${IMAGE}|bonsol-node-stark:latest|' docker/Dockerfile.full >> $TARGET
+          else
+            # For non-fork PRs, use the registry images
+            cp docker/Dockerfile.slim $TARGET
+            sed 's|${IMAGE}|${{ steps.docker_tags.outputs.SLIM_IMAGE }}|' docker/Dockerfile.stark >> $TARGET
+            sed 's|${IMAGE}|${{ steps.docker_tags.outputs.STARK_IMAGE }}|' docker/Dockerfile.full >> $TARGET
+          fi
           cat $TARGET
 
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
-      # Use docker/build-push-action but with load: true and push: false
+      # Use docker/build-push-action but split it into multiple steps with proper image tagging
       - name: Build and Load Docker Image slim (fork PR)
         if: ${{ inputs.is_fork }}
         uses: docker/build-push-action@v6
@@ -70,10 +80,36 @@ jobs:
           context: .
           push: false
           load: true
-          file: Dockerfile.combined
-          tags: bonsol-node-combined:latest
+          file: docker/Dockerfile.slim
+          tags: bonsol-node-slim:latest
           platforms: linux/amd64
+          target: slim
 
+      - name: Build and Load Docker Image stark (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.stark
+          tags: bonsol-node-stark:latest
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=bonsol-node-slim:latest
+
+      - name: Build and Load Docker Image stark-cuda (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.full
+          tags: bonsol-node-stark-cuda:latest
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=bonsol-node-stark:latest
 
       # For non-fork PRs: build and push images to registry
       - name: Build Docker Image slim (non-fork PR)
