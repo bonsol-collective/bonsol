@@ -23,6 +23,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       # Always login to GitHub Container Registry to access base images
       # This is needed for both fork and non-fork PRs to access base images
@@ -55,11 +57,10 @@ jobs:
           echo "STARK_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "STARK_CUDA_IMAGE=ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-          TARGET=Dockerfile.combined
-          cp docker/Dockerfile.slim $TARGET
-          sed 's|${IMAGE}|slim|' docker/Dockerfile.stark >> $TARGET
-          sed 's|${IMAGE}|stark|' docker/Dockerfile.full >> $TARGET
-          cat $TARGET
+          # Local image names for fork PRs - use consistent naming without registry prefix
+          echo "LOCAL_SLIM_IMAGE=bonsol-node-slim:latest" >> $GITHUB_OUTPUT
+          echo "LOCAL_STARK_IMAGE=bonsol-node-stark:latest" >> $GITHUB_OUTPUT
+          echo "LOCAL_STARK_CUDA_IMAGE=bonsol-node-stark-cuda:latest" >> $GITHUB_OUTPUT
 
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but with load: true and push: false
@@ -70,10 +71,41 @@ jobs:
           context: .
           push: false
           load: true
-          file: Dockerfile.combined
-          tags: bonsol-node-combined:latest
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
           platforms: linux/amd64
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
+      - name: Build and Load Docker Image stark (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.stark
+          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Build and Load Docker Image full (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.full
+          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE }}
+          platforms: linux/amd64
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
       # For non-fork PRs: build and push images to registry
       - name: Build Docker Image slim (non-fork PR)
