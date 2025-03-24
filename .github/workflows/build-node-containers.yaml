@@ -77,35 +77,49 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
-      - name: Build and Load Docker Image stark (fork PR)
-        if: ${{ inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          file: docker/Dockerfile.stark
-          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
-          platforms: linux/amd64
-          build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Build stark
+        run: |
+          docker buildx build \
+            --build-arg IMAGE=$LOCAL_SLIM_IMAGE \
+            --file docker/Dockerfile.stark \
+            --load .
 
-      - name: Build and Load Docker Image full (fork PR)
-        if: ${{ inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          file: docker/Dockerfile.full
-          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE }}
-          platforms: linux/amd64
-          build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Build full
+        run: |
+          docker buildx build \
+            --build-arg IMAGE=LOCAL_STARK_IMAGE \
+            --file docker/Dockerfile.full \
+            --load .
+
+#      - name: Build and Load Docker Image stark (fork PR)
+#        if: ${{ inputs.is_fork }}
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          push: false
+#          load: true
+#          file: docker/Dockerfile.stark
+#          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+#          platforms: linux/amd64
+#          build-args: |
+#            IMAGE=${{ steps.docker_tags.outputs.LOCAL_SLIM_IMAGE }}
+#          cache-from: type=local,src=/tmp/.buildx-cache
+#          cache-to: type=local,dest=/tmp/.buildx-cache
+#
+#      - name: Build and Load Docker Image full (fork PR)
+#        if: ${{ inputs.is_fork }}
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          push: false
+#          load: true
+#          file: docker/Dockerfile.full
+#          tags: ${{ steps.docker_tags.outputs.LOCAL_STARK_CUDA_IMAGE }}
+#          platforms: linux/amd64
+#          build-args: |
+#            IMAGE=${{ steps.docker_tags.outputs.LOCAL_STARK_IMAGE }}
+#          cache-from: type=local,src=/tmp/.buildx-cache
+#          cache-to: type=local,dest=/tmp/.buildx-cache
 
       # For non-fork PRs: build and push images to registry
       - name: Build Docker Image slim (non-fork PR)
