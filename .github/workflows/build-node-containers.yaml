@@ -45,11 +45,13 @@ jobs:
       # - PR     - commit number
       # - Release - version number
 
+#          ORG=$(echo "${{ github.event.pull_request.head.repo.full_name }}" | awk -F/ '{ print $1}')
+#          echo "REGISTRY=ghcr.io/${ORG}/bonsol-node" >> $GITHUB_OUTPUT
+
       - name: Set Docker Tags
         id: docker_tags
         run: |
-          ORG=$(echo "${{ github.event.pull_request.head.repo.full_name }}" | awk -F/ '{ print $1}')
-          echo "REGISTRY=ghcr.io/${ORG}/bonsol-node" >> $GITHUB_OUTPUT
+          echo "REGISTRY=docker.io/zerocomputing/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
             echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
