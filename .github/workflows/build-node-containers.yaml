@@ -12,10 +12,16 @@ on:
         type: boolean
         default: true
         description: 'Use minimal stub images for faster CI (fork PRs only)'
+    outputs:
+      cuda_image:
+        description: "The full path to the built CUDA image"
+        value: ${{ jobs.build-node-container-image.outputs.cuda_image }}
 
 jobs:
   build-node-container-image:
     runs-on: ubicloud-standard-30
+    outputs:
+      cuda_image: ${{ steps.set_outputs.outputs.cuda_image }}
 
     permissions:
       contents: read
@@ -31,99 +37,68 @@ jobs:
         with:
           driver: docker
 
-      # Always login to GitHub Container Registry to access base images
-      # This is needed for both fork and non-fork PRs to access base images
+      # Use special CI token with limited scope for all registry operations
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.CI_REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
 
-      # Set different tags based on whether this is a tag push or main branch push
-      # Tags:
-      # - PR     - commit number
-      # - Release - version number
-
+      # Set different tags based on whether this is a fork PR or not
       - name: Set Docker Tags
         id: docker_tags
         run: |
-          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # For tag releases, use flavor-v{version}
-            echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          # Common registry base
+          echo "REGISTRY=ghcr.io/bonsol-collective" >> $GITHUB_OUTPUT
+
+          # Different paths for fork vs non-fork
+          if [[ "${{ inputs.is_fork }}" == "true" ]]; then
+            # Fork PRs use a dedicated testing namespace
+            echo "IMAGE_PATH=fork-testing/bonsol-node" >> $GITHUB_OUTPUT
           else
-            # For main branch pushes, use flavor-{commit_sha}
-            echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+            # Non-fork PRs use the main path
+            echo "IMAGE_PATH=bonsol-node" >> $GITHUB_OUTPUT
           fi
 
-          # Set image references for non-fork builds
-          echo "SLIM_IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
-          echo "STARK_IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
-          echo "STARK_CUDA_IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
+          # Common tag strategy
+          echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      # For fork PRs: build images and load them into Docker daemon (not push to registry)
-      # Use docker/build-push-action but split it into multiple steps with proper image tagging
-      - name: Build and Load Docker Image slim (fork PR)
-        if: ${{ inputs.is_fork }}
+          # Full image references
+          echo "SLIM_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "STARK_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "CUDA_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      # Build and push slim image for all PRs
+      - name: Build and Push Docker Image slim
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: false
-          load: true
+          push: true
           file: docker/Dockerfile.slim
-          tags: bonsol-node-slim:latest
+          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:slim-${{ steps.docker_tags.outputs.TAG }}
           platforms: linux/amd64
           target: slim
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Use pre-built slim image (fork PR testing)
-        if: false  # Disabled - using real slim image instead
+      # Use quick test mode for fork PRs if enabled
+      - name: Set quick test mode for fork PR images
+        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
         run: |
-          echo "Creating a minimal stub slim image locally instead of pulling from registry"
-          # Create a minimal Dockerfile for testing
-          cat > Dockerfile.slim.test << EOF
-          FROM rust:slim
+          echo "Creating simplified Dockerfile.stark.test for testing"
+          cat > Dockerfile.stark.test << EOF
+          ARG IMAGE
+          FROM \${IMAGE}
+
           LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
           LABEL org.opencontainers.image.title="bonsol-node-test"
-          LABEL org.opencontainers.image.description="A stub image for testing builds"
-          RUN mkdir -p /usr/opt/bonsol
-          WORKDIR /usr/opt/bonsol
+          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
+
+          # Skip actual STARK build for CI testing
+          RUN echo "This is a stub STARK image for CI testing only"
           EOF
 
-          # Build the minimal test image
-          docker build -t bonsol-node-slim:latest -f Dockerfile.slim.test .
-          docker images
-
-      - name: Verify slim image is available
-        if: ${{ inputs.is_fork }}
-        run: |
-          echo "Images after slim build:"
-          docker images
-          docker inspect bonsol-node-slim:latest || exit 1
-
-      - name: Build and Load Docker Image stark (fork PR)
-        if: ${{ inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          file: docker/Dockerfile.stark
-          tags: bonsol-node-stark:latest
-          platforms: linux/amd64
-          build-args: |
-            IMAGE=bonsol-node-slim:latest
-
-      - name: Verify stark image is available
-        if: ${{ inputs.is_fork }}
-        run: |
-          echo "Images after stark build:"
-          docker images
-          docker inspect bonsol-node-stark:latest || exit 1
-
-      - name: Create simplified Dockerfile.full for testing
-        if: false  # Disabled - using real Dockerfile.full instead
-        run: |
           echo "Creating simplified Dockerfile.full.test for testing"
           cat > Dockerfile.full.test << EOF
           ARG IMAGE
@@ -134,143 +109,50 @@ jobs:
           LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
 
           # Skip actual CUDA installation for CI testing
-          RUN echo "This is a stub image for CI testing only, without CUDA support"
+          RUN echo "This is a stub CUDA image for CI testing only"
+
+          # Copy the solana binaries
+          RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates
+          WORKDIR /usr/bin
+          RUN wget -qO solana-keygen https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-keygen && chmod +x solana-keygen
+          RUN wget -qO solana https://github.com/solanalabs/solana/releases/download/v1.18.26/solana && chmod +x solana
+          RUN wget -qO solana-test-validator https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-test-validator && chmod +x solana-test-validator
+
+          # Create directories needed for tests
+          WORKDIR /usr/opt/bonsol
+          RUN mkdir -p ~/.config/solana
           EOF
 
-          cat Dockerfile.full.test
-
-      - name: Build and Load Docker Image stark-cuda (fork PR)
-        if: ${{ inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          file: docker/Dockerfile.full
-          tags: bonsol-node-stark-cuda:latest
-          platforms: linux/amd64
-          build-args: |
-            IMAGE=bonsol-node-stark:latest
-
-      - name: Verify stark-cuda image is available
-        if: ${{ inputs.is_fork }}
-        run: |
-          echo "Images after stark-cuda build:"
-          docker images
-          docker inspect bonsol-node-stark-cuda:latest || exit 1
-
-      # For non-fork PRs: build and push images to registry
-      - name: Build and Push Docker Image slim
-        if: ${{ !inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          file: docker/Dockerfile.slim
-          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
+      # Build and push stark image
       - name: Build and Push Docker Image stark
-        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          file: docker/Dockerfile.stark
-          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.stark.test' || 'docker/Dockerfile.stark' }}
+          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:stark-${{ steps.docker_tags.outputs.TAG }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+            IMAGE=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:slim-${{ steps.docker_tags.outputs.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and Push Docker Image full
-        if: ${{ !inputs.is_fork }}
+      # Build and push CUDA/full image
+      - name: Build and Push Docker Image cuda
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          file: docker/Dockerfile.full
-          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }}
+          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
+          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:cuda-${{ steps.docker_tags.outputs.TAG }}
           platforms: linux/amd64
           build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
+            IMAGE=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:stark-${{ steps.docker_tags.outputs.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Run E2E tests after images are built
-      - name: Setup docker container for E2E tests (Fork PRs)
-        if: ${{ inputs.is_fork }}
+      # Set outputs for use in downstream jobs
+      - name: Set job outputs
+        id: set_outputs
         run: |
-          # Create a container using the locally built image
-          docker run -d --name bonsol-node-container \
-            -v $(pwd):/workspaces/bonsol \
-            -it bonsol-node-stark-cuda:latest \
-            sleep infinity
-
-          # Verify container is running
-          docker ps
-
-      - name: Setup docker container for E2E tests (Non-Fork PRs)
-        if: ${{ !inputs.is_fork }}
-        run: |
-          # Create a container using the registry image
-          docker run -d --name bonsol-node-container \
-            -v $(pwd):/workspaces/bonsol \
-            -it ${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }} \
-            sleep infinity
-
-          # Verify container is running
-          docker ps
-
-      - name: Run E2E Tests in Docker container
-        run: |
-          docker exec bonsol-node-container bash -c '
-            set -euxo pipefail
-            cd /usr/opt/bonsol/
-            echo "Running E2E tests with image: $(docker --version)"
-
-            # Clone the repository
-            git clone https://github.com/bonsol-collective/bonsol.git src
-            cp -pr src/elf .
-
-            # Setup Solana validator
-            solana-keygen new -s --no-bip39-passphrase -f
-            solana-test-validator \
-              --ledger ./ledger \
-              -q \
-              --limit-ledger-size 0 \
-              --bind-address 0.0.0.0 \
-              --rpc-pubsub-enable-block-subscription \
-              --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
-              --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
-              -r 1>/dev/null 2>/dev/null &
-            sleep 15
-
-            # Setup Solana keypair and give it some funds
-            solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
-            solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
-            solana -u http://localhost:8899 airdrop 1
-
-            # Start the node
-            ulimit -s unlimited
-            echo "Starting node"
-            /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
-            sleep 15
-
-            # Deploy and run tests
-            echo "Deploying"
-            /usr/opt/bonsol/bonsol \
-              --keypair ~/.config/solana/id.json \
-              --rpc-url http://127.0.0.1:8899 \
-              deploy \
-              url \
-              -m src/cli/src/tests/test_data/test_manifest.json \
-              --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
-              -y
-
-            echo "Running Tests"
-            /usr/opt/bonsol/bonsol-tester 500
-          '
+          echo "cuda_image=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:cuda-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT

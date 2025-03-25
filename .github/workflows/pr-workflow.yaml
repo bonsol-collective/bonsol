@@ -99,3 +99,69 @@ jobs:
       quick_test_mode: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
   # E2E tests are now run directly in the build-node-container-image job
+
+  # E2E test in a separate job using the built image
+  e2e-test:
+    name: E2E Test
+    runs-on: ubicloud-standard-30
+    needs: [call-build-node-container-image, check-fork-pr]
+
+    # Run as a container job using the image built in the previous job
+    container:
+      image: ${{ needs.call-build-node-container-image.outputs.cuda_image }}
+      options: "-it"
+      volumes:
+        - local:/workspaces/bonsol
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run E2E Tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /usr/opt/bonsol/
+          echo "Running E2E tests with image: ${{ needs.call-build-node-container-image.outputs.cuda_image }}"
+
+          # Clone the repository
+          git clone https://github.com/bonsol-collective/bonsol.git src
+          cp -pr src/elf .
+
+          # Setup Solana validator
+          solana-keygen new -s --no-bip39-passphrase -f
+          solana-test-validator \
+            --ledger ./ledger \
+            -q \
+            --limit-ledger-size 0 \
+            --bind-address 0.0.0.0 \
+            --rpc-pubsub-enable-block-subscription \
+            --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+            --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+            -r 1>/dev/null 2>/dev/null &
+          sleep 15
+
+          # Setup Solana keypair and give it some funds
+          solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+          solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+          solana -u http://localhost:8899 airdrop 1
+
+          # Start the node
+          ulimit -s unlimited
+          echo "Starting node"
+          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+          sleep 15
+
+          # Deploy and run tests
+          echo "Deploying"
+          /usr/opt/bonsol/bonsol \
+            --keypair ~/.config/solana/id.json \
+            --rpc-url http://127.0.0.1:8899 \
+            deploy \
+            url \
+            -m src/cli/src/tests/test_data/test_manifest.json \
+            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+            -y
+
+          echo "Running Tests"
+          /usr/opt/bonsol/bonsol-tester 500
