@@ -65,7 +65,7 @@ jobs:
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but split it into multiple steps with proper image tagging
       - name: Build and Load Docker Image slim (fork PR)
-        if: ${{ inputs.is_fork && !inputs.quick_test_mode }}  # Skip this step if in quick test mode
+        if: ${{ inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -77,7 +77,7 @@ jobs:
           target: slim
 
       - name: Use pre-built slim image (fork PR testing)
-        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
+        if: false  # Disabled - using real slim image instead
         run: |
           echo "Creating a minimal stub slim image locally instead of pulling from registry"
           # Create a minimal Dockerfile for testing
@@ -122,7 +122,7 @@ jobs:
           docker inspect bonsol-node-stark:latest || exit 1
 
       - name: Create simplified Dockerfile.full for testing
-        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
+        if: false  # Disabled - using real Dockerfile.full instead
         run: |
           echo "Creating simplified Dockerfile.full.test for testing"
           cat > Dockerfile.full.test << EOF
@@ -146,7 +146,7 @@ jobs:
           context: .
           push: false
           load: true
-          file: ${{ inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
+          file: docker/Dockerfile.full
           tags: bonsol-node-stark-cuda:latest
           platforms: linux/amd64
           build-args: |
