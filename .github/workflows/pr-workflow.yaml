@@ -82,7 +82,8 @@ jobs:
         run: |
           env
           echo "##########"
-          env | grep polasekr
+          echo "Forked Repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "Target Repository: ${{ github.event.pull_request.base.repo.full_name }}"
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
             echo "is_fork=true" >> $GITHUB_OUTPUT
             echo "PR is from a fork repository"
