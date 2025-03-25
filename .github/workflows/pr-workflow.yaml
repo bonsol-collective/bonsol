@@ -80,6 +80,9 @@ jobs:
       - name: Check if PR is from fork
         id: check
         run: |
+          env
+          echo "##########"
+          env | grep polasekr
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
             echo "is_fork=true" >> $GITHUB_OUTPUT
             echo "PR is from a fork repository"
