@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker-container
+          driver: docker
 
       # Always login to GitHub Container Registry to access base images
       # This is needed for both fork and non-fork PRs to access base images
