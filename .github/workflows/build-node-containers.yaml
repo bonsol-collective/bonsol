@@ -43,7 +43,8 @@ jobs:
       - name: Set Docker Tags
         id: docker_tags
         run: |
-          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
+          ORG=$(echo "${{ github.event.pull_request.head.repo.full_name }}" | awk -F/ '{ print $1})
+          echo "REGISTRY=ghcr.io/${ORG}/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
             echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -51,24 +52,25 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
+          cat $GITHUB_OUTPUT
 
-      # For fork PRs: build images and load them into Docker daemon (not push to registry)
-      # Use docker/build-push-action but with load: true and push: false
-      # This only builds the image without pushing to verify that the code updates didn't break the build
-      - name: Build and Load Docker Image slim (fork PR)
-        if: ${{ inputs.is_fork }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          file: docker/Dockerfile.slim
-          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
-          platforms: linux/amd64
+#      # For fork PRs: build images and load them into Docker daemon (not push to registry)
+#      # Use docker/build-push-action but with load: true and push: false
+#      # This only builds the image without pushing to verify that the code updates didn't break the build
+#      - name: Build and Load Docker Image slim (fork PR)
+#        if: ${{ inputs.is_fork }}
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          push: false
+#          load: true
+#          file: docker/Dockerfile.slim
+#          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+#          platforms: linux/amd64
 
       # For non-fork PRs: build and push images to registry
       - name: Build and Push Docker Image slim
-        if: ${{ !inputs.is_fork }}
+#        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -80,7 +82,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image start
-        if: ${{ !inputs.is_fork }}
+#        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -94,7 +96,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image full
-        if: ${{ !inputs.is_fork }}
+#        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
