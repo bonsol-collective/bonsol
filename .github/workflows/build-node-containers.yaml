@@ -51,7 +51,7 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
-          
+
           # Set image references for non-fork builds
           echo "SLIM_IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
           echo "STARK_IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
@@ -112,7 +112,7 @@ jobs:
           platforms: linux/amd64
           build-args: |
             IMAGE=localhost:5000/bonsol-node-stark:latest
-            
+
       - name: Verify stark-cuda image is available
         if: ${{ inputs.is_fork }}
         run: |
