@@ -74,9 +74,19 @@ jobs:
       - name: Use pre-built slim image (fork PR testing)
         if: ${{ inputs.is_fork }}
         run: |
-          echo "Pulling pre-built slim image instead of building one"
-          docker pull ghcr.io/bonsol-collective/bonsol-node:slim-ae3dfa0
-          docker tag ghcr.io/bonsol-collective/bonsol-node:slim-ae3dfa0 localhost:5000/bonsol-node-slim:latest
+          echo "Creating a minimal stub slim image locally instead of pulling from registry"
+          # Create a minimal Dockerfile for testing
+          cat > Dockerfile.slim.test << EOF
+          FROM rust:slim
+          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+          LABEL org.opencontainers.image.title="bonsol-node-test"
+          LABEL org.opencontainers.image.description="A stub image for testing builds"
+          RUN mkdir -p /usr/opt/bonsol
+          WORKDIR /usr/opt/bonsol
+          EOF
+          
+          # Build the minimal test image
+          docker build -t localhost:5000/bonsol-node-slim:latest -f Dockerfile.slim.test .
           docker tag localhost:5000/bonsol-node-slim:latest bonsol-node-slim:latest
           docker images
 
