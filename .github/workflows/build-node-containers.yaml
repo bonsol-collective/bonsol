@@ -58,12 +58,28 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.CI_REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        id: login
 
-      - name: Verify Docker login status
+      - name: Debug Token Information
         run: |
-          echo "Verifying Docker login status..."
-          docker info 2>&1 | grep "Username"
+          echo "GitHub Actor: ${{ github.actor }}"
+          echo "Is fork PR: ${{ inputs.is_fork }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Login successful: ${{ steps.login.outputs.token != '' }}"
+          echo "Token available: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "Custom token available: ${{ secrets.CI_REGISTRY_TOKEN != '' }}"
+
+      - name: Verify Docker Login
+        run: |
+          echo "Checking if docker can access the registry..."
+          # Safer verification that doesn't fail the build
+          if docker info 2>&1 | grep -q "Username"; then
+            echo "✅ Docker login successful"
+          else
+            echo "⚠️ Docker login may have failed, but continuing with build"
+            # Don't fail here, let the actual build steps fail with more useful errors
+          fi
 
       # Set different tags based on whether this is a fork PR or not
       - name: Set Docker Tags
@@ -89,105 +105,62 @@ jobs:
           echo "STARK_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "CUDA_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      # Build and push slim image for all PRs
+      # Build and push slim image for all PRs (simpler approach)
       - name: Build and Push Docker Image slim
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/Dockerfile.slim
-          push: true
-          tags: ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
-          platforms: linux/amd64
-          target: slim
-          no-cache: true
-          # Add verbose output for debugging
-          provenance: false
-          sbom: false
-          build-args: |
-            QUICK_TEST=${{ inputs.quick_test_mode }}
-          outputs: type=docker,dest=/tmp/image-slim.tar
-
-      - name: Inspect slim image
-        if: always()
         run: |
-          if [ -f /tmp/image-slim.tar ]; then
-            echo "Slim image built successfully, inspecting..."
-            docker load < /tmp/image-slim.tar
-            docker image ls | grep bonsol-node
+          # Use direct docker commands for simpler debugging
+          echo "Building slim image..."
+          docker build \
+            -f docker/Dockerfile.slim \
+            -t ${{ steps.docker_tags.outputs.SLIM_IMAGE }} \
+            --target slim \
+            --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            .
+
+          echo "Pushing slim image..."
+          docker push ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
+
+      # For stark PR builds - simplified approach
+      - name: Build and Push Docker Image stark
+        run: |
+          # Use direct docker commands for simpler debugging
+          echo "Building stark image..."
+          if [[ "${{ inputs.is_fork && inputs.quick_test_mode }}" == "true" ]]; then
+            DOCKERFILE="Dockerfile.stark.test"
           else
-            echo "Slim image build failed, tar file not found"
+            DOCKERFILE="docker/Dockerfile.stark"
           fi
 
-      # Use quick test mode for fork PRs if enabled
-      - name: Set quick test mode for fork PR images
-        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
-        run: |
-          echo "Creating simplified Dockerfile.stark.test for testing"
-          cat > Dockerfile.stark.test << EOF
-          ARG IMAGE
-          FROM \${IMAGE}
+          docker build \
+            -f $DOCKERFILE \
+            -t ${{ steps.docker_tags.outputs.STARK_IMAGE }} \
+            --build-arg IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }} \
+            --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            .
 
-          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
-          LABEL org.opencontainers.image.title="bonsol-node-test"
-          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
+          echo "Pushing stark image..."
+          docker push ${{ steps.docker_tags.outputs.STARK_IMAGE }}
 
-          # Skip actual STARK build for CI testing
-          RUN echo "This is a stub STARK image for CI testing only"
-          EOF
-
-          echo "Creating simplified Dockerfile.full.test for testing"
-          cat > Dockerfile.full.test << EOF
-          ARG IMAGE
-          FROM \${IMAGE}
-
-          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
-          LABEL org.opencontainers.image.title="bonsol-node-test"
-          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
-
-          # Skip actual CUDA installation for CI testing
-          RUN echo "This is a stub CUDA image for CI testing only"
-
-          # Copy the solana binaries
-          RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates
-          WORKDIR /usr/bin
-          RUN wget -qO solana-keygen https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-keygen && chmod +x solana-keygen
-          RUN wget -qO solana https://github.com/solanalabs/solana/releases/download/v1.18.26/solana && chmod +x solana
-          RUN wget -qO solana-test-validator https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-test-validator && chmod +x solana-test-validator
-
-          # Create directories needed for tests
-          WORKDIR /usr/opt/bonsol
-          RUN mkdir -p ~/.config/solana
-          EOF
-
-      # For stark PR builds - always build this for now
-      - name: Build and Push Docker Image stark
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.stark.test' || 'docker/Dockerfile.stark' }}
-          push: true
-          tags: ${{ steps.docker_tags.outputs.STARK_IMAGE }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }}
-            QUICK_TEST=${{ inputs.quick_test_mode }}
-
-      # For cuda PR builds - always build this for now
+      # For cuda PR builds - simplified approach
       - name: Build and Push Docker Image cuda
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
-          push: true
-          tags: ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            IMAGE=${{ steps.docker_tags.outputs.STARK_IMAGE }}
-            QUICK_TEST=${{ inputs.quick_test_mode }}
+        run: |
+          # Use direct docker commands for simpler debugging
+          echo "Building cuda image..."
+          if [[ "${{ inputs.is_fork && inputs.quick_test_mode }}" == "true" ]]; then
+            DOCKERFILE="Dockerfile.full.test"
+          else
+            DOCKERFILE="docker/Dockerfile.full"
+          fi
+
+          docker build \
+            -f $DOCKERFILE \
+            -t ${{ steps.docker_tags.outputs.CUDA_IMAGE }} \
+            --build-arg IMAGE=${{ steps.docker_tags.outputs.STARK_IMAGE }} \
+            --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            .
+
+          echo "Pushing cuda image..."
+          docker push ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
 
       # Set outputs for use in downstream jobs
       - name: Set job outputs
