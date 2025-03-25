@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-node-container-image:
-    runs-on: ubicloud-standard-16
+    runs-on: ubicloud-standard-30
 
     permissions:
       contents: read
@@ -199,3 +199,78 @@ jobs:
             IMAGE=${{ steps.docker_tags.outputs.REGISTRY }}:stark-${{ steps.docker_tags.outputs.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Run E2E tests after images are built
+      - name: Setup docker container for E2E tests (Fork PRs)
+        if: ${{ inputs.is_fork }}
+        run: |
+          # Create a container using the locally built image
+          docker run -d --name bonsol-node-container \
+            -v $(pwd):/workspaces/bonsol \
+            -it bonsol-node-stark-cuda:latest \
+            sleep infinity
+
+          # Verify container is running
+          docker ps
+
+      - name: Setup docker container for E2E tests (Non-Fork PRs)
+        if: ${{ !inputs.is_fork }}
+        run: |
+          # Create a container using the registry image
+          docker run -d --name bonsol-node-container \
+            -v $(pwd):/workspaces/bonsol \
+            -it ${{ steps.docker_tags.outputs.REGISTRY }}:stark-cuda-${{ steps.docker_tags.outputs.TAG }} \
+            sleep infinity
+
+          # Verify container is running
+          docker ps
+
+      - name: Run E2E Tests in Docker container
+        run: |
+          docker exec bonsol-node-container bash -c '
+            set -euxo pipefail
+            cd /usr/opt/bonsol/
+            echo "Running E2E tests with image: $(docker --version)"
+
+            # Clone the repository
+            git clone https://github.com/bonsol-collective/bonsol.git src
+            cp -pr src/elf .
+
+            # Setup Solana validator
+            solana-keygen new -s --no-bip39-passphrase -f
+            solana-test-validator \
+              --ledger ./ledger \
+              -q \
+              --limit-ledger-size 0 \
+              --bind-address 0.0.0.0 \
+              --rpc-pubsub-enable-block-subscription \
+              --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+              --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+              -r 1>/dev/null 2>/dev/null &
+            sleep 15
+
+            # Setup Solana keypair and give it some funds
+            solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+            solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+            solana -u http://localhost:8899 airdrop 1
+
+            # Start the node
+            ulimit -s unlimited
+            echo "Starting node"
+            /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+            sleep 15
+
+            # Deploy and run tests
+            echo "Deploying"
+            /usr/opt/bonsol/bonsol \
+              --keypair ~/.config/solana/id.json \
+              --rpc-url http://127.0.0.1:8899 \
+              deploy \
+              url \
+              -m src/cli/src/tests/test_data/test_manifest.json \
+              --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+              -y
+
+            echo "Running Tests"
+            /usr/opt/bonsol/bonsol-tester 500
+          '
