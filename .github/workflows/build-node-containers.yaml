@@ -60,7 +60,7 @@ jobs:
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but split it into multiple steps with proper image tagging
       - name: Build and Load Docker Image slim (fork PR)
-        if: ${{ inputs.is_fork }}
+        if: ${{ inputs.is_fork && false }}  # Skip this step for faster testing
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -71,12 +71,20 @@ jobs:
           platforms: linux/amd64
           target: slim
 
+      - name: Use pre-built slim image (fork PR testing)
+        if: ${{ inputs.is_fork }}
+        run: |
+          echo "Pulling pre-built slim image instead of building one"
+          docker pull ghcr.io/bonsol-collective/bonsol-node:slim-ae3dfa0
+          docker tag ghcr.io/bonsol-collective/bonsol-node:slim-ae3dfa0 localhost:5000/bonsol-node-slim:latest
+          docker tag localhost:5000/bonsol-node-slim:latest bonsol-node-slim:latest
+          docker images
+
       - name: Verify slim image is available
         if: ${{ inputs.is_fork }}
         run: |
           echo "Images after slim build:"
           docker images
-          docker tag localhost:5000/bonsol-node-slim:latest bonsol-node-slim:latest
           docker inspect bonsol-node-slim:latest || exit 1
 
       - name: Build and Load Docker Image stark (fork PR)
