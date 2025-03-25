@@ -61,24 +61,22 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
         id: login
 
-      - name: Debug Token Information
+      - name: Verify Token and Registry Access
         run: |
+          echo "============ Authentication Info ============"
           echo "GitHub Actor: ${{ github.actor }}"
           echo "Is fork PR: ${{ inputs.is_fork }}"
           echo "Repository: ${{ github.repository }}"
-          echo "Login successful: ${{ steps.login.outputs.token != '' }}"
           echo "Token available: ${{ secrets.GITHUB_TOKEN != '' }}"
           echo "Custom token available: ${{ secrets.CI_REGISTRY_TOKEN != '' }}"
+          echo "============================================="
 
-      - name: Verify Docker Login
-        run: |
-          echo "Checking if docker can access the registry..."
-          # Safer verification that doesn't fail the build
-          if docker info 2>&1 | grep -q "Username"; then
-            echo "✅ Docker login successful"
+          # Try to access registry information to verify authentication
+          echo "Testing registry access..."
+          if docker pull ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0 >/dev/null 2>&1; then
+            echo "✅ Successfully authenticated with registry (pull test)"
           else
-            echo "⚠️ Docker login may have failed, but continuing with build"
-            # Don't fail here, let the actual build steps fail with more useful errors
+            echo "⚠️ Registry authentication might be incomplete - continuing anyway"
           fi
 
       # Set different tags based on whether this is a fork PR or not
@@ -110,57 +108,138 @@ jobs:
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building slim image..."
+
+          # Pull the base image first to ensure we have latest
+          docker pull node:18-slim || true
+
+          # Build with no-cache for clean builds (avoids stale cache issues)
           docker build \
             -f docker/Dockerfile.slim \
             -t ${{ steps.docker_tags.outputs.SLIM_IMAGE }} \
             --target slim \
             --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            --no-cache \
             .
 
-          echo "Pushing slim image..."
-          docker push ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
+          # Check build result before pushing
+          if [ $? -eq 0 ]; then
+            echo "✅ Slim image built successfully"
+            echo "Image details:"
+            docker images ${{ steps.docker_tags.outputs.SLIM_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
 
-      # For stark PR builds - simplified approach
+            echo "Pushing slim image..."
+            docker push ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
+
+            if [ $? -eq 0 ]; then
+              echo "✅ Slim image pushed successfully"
+            else
+              echo "❌ Failed to push slim image"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to build slim image"
+            exit 1
+          fi
+
+      # For stark PR builds - simplified approach with better error handling
       - name: Build and Push Docker Image stark
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building stark image..."
           if [[ "${{ inputs.is_fork && inputs.quick_test_mode }}" == "true" ]]; then
             DOCKERFILE="Dockerfile.stark.test"
+            echo "Using test Dockerfile for fork PR: $DOCKERFILE"
           else
             DOCKERFILE="docker/Dockerfile.stark"
+            echo "Using standard Dockerfile: $DOCKERFILE"
           fi
 
+          # Verify the Dockerfile exists
+          if [ ! -f "$DOCKERFILE" ]; then
+            echo "❌ Dockerfile not found: $DOCKERFILE"
+            ls -la docker/
+            ls -la ./
+            exit 1
+          fi
+
+          # Build the image
           docker build \
             -f $DOCKERFILE \
             -t ${{ steps.docker_tags.outputs.STARK_IMAGE }} \
             --build-arg IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }} \
             --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            --no-cache \
             .
 
-          echo "Pushing stark image..."
-          docker push ${{ steps.docker_tags.outputs.STARK_IMAGE }}
+          # Check build result before pushing
+          if [ $? -eq 0 ]; then
+            echo "✅ Stark image built successfully"
+            echo "Image details:"
+            docker images ${{ steps.docker_tags.outputs.STARK_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
 
-      # For cuda PR builds - simplified approach
+            echo "Pushing stark image..."
+            docker push ${{ steps.docker_tags.outputs.STARK_IMAGE }}
+
+            if [ $? -eq 0 ]; then
+              echo "✅ Stark image pushed successfully"
+            else
+              echo "❌ Failed to push stark image"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to build stark image"
+            exit 1
+          fi
+
+      # For cuda PR builds - simplified approach with better error handling
       - name: Build and Push Docker Image cuda
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building cuda image..."
           if [[ "${{ inputs.is_fork && inputs.quick_test_mode }}" == "true" ]]; then
             DOCKERFILE="Dockerfile.full.test"
+            echo "Using test Dockerfile for fork PR: $DOCKERFILE"
           else
             DOCKERFILE="docker/Dockerfile.full"
+            echo "Using standard Dockerfile: $DOCKERFILE"
           fi
 
+          # Verify the Dockerfile exists
+          if [ ! -f "$DOCKERFILE" ]; then
+            echo "❌ Dockerfile not found: $DOCKERFILE"
+            ls -la docker/
+            ls -la ./
+            exit 1
+          fi
+
+          # Build the image
           docker build \
             -f $DOCKERFILE \
             -t ${{ steps.docker_tags.outputs.CUDA_IMAGE }} \
             --build-arg IMAGE=${{ steps.docker_tags.outputs.STARK_IMAGE }} \
             --build-arg QUICK_TEST=${{ inputs.quick_test_mode }} \
+            --no-cache \
             .
 
-          echo "Pushing cuda image..."
-          docker push ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
+          # Check build result before pushing
+          if [ $? -eq 0 ]; then
+            echo "✅ Cuda image built successfully"
+            echo "Image details:"
+            docker images ${{ steps.docker_tags.outputs.CUDA_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
+
+            echo "Pushing cuda image..."
+            docker push ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
+
+            if [ $? -eq 0 ]; then
+              echo "✅ Cuda image pushed successfully"
+            else
+              echo "❌ Failed to push cuda image"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to build cuda image"
+            exit 1
+          fi
 
       # Set outputs for use in downstream jobs
       - name: Set job outputs
