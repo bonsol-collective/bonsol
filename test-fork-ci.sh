@@ -1,50 +1,48 @@
 #!/bin/bash
-set -e
+# Test script for fork PR CI workflow changes
 
-echo "🧪 Testing Fork PR CI workflow locally"
-echo "======================================"
-echo "This script simulates how the CI workflow builds Docker images for fork PRs"
+set -euo pipefail
 
-# First ensure we're logged in to GitHub Container Registry
-# You need to have a GitHub token with read:packages scope
-if [[ -z "${GITHUB_TOKEN}" ]]; then
-  echo "⚠️ GITHUB_TOKEN not set - attempting to use Docker credentials if already logged in"
-  echo "If this fails, please set GITHUB_TOKEN environment variable and run this script again:"
-  echo "export GITHUB_TOKEN=your_token_here"
-else
-  echo "🔑 Logging in to GitHub Container Registry..."
-  echo "${GITHUB_TOKEN}" | docker login ghcr.io -u $USER --password-stdin
+echo "Testing fork PR CI workflow changes"
+
+# Check if we're already in a branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "Already on branch $CURRENT_BRANCH, please switch to main branch first"
+  exit 1
 fi
 
-# Clean up any existing images
-echo "🧹 Cleaning up existing test images..."
-docker rmi -f bonsol-node-slim:latest bonsol-node-stark:latest bonsol-node-stark-cuda:latest 2>/dev/null || true
+# Create a new test branch
+TEST_BRANCH="test-fork-ci-workflow-$(date +%s)"
+echo "Creating test branch: $TEST_BRANCH"
+git checkout -b "$TEST_BRANCH"
 
-# Build the slim image first
-echo "📦 Building base node slim image..."
-docker build -t bonsol-node-slim:latest -f ./docker/Dockerfile.slim . || {
-  echo "❌ Failed to build slim image"
-  exit 1
-}
+# Make a small change to trigger CI
+echo "# Test CI Workflow Change" >> README.md
 
-# Build the stark image that depends on the slim image
-echo "📦 Building stark image..."
-docker build -t bonsol-node-stark:latest -f ./docker/Dockerfile.stark . \
-  --build-arg IMAGE=bonsol-node-slim:latest || {
-  echo "❌ Failed to build stark image"
-  exit 1
-}
+# Commit the changes
+git add README.md
+git commit -m "test: Trigger CI workflow for fork PRs"
 
-# Build the full image that depends on the stark image
-echo "📦 Building full cuda image..."
-docker build -t bonsol-node-stark-cuda:latest -f ./docker/Dockerfile.full . \
-  --build-arg IMAGE=bonsol-node-stark:latest || {
-  echo "❌ Failed to build full image"
-  exit 1
-}
+# Push the changes to your fork
+echo "Pushing changes to your fork"
+echo "This will create a PR that will run the updated CI workflow"
+echo "The E2E tests should now use the pre-built image from GitHub Container Registry"
+echo "instead of trying to build a new image for fork PRs"
 
-echo "✅ All images built successfully!"
-echo "Docker images now available:"
-docker images | grep bonsol-node
-
-echo "This confirms the workflow will work for fork PRs" 
+# Provide instructions for manual steps
+echo ""
+echo "=== MANUAL STEPS ==="
+echo "1. Push this branch to your fork:"
+echo "   git push -u origin $TEST_BRANCH"
+echo ""
+echo "2. Create a Pull Request from your fork's $TEST_BRANCH branch to the main repository's main branch"
+echo ""
+echo "3. Monitor the CI workflow in GitHub Actions to verify that:"
+echo "   - The call-build-node-container-image job runs but should not block E2E tests for fork PRs"
+echo "   - The E2E Test (Fork PRs) job uses the pre-built image and runs successfully"
+echo ""
+echo "4. After testing, you can cleanup with:"
+echo "   git checkout main"
+echo "   git branch -D $TEST_BRANCH"
+echo "   git push origin --delete $TEST_BRANCH (if needed)" 

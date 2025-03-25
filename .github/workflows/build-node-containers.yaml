@@ -81,9 +81,17 @@ jobs:
           push: false
           load: true
           file: docker/Dockerfile.slim
-          tags: bonsol-node-slim:latest
+          tags: localhost:5000/bonsol-node-slim:latest
           platforms: linux/amd64
           target: slim
+
+      - name: Verify slim image is available
+        if: ${{ inputs.is_fork }}
+        run: |
+          echo "Images after slim build:"
+          docker images
+          docker tag localhost:5000/bonsol-node-slim:latest bonsol-node-slim:latest
+          docker inspect bonsol-node-slim:latest || exit 1
 
       - name: Build and Load Docker Image stark (fork PR)
         if: ${{ inputs.is_fork }}
@@ -93,10 +101,18 @@ jobs:
           push: false
           load: true
           file: docker/Dockerfile.stark
-          tags: bonsol-node-stark:latest
+          tags: localhost:5000/bonsol-node-stark:latest
           platforms: linux/amd64
           build-args: |
-            IMAGE=bonsol-node-slim:latest
+            IMAGE=localhost:5000/bonsol-node-slim:latest
+
+      - name: Verify stark image is available
+        if: ${{ inputs.is_fork }}
+        run: |
+          echo "Images after stark build:"
+          docker images
+          docker tag localhost:5000/bonsol-node-stark:latest bonsol-node-stark:latest
+          docker inspect bonsol-node-stark:latest || exit 1
 
       - name: Build and Load Docker Image stark-cuda (fork PR)
         if: ${{ inputs.is_fork }}
@@ -109,7 +125,14 @@ jobs:
           tags: bonsol-node-stark-cuda:latest
           platforms: linux/amd64
           build-args: |
-            IMAGE=bonsol-node-stark:latest
+            IMAGE=localhost:5000/bonsol-node-stark:latest
+            
+      - name: Verify stark-cuda image is available
+        if: ${{ inputs.is_fork }}
+        run: |
+          echo "Images after stark-cuda build:"
+          docker images
+          docker inspect bonsol-node-stark-cuda:latest || exit 1
 
       # For non-fork PRs: build and push images to registry
       - name: Build Docker Image slim (non-fork PR)
