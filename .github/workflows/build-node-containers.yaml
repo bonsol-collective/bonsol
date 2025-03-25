@@ -40,10 +40,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+          install: false
+
+      # Additional debug info
+      - name: Docker Version
+        run: |
+          docker version
+          docker system info
 
       # Use special CI token with limited scope for all registry operations
       - name: Login to GitHub Container Registry
@@ -52,6 +59,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.CI_REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Verify Docker login status
+        run: |
+          echo "Verifying Docker login status..."
+          docker info 2>&1 | grep "Username"
 
       # Set different tags based on whether this is a fork PR or not
       - name: Set Docker Tags
@@ -87,10 +99,24 @@ jobs:
           tags: ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
           platforms: linux/amd64
           target: slim
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
+          # Add verbose output for debugging
+          provenance: false
+          sbom: false
           build-args: |
             QUICK_TEST=${{ inputs.quick_test_mode }}
+          outputs: type=docker,dest=/tmp/image-slim.tar
+
+      - name: Inspect slim image
+        if: always()
+        run: |
+          if [ -f /tmp/image-slim.tar ]; then
+            echo "Slim image built successfully, inspecting..."
+            docker load < /tmp/image-slim.tar
+            docker image ls | grep bonsol-node
+          else
+            echo "Slim image build failed, tar file not found"
+          fi
 
       # Use quick test mode for fork PRs if enabled
       - name: Set quick test mode for fork PR images
@@ -133,13 +159,12 @@ jobs:
           RUN mkdir -p ~/.config/solana
           EOF
 
-      # For stark PR builds
+      # For stark PR builds - always build this for now
       - name: Build and Push Docker Image stark
-        if: ${{ inputs.stark_image }}
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.stark
+          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.stark.test' || 'docker/Dockerfile.stark' }}
           push: true
           tags: ${{ steps.docker_tags.outputs.STARK_IMAGE }}
           platforms: linux/amd64
@@ -149,13 +174,12 @@ jobs:
             IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }}
             QUICK_TEST=${{ inputs.quick_test_mode }}
 
-      # For cuda PR builds
+      # For cuda PR builds - always build this for now
       - name: Build and Push Docker Image cuda
-        if: ${{ inputs.cuda_image }}
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.full
+          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
           push: true
           tags: ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
           platforms: linux/amd64
