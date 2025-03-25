@@ -14,14 +14,22 @@ on:
         description: 'Use minimal stub images for faster CI (fork PRs only)'
     outputs:
       cuda_image:
-        description: "The full path to the built CUDA image"
+        description: "The CUDA Docker image reference"
         value: ${{ jobs.build-node-container-image.outputs.cuda_image }}
+      slim_image:
+        description: "The slim Docker image reference"
+        value: ${{ jobs.build-node-container-image.outputs.slim_image }}
+      stark_image:
+        description: "The stark Docker image reference"
+        value: ${{ jobs.build-node-container-image.outputs.stark_image }}
 
 jobs:
   build-node-container-image:
     runs-on: ubicloud-standard-30
     outputs:
-      cuda_image: ${{ steps.set_outputs.outputs.cuda_image }}
+      cuda_image: ${{ steps.outputs.outputs.cuda_image }}
+      slim_image: ${{ steps.outputs.outputs.slim_image }}
+      stark_image: ${{ steps.outputs.outputs.stark_image }}
 
     permissions:
       contents: read
@@ -64,23 +72,25 @@ jobs:
           # Common tag strategy
           echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
 
-          # Full image references
-          echo "SLIM_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "STARK_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "CUDA_IMAGE=${{ github.repository_owner }}/fork-testing/bonsol-node:cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
+          # Full image references including registry and correct paths
+          echo "SLIM_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "STARK_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "CUDA_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       # Build and push slim image for all PRs
       - name: Build and Push Docker Image slim
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
           file: docker/Dockerfile.slim
-          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:slim-${{ steps.docker_tags.outputs.TAG }}
+          push: true
+          tags: ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
           platforms: linux/amd64
           target: slim
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            QUICK_TEST=${{ inputs.quick_test_mode }}
 
       # Use quick test mode for fork PRs if enabled
       - name: Set quick test mode for fork PR images
@@ -123,36 +133,43 @@ jobs:
           RUN mkdir -p ~/.config/solana
           EOF
 
-      # Build and push stark image
+      # For stark PR builds
       - name: Build and Push Docker Image stark
-        uses: docker/build-push-action@v6
+        if: ${{ inputs.stark_image }}
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: docker/Dockerfile.stark
           push: true
-          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.stark.test' || 'docker/Dockerfile.stark' }}
-          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:stark-${{ steps.docker_tags.outputs.TAG }}
+          tags: ${{ steps.docker_tags.outputs.STARK_IMAGE }}
           platforms: linux/amd64
-          build-args: |
-            IMAGE=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:slim-${{ steps.docker_tags.outputs.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.SLIM_IMAGE }}
+            QUICK_TEST=${{ inputs.quick_test_mode }}
 
-      # Build and push CUDA/full image
+      # For cuda PR builds
       - name: Build and Push Docker Image cuda
-        uses: docker/build-push-action@v6
+        if: ${{ inputs.cuda_image }}
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: docker/Dockerfile.full
           push: true
-          file: ${{ inputs.is_fork && inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
-          tags: ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:cuda-${{ steps.docker_tags.outputs.TAG }}
+          tags: ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
           platforms: linux/amd64
-          build-args: |
-            IMAGE=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:stark-${{ steps.docker_tags.outputs.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            IMAGE=${{ steps.docker_tags.outputs.STARK_IMAGE }}
+            QUICK_TEST=${{ inputs.quick_test_mode }}
 
       # Set outputs for use in downstream jobs
       - name: Set job outputs
-        id: set_outputs
+        id: outputs
         run: |
-          echo "cuda_image=ghcr.io/${{ steps.docker_tags.outputs.IMAGE_PATH }}:cuda-${{ steps.docker_tags.outputs.TAG }}" >> $GITHUB_OUTPUT
+          # Set the outputs for downstream jobs
+          echo "slim_image=${{ steps.docker_tags.outputs.SLIM_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "stark_image=${{ steps.docker_tags.outputs.STARK_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "cuda_image=${{ steps.docker_tags.outputs.CUDA_IMAGE }}" >> $GITHUB_OUTPUT
