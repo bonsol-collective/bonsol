@@ -7,6 +7,11 @@ on:
         required: false
         type: boolean
         default: false
+      quick_test_mode:
+        required: false
+        type: boolean
+        default: true
+        description: 'Use minimal stub images for faster CI (fork PRs only)'
 
 jobs:
   build-node-container-image:
@@ -60,19 +65,19 @@ jobs:
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but split it into multiple steps with proper image tagging
       - name: Build and Load Docker Image slim (fork PR)
-        if: ${{ inputs.is_fork && false }}  # Skip this step for faster testing
+        if: ${{ inputs.is_fork && !inputs.quick_test_mode }}  # Skip this step if in quick test mode
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
           load: true
           file: docker/Dockerfile.slim
-          tags: localhost:5000/bonsol-node-slim:latest
+          tags: bonsol-node-slim:latest
           platforms: linux/amd64
           target: slim
 
       - name: Use pre-built slim image (fork PR testing)
-        if: ${{ inputs.is_fork }}
+        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
         run: |
           echo "Creating a minimal stub slim image locally instead of pulling from registry"
           # Create a minimal Dockerfile for testing
@@ -116,6 +121,24 @@ jobs:
           docker images
           docker inspect bonsol-node-stark:latest || exit 1
 
+      - name: Create simplified Dockerfile.full for testing
+        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
+        run: |
+          echo "Creating simplified Dockerfile.full.test for testing"
+          cat > Dockerfile.full.test << EOF
+          ARG IMAGE
+          FROM \${IMAGE}
+
+          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+          LABEL org.opencontainers.image.title="bonsol-node-test"
+          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
+
+          # Skip actual CUDA installation for CI testing
+          RUN echo "This is a stub image for CI testing only, without CUDA support"
+          EOF
+
+          cat Dockerfile.full.test
+
       - name: Build and Load Docker Image stark-cuda (fork PR)
         if: ${{ inputs.is_fork }}
         uses: docker/build-push-action@v6
@@ -123,7 +146,7 @@ jobs:
           context: .
           push: false
           load: true
-          file: docker/Dockerfile.full
+          file: ${{ inputs.quick_test_mode && 'Dockerfile.full.test' || 'docker/Dockerfile.full' }}
           tags: bonsol-node-stark-cuda:latest
           platforms: linux/amd64
           build-args: |

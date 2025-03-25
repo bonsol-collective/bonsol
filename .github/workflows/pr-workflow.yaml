@@ -96,6 +96,7 @@ jobs:
     uses: ./.github/workflows/build-node-containers.yaml
     with:
       is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
+      quick_test_mode: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
   e2e-test:
 
