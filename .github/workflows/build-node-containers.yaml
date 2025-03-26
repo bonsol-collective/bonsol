@@ -13,30 +13,21 @@ on:
         default: true
         description: 'Use minimal stub images for faster CI (fork PRs only)'
     outputs:
-      cuda_image:
-        description: "The CUDA Docker image reference"
-        value: ${{ jobs.build-node-container-image.outputs.cuda_image }}
-      slim_image:
-        description: "The slim Docker image reference"
-        value: ${{ jobs.build-node-container-image.outputs.slim_image }}
-      stark_image:
-        description: "The stark Docker image reference"
-        value: ${{ jobs.build-node-container-image.outputs.stark_image }}
+      build_success:
+        description: "Whether the build and tests succeeded"
+        value: ${{ jobs.build-node-container-image.outputs.build_success }}
 
 jobs:
   build-node-container-image:
     runs-on: ubicloud-standard-30
     outputs:
-      cuda_image: ${{ steps.outputs.outputs.cuda_image }}
-      slim_image: ${{ steps.outputs.outputs.slim_image }}
-      stark_image: ${{ steps.outputs.outputs.stark_image }}
+      build_success: ${{ steps.outputs.outputs.build_success }}
 
     permissions:
       contents: read
       packages: write
 
     steps:
-
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -52,7 +43,7 @@ jobs:
           docker version
           docker system info
 
-      # Use special CI token with limited scope for all registry operations
+      # For fork PRs we'll still try to authenticate for pulling base images
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -61,51 +52,60 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
         id: login
 
-      - name: Verify Token and Registry Access
-        run: |
-          echo "============ Authentication Info ============"
-          echo "GitHub Actor: ${{ github.actor }}"
-          echo "Is fork PR: ${{ inputs.is_fork }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Token available: ${{ secrets.GITHUB_TOKEN != '' }}"
-          echo "Custom token available: ${{ secrets.CI_REGISTRY_TOKEN != '' }}"
-          echo "============================================="
-
-          # Try to access registry information to verify authentication
-          echo "Testing registry access..."
-          if docker pull ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0 >/dev/null 2>&1; then
-            echo "✅ Successfully authenticated with registry (pull test)"
-          else
-            echo "⚠️ Registry authentication might be incomplete - continuing anyway"
-          fi
-
-      # Set different tags based on whether this is a fork PR or not
+      # Set local image tags
       - name: Set Docker Tags
         id: docker_tags
         run: |
-          # Common registry base
-          echo "REGISTRY=ghcr.io/bonsol-collective" >> $GITHUB_OUTPUT
+          # Set local tags for all images
+          echo "SLIM_IMAGE=bonsol-node:slim-local" >> $GITHUB_OUTPUT
+          echo "STARK_IMAGE=bonsol-node:stark-local" >> $GITHUB_OUTPUT
+          echo "CUDA_IMAGE=bonsol-node:cuda-local" >> $GITHUB_OUTPUT
 
-          # Different paths for fork vs non-fork
-          if [[ "${{ inputs.is_fork }}" == "true" ]]; then
-            # Fork PRs use a dedicated testing namespace
-            echo "IMAGE_PATH=fork-testing/bonsol-node" >> $GITHUB_OUTPUT
-          else
-            # Non-fork PRs use the main path
-            echo "IMAGE_PATH=bonsol-node" >> $GITHUB_OUTPUT
-          fi
-          cat $GITHUB_OUTPUT
+          echo "Building local images for use in the same job"
 
-          # Common tag strategy
-          echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+      # Create test Dockerfiles for fork PRs
+      - name: Create test Dockerfiles for fork PRs
+        if: ${{ inputs.is_fork && inputs.quick_test_mode }}
+        run: |
+          echo "Creating simplified Dockerfile.stark.test for testing"
+          cat > Dockerfile.stark.test << EOF
+          ARG IMAGE
+          FROM \${IMAGE}
 
-          # Full image references including registry and correct paths
-          echo "SLIM_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:slim-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "STARK_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:stark-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "CUDA_IMAGE=ghcr.io/bonsol-collective/${{ inputs.is_fork && 'fork-testing/bonsol-node' || 'bonsol-node' }}:cuda-${{ github.sha }}" >> $GITHUB_OUTPUT
+          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+          LABEL org.opencontainers.image.title="bonsol-node-test"
+          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
 
-      # Build and push slim image for all PRs (simpler approach)
-      - name: Build and Push Docker Image slim
+          # Skip actual STARK build for CI testing
+          RUN echo "This is a stub STARK image for CI testing only"
+          EOF
+
+          echo "Creating simplified Dockerfile.full.test for testing"
+          cat > Dockerfile.full.test << EOF
+          ARG IMAGE
+          FROM \${IMAGE}
+
+          LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
+          LABEL org.opencontainers.image.title="bonsol-node-test"
+          LABEL org.opencontainers.image.description="A stub image for testing CI workflow"
+
+          # Skip actual CUDA installation for CI testing
+          RUN echo "This is a stub CUDA image for CI testing only"
+
+          # Copy the solana binaries
+          RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates
+          WORKDIR /usr/bin
+          RUN wget -qO solana-keygen https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-keygen && chmod +x solana-keygen
+          RUN wget -qO solana https://github.com/solanalabs/solana/releases/download/v1.18.26/solana && chmod +x solana
+          RUN wget -qO solana-test-validator https://github.com/solanalabs/solana/releases/download/v1.18.26/solana-test-validator && chmod +x solana-test-validator
+
+          # Create directories needed for tests
+          WORKDIR /usr/opt/bonsol
+          RUN mkdir -p ~/.config/solana
+          EOF
+
+      # Build slim image with load instead of push
+      - name: Build Docker Image slim
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building slim image..."
@@ -122,28 +122,18 @@ jobs:
             --no-cache \
             .
 
-          # Check build result before pushing
+          # Check build result
           if [ $? -eq 0 ]; then
             echo "✅ Slim image built successfully"
             echo "Image details:"
             docker images ${{ steps.docker_tags.outputs.SLIM_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
-
-            echo "Pushing slim image..."
-            docker push ${{ steps.docker_tags.outputs.SLIM_IMAGE }}
-
-            if [ $? -eq 0 ]; then
-              echo "✅ Slim image pushed successfully"
-            else
-              echo "❌ Failed to push slim image"
-              exit 1
-            fi
           else
             echo "❌ Failed to build slim image"
             exit 1
           fi
 
-      # For stark PR builds - simplified approach with better error handling
-      - name: Build and Push Docker Image stark
+      # Build stark image - loaded locally
+      - name: Build Docker Image stark
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building stark image..."
@@ -172,28 +162,18 @@ jobs:
             --no-cache \
             .
 
-          # Check build result before pushing
+          # Check build result
           if [ $? -eq 0 ]; then
             echo "✅ Stark image built successfully"
             echo "Image details:"
             docker images ${{ steps.docker_tags.outputs.STARK_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
-
-            echo "Pushing stark image..."
-            docker push ${{ steps.docker_tags.outputs.STARK_IMAGE }}
-
-            if [ $? -eq 0 ]; then
-              echo "✅ Stark image pushed successfully"
-            else
-              echo "❌ Failed to push stark image"
-              exit 1
-            fi
           else
             echo "❌ Failed to build stark image"
             exit 1
           fi
 
-      # For cuda PR builds - simplified approach with better error handling
-      - name: Build and Push Docker Image cuda
+      # Build CUDA image - loaded locally
+      - name: Build Docker Image cuda
         run: |
           # Use direct docker commands for simpler debugging
           echo "Building cuda image..."
@@ -222,31 +202,97 @@ jobs:
             --no-cache \
             .
 
-          # Check build result before pushing
+          # Check build result
           if [ $? -eq 0 ]; then
             echo "✅ Cuda image built successfully"
             echo "Image details:"
             docker images ${{ steps.docker_tags.outputs.CUDA_IMAGE }} --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
-
-            echo "Pushing cuda image..."
-            docker push ${{ steps.docker_tags.outputs.CUDA_IMAGE }}
-
-            if [ $? -eq 0 ]; then
-              echo "✅ Cuda image pushed successfully"
-            else
-              echo "❌ Failed to push cuda image"
-              exit 1
-            fi
           else
             echo "❌ Failed to build cuda image"
             exit 1
           fi
 
-      # Set outputs for use in downstream jobs
+      # Run E2E tests directly using the local image
+      - name: Run E2E Tests
+        run: |
+          # Start a container using the local image
+          echo "Starting E2E test container using locally built image: ${{ steps.docker_tags.outputs.CUDA_IMAGE }}"
+
+          # Create a container for testing
+          CONTAINER_ID=$(docker run -d --name e2e-test \
+            -v $(pwd):/workspaces/bonsol \
+            ${{ steps.docker_tags.outputs.CUDA_IMAGE }} \
+            sleep infinity)
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to start test container"
+            exit 1
+          fi
+
+          # Run the E2E test steps inside the container
+          docker exec e2e-test bash -c "
+            set -euxo pipefail
+            cd /usr/opt/bonsol/
+
+            # Clone the repository
+            git clone https://github.com/bonsol-collective/bonsol.git src
+            cp -pr src/elf .
+
+            # Setup Solana validator
+            solana-keygen new -s --no-bip39-passphrase -f
+            solana-test-validator \
+              --ledger ./ledger \
+              -q \
+              --limit-ledger-size 0 \
+              --bind-address 0.0.0.0 \
+              --rpc-pubsub-enable-block-subscription \
+              --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+              --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+              -r 1>/dev/null 2>/dev/null &
+            sleep 15
+
+            # Setup Solana keypair and give it some funds
+            solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+            solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+            solana -u http://localhost:8899 airdrop 1
+
+            # Start the node
+            ulimit -s unlimited
+            echo 'Starting node'
+            /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+            sleep 15
+
+            # Deploy and run tests
+            echo 'Deploying'
+            /usr/opt/bonsol/bonsol \
+              --keypair ~/.config/solana/id.json \
+              --rpc-url http://127.0.0.1:8899 \
+              deploy \
+              url \
+              -m src/cli/src/tests/test_data/test_manifest.json \
+              --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+              -y
+
+            echo 'Running Tests'
+            /usr/opt/bonsol/bonsol-tester 500
+          "
+
+          TEST_RESULT=$?
+
+          # Clean up the container
+          docker stop e2e-test
+          docker rm e2e-test
+
+          # Check if the tests passed
+          if [ $TEST_RESULT -eq 0 ]; then
+            echo "✅ E2E tests passed successfully"
+          else
+            echo "❌ E2E tests failed"
+            exit 1
+          fi
+
+      # Set outputs for downstream jobs
       - name: Set job outputs
         id: outputs
         run: |
-          # Set the outputs for downstream jobs
-          echo "slim_image=${{ steps.docker_tags.outputs.SLIM_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "stark_image=${{ steps.docker_tags.outputs.STARK_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "cuda_image=${{ steps.docker_tags.outputs.CUDA_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "build_success=true" >> $GITHUB_OUTPUT
