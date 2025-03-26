@@ -8,9 +8,10 @@ on:
 
 # Allow one concurrent deployment
 env:
-  S3_BUCKET_NAME: "risc0-prover-us-east-1-041119533185"
-  AWS_REGION: "us-east-1"
+  S3_BUCKET_NAME: "risc0-prover-artifacts"
   PROVER_TAG: "v2024-05-17.1"
+  AWS_REGION: "us-east-1"
+  AWS_ROLE: "arn:aws:iam::516174096100:role/GithubBonsolCI"
 
 concurrency:
   group: "sync-prover-to-s3"
@@ -32,14 +33,21 @@ jobs:
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::041119533185:role/GithubBonsolCI
+          role-to-assume: ${{ env.AWS_ROLE }}
 
       - name: Build Prover Artifact
         run: |
           docker build --progress=plain -f .github/docker/Dockerfile.prover -o risc0-groth16-prover . --build-arg PROVER_TAG=${PROVER_TAG}
 
       - name: Generate SHA-256 Verification
-        run: "for file in risc0-groth16-prover/${PROVER_TAG}/stark/*; do\n    basefile=$(basename \"$file\")\n    (cd \"$(dirname \"$file\")\" && sha256sum \"$basefile\" > \"$basefile.sha256\")\n    echo -n \"sha256sum \"\n    cat \"$file.sha256\"\ndone        \n"
+        run: |
+          for file in risc0-groth16-prover/${PROVER_TAG}/stark/*;
+          do
+            basefile=$(basename "$file")
+            (cd $(dirname "$file") && sha256sum "$basefile" > "$basefile.sha256")
+            echo -n "sha256sum "
+            cat "$file.sha256"
+          done
 
       - name: Sync S3 Bucket
         run: |

@@ -1,0 +1,63 @@
+name: Unittest coverage report
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+  packages: read
+
+jobs:
+
+  unittest-report:
+
+    name: Prepare
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.1.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute unittests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw' cargo test
+          grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/html
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: Upload static files as artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./target/coverage/html/
+
+  deploy-coverage:
+
+    name: Deploy unittest coverage
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: unittest-report
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      # environment created automatically by GitHub
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
