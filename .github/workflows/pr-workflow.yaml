@@ -2,7 +2,7 @@ name: Pull request workflow
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  packages: write  # Only needed for reading from registry
+  packages: read  # Only needed for pulling base images
 
 jobs:
 
@@ -22,9 +22,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          # When using pull_request_target, checkout the base branch for security
-          ref: ${{ github.event.pull_request.base.sha }}
 
       - name: Install Python
         uses: actions/setup-python@v4
