@@ -12,32 +12,43 @@ permissions:
   packages: read
 
 jobs:
-
   check_pre-commit:
-
     name: Run pre-commit checks
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Install pre-commit
         run: pip install pre-commit
-
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
 
+  check-fork-pr:
+    name: Check if PR is from fork
+    runs-on: ubuntu-latest
+    outputs:
+      is_fork: ${{ steps.check.outputs.is_fork }}
+    steps:
+      - name: Check if PR is from fork
+        id: check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "PR is from a fork repository"
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+            echo "PR is from the same repository"
+          fi
+
   check-formatting:
-
     name: Check & Format
+    needs: check-fork-pr
+    if: needs.check-fork-pr.outputs.is_fork == 'false'
     runs-on: ubicloud-standard-16
-
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
@@ -57,10 +68,10 @@ jobs:
           cargo +nightly fmt --all -- --check
 
   unit-tests:
-
     name: Unit Test
+    needs: check-fork-pr
+    if: needs.check-fork-pr.outputs.is_fork == 'false'
     runs-on: ubicloud-standard-16
-
     container:
       image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
@@ -71,55 +82,101 @@ jobs:
       - name: Test
         run: cargo test -- --nocapture
 
-  check-fork-pr:
-    name: Check if PR is from fork
-    runs-on: ubuntu-latest
-    outputs:
-      is_fork: ${{ steps.check.outputs.is_fork }}
-    steps:
-      - name: Check if PR is from fork
-        id: check
-        run: |
-          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-            echo "is_fork=true" >> $GITHUB_OUTPUT
-            echo "PR is from a fork repository"
-          else
-            echo "is_fork=false" >> $GITHUB_OUTPUT
-            echo "PR is from the same repository"
-          fi
-
   call-build-node-container-image:
     permissions:
       contents: read
       packages: write
     needs: check-fork-pr
+    if: needs.check-fork-pr.outputs.is_fork == 'false'
     uses: ./.github/workflows/build-node-containers.yaml
     with:
-      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
+      is_fork: false
 
   e2e-test:
-
     name: E2E Test
+    if: needs.check-fork-pr.outputs.is_fork == 'false'
     runs-on:
       labels: ubicloud-standard-30
-    needs: call-build-node-container-image
-
+    needs: [check-fork-pr, call-build-node-container-image]
     container:
       image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: E2E Test
         shell: bash
         run: |
           set -euxo pipefail
           cd /usr/opt/bonsol/
-          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
+          git clone https://github.com/bonsol-collective/bonsol.git src
+          cp -pr src/elf .
+          solana-keygen new -s --no-bip39-passphrase -f
+          solana-test-validator \
+            --ledger ./ledger \
+            -q \
+            --limit-ledger-size 0 \
+            --bind-address 0.0.0.0 \
+            --rpc-pubsub-enable-block-subscription \
+            --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+            --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+            -r 1>/dev/null 2>/dev/null &
+          sleep 15
+          solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+          solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+          solana -u http://localhost:8899 airdrop 1
+          ulimit -s unlimited
+          echo "Starting node"
+          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+          sleep 15
+          echo "Deploying"
+          /usr/opt/bonsol/bonsol \
+            --keypair ~/.config/solana/id.json \
+            --rpc-url http://127.0.0.1:8899 \
+            deploy \
+            url \
+            -m src/cli/src/tests/test_data/test_manifest.json \
+            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+            -y
+          echo "Running Tests"
+          /usr/opt/bonsol/bonsol-tester 500
+
+  # Fork PR workflow jobs
+  all-in-one-fork:
+    name: All-in-one Check (Fork)
+    needs: check-fork-pr
+    if: needs.check-fork-pr.outputs.is_fork == 'true'
+    runs-on: ubicloud-standard-30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          # Install necessary dependencies
+          curl -L https://github.com/bonsol-collective/bonsol-ci-env/releases/download/v1.0.0/bonsol-ci-env.tar.gz | tar xz
+          curl -L https://github.com/bonsol-collective/bonsol-node/releases/download/v1.0.0/bonsol-node-stark-cuda.tar.gz | tar xz
+
+          # Set up environment variables
+          export PATH=$PATH:/usr/local/cargo/bin
+          export RUSTUP_HOME=/usr/local/rustup
+          export CARGO_HOME=/usr/local/cargo
+
+      - name: Check & Format
+        run: |
+          cargo check
+          cargo +nightly fmt --all -- --check
+
+      - name: Unit Tests
+        run: |
+          cargo test -- --nocapture
+
+      - name: E2E Tests
+        run: |
+          set -euxo pipefail
+          cd /usr/opt/bonsol/
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
