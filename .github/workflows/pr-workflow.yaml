@@ -147,21 +147,51 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Login to GitHub Container Registry to access base images if needed
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build CI environment for running tests
       - name: Build CI environment
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/ci-env.Dockerfile
+          file: docker/Dockerfile.github-actions-ci
           load: true
           tags: bonsol-ci-env:local
 
-      - name: Build Node environment
+      # Build full node image for E2E tests
+      - name: Build slim node image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/node.Dockerfile
+          file: docker/Dockerfile.slim
+          load: true
+          tags: bonsol-node-slim:local
+
+      - name: Build stark node image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.stark
+          load: true
+          tags: bonsol-node-stark:local
+          build-args: |
+            IMAGE=bonsol-node-slim:local
+
+      - name: Build full node image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.full
           load: true
           tags: bonsol-node-stark-cuda:local
+          build-args: |
+            IMAGE=bonsol-node-stark:local
 
       - name: Check & Format
         run: |
