@@ -107,12 +107,13 @@ jobs:
   # E2E test in a separate job using the built image
   e2e-test:
     name: E2E Test
-    runs-on: ubicloud-standard-30
-    needs: [call-build-node-container-image, check-fork-pr]
+    runs-on:
+      labels: ubicloud-standard-30
+    needs: call-build-node-container-image
 
     # Run as a container job using the image built in the previous job
     container:
-      image: ${{ needs.call-build-node-container-image.outputs.cuda_image }}
+      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol

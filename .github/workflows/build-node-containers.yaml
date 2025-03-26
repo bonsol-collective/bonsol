@@ -94,6 +94,7 @@ jobs:
             # Non-fork PRs use the main path
             echo "IMAGE_PATH=bonsol-node" >> $GITHUB_OUTPUT
           fi
+          cat $GITHUB_OUTPUT
 
           # Common tag strategy
           echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
