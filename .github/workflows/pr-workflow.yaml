@@ -132,15 +132,6 @@ jobs:
           /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
           sleep 15
           echo "Deploying"
-          /usr/opt/bonsol/bonsol \
-            --keypair ~/.config/solana/id.json \
-            --rpc-url http://127.0.0.1:8899 \
-            deploy \
-            url \
-            -m src/cli/src/tests/test_data/test_manifest.json \
-            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
-            -y
-          echo "Running Tests"
           /usr/opt/bonsol/bonsol-tester 500
 
   # Fork PR workflow jobs
@@ -153,58 +144,72 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup environment
-        run: |
-          # Install necessary dependencies
-          curl -L https://github.com/bonsol-collective/bonsol-ci-env/releases/download/v1.0.0/bonsol-ci-env.tar.gz | tar xz
-          curl -L https://github.com/bonsol-collective/bonsol-node/releases/download/v1.0.0/bonsol-node-stark-cuda.tar.gz | tar xz
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          # Set up environment variables
-          export PATH=$PATH:/usr/local/cargo/bin
-          export RUSTUP_HOME=/usr/local/rustup
-          export CARGO_HOME=/usr/local/cargo
+      - name: Build CI environment
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/ci-env.Dockerfile
+          load: true
+          tags: bonsol-ci-env:local
+
+      - name: Build Node environment
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/node.Dockerfile
+          load: true
+          tags: bonsol-node-stark-cuda:local
 
       - name: Check & Format
         run: |
-          cargo check
-          cargo +nightly fmt --all -- --check
+          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-ci-env:local bash -c "
+            cargo check &&
+            cargo +nightly fmt --all -- --check
+          "
 
       - name: Unit Tests
         run: |
-          cargo test -- --nocapture
+          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-ci-env:local bash -c "
+            cargo test -- --nocapture
+          "
 
       - name: E2E Tests
         run: |
-          set -euxo pipefail
-          cd /usr/opt/bonsol/
-          git clone https://github.com/bonsol-collective/bonsol.git src
-          cp -pr src/elf .
-          solana-keygen new -s --no-bip39-passphrase -f
-          solana-test-validator \
-            --ledger ./ledger \
-            -q \
-            --limit-ledger-size 0 \
-            --bind-address 0.0.0.0 \
-            --rpc-pubsub-enable-block-subscription \
-            --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
-            --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
-            -r 1>/dev/null 2>/dev/null &
-          sleep 15
-          solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
-          solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
-          solana -u http://localhost:8899 airdrop 1
-          ulimit -s unlimited
-          echo "Starting node"
-          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
-          sleep 15
-          echo "Deploying"
-          /usr/opt/bonsol/bonsol \
-            --keypair ~/.config/solana/id.json \
-            --rpc-url http://127.0.0.1:8899 \
-            deploy \
-            url \
-            -m src/cli/src/tests/test_data/test_manifest.json \
-            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
-            -y
-          echo "Running Tests"
-          /usr/opt/bonsol/bonsol-tester 500
+          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-node-stark-cuda:local bash -c "
+            set -euxo pipefail
+            cd /usr/opt/bonsol/
+            git clone https://github.com/bonsol-collective/bonsol.git src
+            cp -pr src/elf .
+            solana-keygen new -s --no-bip39-passphrase -f
+            solana-test-validator \
+              --ledger ./ledger \
+              -q \
+              --limit-ledger-size 0 \
+              --bind-address 0.0.0.0 \
+              --rpc-pubsub-enable-block-subscription \
+              --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+              --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+              -r 1>/dev/null 2>/dev/null &
+            sleep 15
+            solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+            solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+            solana -u http://localhost:8899 airdrop 1
+            ulimit -s unlimited
+            echo 'Starting node'
+            /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+            sleep 15
+            echo 'Deploying'
+            /usr/opt/bonsol/bonsol \
+              --keypair ~/.config/solana/id.json \
+              --rpc-url http://127.0.0.1:8899 \
+              deploy \
+              url \
+              -m src/cli/src/tests/test_data/test_manifest.json \
+              --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+              -y
+            echo 'Running Tests'
+            /usr/opt/bonsol/bonsol-tester 500
+          "
