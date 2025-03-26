@@ -2,11 +2,11 @@ name: Build Bonsol node images
 
 on:
   workflow_call:
-    inputs:
-      is_fork:
-        required: false
-        type: boolean
-        default: false
+#    inputs:
+#      is_fork:
+#        required: false
+#        type: boolean
+#        default: false
 
 jobs:
   build-node-container-image:
@@ -44,6 +44,7 @@ jobs:
         id: docker_tags
         run: |
           echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
+          echo "REGISTRY=docker.io/zerocomputing/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
             echo "TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -51,6 +52,7 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
+          cat $GITHUB_OUTPUT
 
       # For fork PRs: build images and load them into Docker daemon (not push to registry)
       # Use docker/build-push-action but with load: true and push: false

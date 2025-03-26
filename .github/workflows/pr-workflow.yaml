@@ -80,10 +80,6 @@ jobs:
       - name: Check if PR is from fork
         id: check
         run: |
-          env
-          echo "##########"
-          echo "Forked Repository: ${{ github.event.pull_request.head.repo.full_name }}"
-          echo "Target Repository: ${{ github.event.pull_request.base.repo.full_name }}"
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
             echo "is_fork=true" >> $GITHUB_OUTPUT
             echo "PR is from a fork repository"
@@ -106,10 +102,10 @@ jobs:
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
-    needs: [call-build-node-container-image, check-fork-pr]
+    needs: call-build-node-container-image
 
     container:
-      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
+      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
