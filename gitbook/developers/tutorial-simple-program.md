@@ -10,15 +10,13 @@ icon: space-awesome
 
 ## Setting up your environment
 
-### Clone the Bonsol Repository
+### Setup a local environment
 
-```bash
-git clone https://github.com/bonsol-collective/bonsol.git
-```
+Refer to the [Setup a local environment](./setup-a-local-environment.md) page for instructions on setting up a local environment.
 
 ### Start the Local Validator
 
-The validator script builds and deploys necessary Solana programs, including the Bonsol core program and an example callback program.
+The validator script builds and deploys necessary Solana programs, including the Bonsol core program and an example callback program (not used in this tutorial).
 
 ```bash
 $ ./bin/validator.sh
@@ -84,6 +82,22 @@ Signature: 53GJFP1HMopNuyXfnQSxP7m49MZ2HfTTfRvVkMLdCk3dkzgKr8whfzQw7amWmVz2BP3zU
 
 > :bulb: Note: Keep this terminal window open as the prover node needs to run throughout the tutorial.
 
+### Run the Local ZK Program Server
+
+As explained in the [architecture](../core-concepts/architecture.md.md) page, provers on the network need to fetch the ZK programs and the input data used to generate the proof. The methods used to fetch these resources are stored on-chain by the ZK program developer.
+
+For the purpose of local development, we will use a local HTTP server to host the ZK program data. This server stores everything in memory, so it will reset when the server is restarted. Open a new terminal and run:
+
+```bash
+$ cargo run -p local-zk-program-server
+   Compiling local-zk-program-server v0.4.5 (/home/ubuntu/bonsol/local-zk-program-server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.56s
+     Running `target/debug/local-zk-program-server`
+Server is running on 0.0.0.0:8080
+```
+
+> :bulb: Note: Keep this terminal window open as the prover node needs to run throughout the tutorial.
+
 ## Writing the ZK program
 
 Let's examine the simple ZK program provided in the repo at `bonsol/images/simple/src/main.rs`.
@@ -124,14 +138,14 @@ fn main() {
 This simple program demonstrates private input validation, where only the prover knows the private input, but anyone can verify the result. Here's how the program works:
 
 1. Reads two inputs
-   * public1: A JSON string with an "attestation" field
-   * private2: A private string to compare against the attestation
+   - public1: A JSON string with an "attestation" field
+   - private2: A private string to compare against the attestation
 2. Validates if
-   * The public input is valid JSON
-   * The "attestation" field in the JSON matches the private input
+   - The public input is valid JSON
+   - The "attestation" field in the JSON matches the private input
 3. Outputs
-   * A cryptographic digest of both inputs
-   * A result (1 for match, 0 for no match)
+   - A cryptographic digest of both inputs
+   - A result (1 for match, 0 for no match)
 
 ## Building the ZK program
 
@@ -148,10 +162,7 @@ This compiles the Rust code into a format compatible with the RISC Zero VM and g
   "name": "simple2",
   "binaryPath": "./images/simple/target/riscv-guest/riscv32im-risc0-zkvm-elf/docker/simple2/simple2",
   "imageId": "ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e",
-  "inputOrder": [
-    "Public",
-    "Private"
-  ],
+  "inputOrder": ["Public", "Private"],
   "signature": "5PdbBK1A5Qtyg1P6GUbMLt2eG4VSPfYRMaGsPoxJRwoQzJbAgkFx9N5nafTHxpdG5d2CUqVUsBfUgWijyEBXtxqH",
   "size": 279880
 }
@@ -161,17 +172,16 @@ This compiles the Rust code into a format compatible with the RISC Zero VM and g
 
 ## Deploying the ZK program
 
-Next, deploy the program to an S3 bucket and register it on-chain:
+Next, deploy the program to the local ZK program server and register it on-chain:
 
 ```bash
-$ bonsol deploy s3 \
+$ bonsol deploy url \
     --bucket bonsol \
-    --region us-east-1 \
-    --access-key $AWS_ACCESS_KEY_ID \
-    --secret-key $AWS_SECRET_ACCESS_KEY \
+    --url http://localhost:8080 \
+    --post \
     --manifest-path ./images/simple/manifest.json
 
-Uploaded to S3 url https://bonsol.s3.us-east-1.amazonaws.com/simple2-ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e
+Program available at URL https://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e
 Deploying to Solana, which will cost real money. Are you sure you want to continue? (y/n)
 y
 ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e deployed
@@ -183,7 +193,7 @@ ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e deployed
 
 ### Edit the execution request
 
-Locate the sample execution request template at `bonsol/charts/input_files/simple_execution_request.json`. Update the template with your specific `imageId` from the `manifest.json`file and remove the callback configuration (we'll cover callbacks in a separate tutorial):
+Locate the sample execution request template at `bonsol/charts/input_files/simple_execution_request.json`. Update the template with your specific `imageId` from the `manifest.json`file:
 
 ```json
 # bonsol/charts/input_files/simple_execution_request.json
@@ -211,13 +221,13 @@ Locate the sample execution request template at `bonsol/charts/input_files/simpl
 
 ### Understanding the request
 
-* `imageId`: The identifier for your ZK program
-* `executionConfig`: Configuration for execution behavior
-* `inputs`: The inputs to your program (must match the order in manifest.json)
-* First input: Public JSON data with `"attestation":"test"`
-* Second input: Private data (URL-encoded and hosted remotely)
-* `tip`: The amount to pay the prover (in lamports)
-* `expiry`: Number of blocks until the request expires
+- `imageId`: The identifier for your ZK program
+- `executionConfig`: Configuration for execution behavior
+- `inputs`: The inputs to your program (must match the order in manifest.json)
+- First input: Public JSON data with `"attestation":"test"`
+- Second input: Private data (URL-encoded and hosted remotely)
+- `tip`: The amount to pay the prover (in lamports)
+- `expiry`: Number of blocks until the request expires
 
 ### Submit the execution request
 
