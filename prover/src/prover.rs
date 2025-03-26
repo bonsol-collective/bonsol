@@ -20,7 +20,7 @@ pub fn new_risc0_exec_env(
                     let receipt: Receipt = bincode::deserialize(&ri.data)?;
                     env_builder.add_assumption(receipt);
                 } else {
-                    env_builder.write_slice(&ri.data);
+                    env_builder.write_frame(&ri.data);
                 }
             }
             _ => {

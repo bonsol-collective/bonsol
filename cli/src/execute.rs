@@ -2,7 +2,7 @@ use crate::common::*;
 use anyhow::Result;
 use bonsol_prover::input_resolver::{DefaultInputResolver, InputResolver, ProgramInput};
 use bonsol_sdk::instructions::{ExecutionConfig, InputRef};
-use bonsol_sdk::{BonsolClient, ExecutionAccountStatus, InputType};
+use bonsol_sdk::{rand_id, BonsolClient, ExecutionAccountStatus, InputType};
 use indicatif::ProgressBar;
 use sha2::{Digest, Sha256};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;

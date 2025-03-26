@@ -6,7 +6,7 @@ description: >-
 icon: space-awesome
 ---
 
-# Tutorial: Simple Program
+# A Simple First Program
 
 ## Setting up your environment
 
@@ -105,30 +105,55 @@ Let's examine the simple ZK program provided in the repo at `bonsol/images/simpl
 ```rust
 # bonsol/images/simple/src/main.rs
 
+use std::io::Read;
+
 use gjson::Kind;
-use risc0_zkvm::{guest::{env, sha::Impl},sha::{Digest, Sha256}};
+use risc0_zkvm::{
+    guest::{env, sha::Impl},
+    sha::Sha256,
+};
 
 fn main() {
-    let mut public1 = Vec::new();
-    env::read_slice(&mut public1);
-    let publici1 = String::from_utf8(public1).unwrap();
-    let mut private2 = Vec::new();
-    env::read_slice(&mut private2);
-    let privatei2 = String::from_utf8(private2).unwrap();
+    // Read all the input data at once
+    // Inputs are sent as frames: 4-byte length followed by the data
+    let mut buf: Vec<u8> = Vec::new();
+    env::stdin().read_to_end(&mut buf).unwrap();
+
+    let mut inputs = Vec::new();
+    let mut offset = 0;
+    while offset + 4 <= buf.len() {
+        let length = u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap()) as usize;
+        offset += 4; // Move past the length field
+
+        // Ensure we have enough data for the frame
+        if offset + length > buf.len() {
+            // Stop if the frame is incomplete
+            break;
+        }
+
+        // Extract the frame data
+        inputs.push(&buf[offset..offset + length]);
+        // Move to the next frame
+        offset += length;
+    }
+
+    // Using from_utf8_lossy to avoid allocating new strings
+    let publici1 = String::from_utf8_lossy(&inputs[0]);
+    let privatei2 = String::from_utf8_lossy(&inputs[1]);
+
+    println!("publici1: {}", publici1);
+    println!("privatei2: {}", privatei2);
+
     let valid = gjson::valid(&publici1);
-    let mut res = 0;
+    let mut res: u8 = 0;
     if valid {
         let val = gjson::get(&publici1, "attestation");
         if val.kind() == Kind::String && val.str() == privatei2 {
             res = 1;
         }
     }
-    let digest = Impl::hash_bytes(
-        &[
-            publici1.as_bytes(),
-            privatei2.as_bytes(),
-        ].concat(),
-    );
+
+    let digest = Impl::hash_bytes(&[publici1.as_bytes(), privatei2.as_bytes()].concat());
     env::commit_slice(digest.as_bytes());
     env::commit_slice(&[res]);
 }
@@ -137,7 +162,7 @@ fn main() {
 
 This simple program demonstrates private input validation, where only the prover knows the private input, but anyone can verify the result. Here's how the program works:
 
-1. Reads two inputs
+1. Reads two inputs from a slice of bytes
    - public1: A JSON string with an "attestation" field
    - private2: A private string to compare against the attestation
 2. Validates if
@@ -146,6 +171,8 @@ This simple program demonstrates private input validation, where only the prover
 3. Outputs
    - A cryptographic digest of both inputs
    - A result (1 for match, 0 for no match)
+
+> :bulb: Note: Calls to `println!` inside the ZK program can be seen in the prover logs, which can be useful for debugging.
 
 ## Building the ZK program
 
@@ -161,10 +188,10 @@ This compiles the Rust code into a format compatible with the RISC Zero VM and g
 {
   "name": "simple2",
   "binaryPath": "./images/simple/target/riscv-guest/riscv32im-risc0-zkvm-elf/docker/simple2/simple2",
-  "imageId": "ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e",
+  "imageId": "e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31",
   "inputOrder": ["Public", "Private"],
-  "signature": "5PdbBK1A5Qtyg1P6GUbMLt2eG4VSPfYRMaGsPoxJRwoQzJbAgkFx9N5nafTHxpdG5d2CUqVUsBfUgWijyEBXtxqH",
-  "size": 279880
+  "signature": "5jz1kGwvkhkKsp1s3imXaU41c8pkCQhdX8FuTCjoyFjeXGs7iDW5YHFirJNS6zYfgdoneb1pnbNoB4yRFRNxb919",
+  "size": 288448
 }
 ```
 
@@ -181,10 +208,10 @@ $ bonsol deploy url \
     --post \
     --manifest-path ./images/simple/manifest.json
 
-Program available at URL https://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e
+Program available at URL https://localhost:8080/simple2-e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31
 Deploying to Solana, which will cost real money. Are you sure you want to continue? (y/n)
 y
-ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e deployed
+e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31 deployed
 ```
 
 > 💡 Note: When deploying to mainnet, this operation costs SOL to register your program on-chain.
@@ -198,7 +225,7 @@ Locate the sample execution request template at `bonsol/charts/input_files/simpl
 ```json
 # bonsol/charts/input_files/simple_execution_request.json
 {
-  "imageId": "ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e",
+  "imageId": "e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31",
   "executionConfig": {
     "verifyInputHash": false,
     "forwardOutput": true
@@ -261,6 +288,9 @@ current block 24380
 You can check your prover logs for the corresponding on-chain transaction:
 
 ```
-⠒ [0/1] Finalizing transaction 2j6iCbz8fKid1MKVKhB9QzvbAiziT4q4xeANAiEPP5DpQuwRTqAycD4JKJ3ca1pHkwNXxQ1fSJKmBdPFXYSrihtA  Sending to runner
-{"timestamp":"2025-03-11T09:24:48.933897605Z","level":"INFO","fields":{"message":"Proof submitted: 2j6iCbz8fKid1MKVKhB9QzvbAiziT4q4xeANAiEPP5DpQuwRTqAycD4JKJ3ca1pHkwNXxQ1fSJKmBdPFXYSrihtA"},"target":"bonsol_node::risc0_runner"}
+{"timestamp":"2025-03-20T20:35:31.577353832Z","level":"INFO","fields":{"message":"Sending transaction... (https://explorer.solana.com/tx/4bTfj66z39SKJP618We65y4142L6FzR23jp3XeQPDfvE98Sx7gfQpR5AXLr7Gxp4yLVXEuAuRpKHhQpBNRxE8HqR?cluster=custom&customUrl=http://localhost:8899)"},"target":"bonsol_node::transaction_sender"}
+⠚ [0/1] Finalizing transaction 4bTfj66z39SKJP618We65y4142L6FzR23jp3XeQPDfvE98Sx7gfQpR5AXLr7Gxp4yLVXEuAuRpKHhQpBNSending to runner
+{"timestamp":"2025-03-20T20:35:32.079661414Z","level":"INFO","fields":{"message":"Proof submitted: 4bTfj66z39SKJP618We65y4142L6FzR23jp3XeQPDfvE98Sx7gfQpR5AXLr7Gxp4yLVXEuAuRpKHhQpBNRxE8HqR"},"target":"bonsol_node::risc0_runner"}
 ```
+
+The prover also outputs a link to the Solana Explorer for the transaction.

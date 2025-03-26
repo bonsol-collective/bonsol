@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use solana_rpc_client::rpc_client::SerializableTransaction;
 use tracing::error;
 
 use {
@@ -274,6 +275,12 @@ impl TransactionSender for RpcTransactionSender {
         let msg = v0::Message::try_compile(&self.signer.pubkey(), &[instruction], &[], blockhash)?;
         let tx = VersionedTransaction::try_new(VersionedMessage::V0(msg), &[&self.signer])?;
 
+        let explorer_url = format!(
+            "https://explorer.solana.com/tx/{}?cluster=custom&customUrl={}",
+            tx.get_signature(),
+            self.rpc_client.url()
+        );
+        info!("Sending transaction... ({})", explorer_url);
         let sig = self
             .rpc_client
             .send_and_confirm_transaction_with_spinner_and_config(

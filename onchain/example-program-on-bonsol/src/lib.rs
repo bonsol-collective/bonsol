@@ -17,7 +17,7 @@ use solana_program::{declare_id, entrypoint, msg};
 use std::str::from_utf8;
 
 declare_id!("exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG");
-const SIMPLE_IMAGE_ID: &str = "68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960";
+const SIMPLE_IMAGE_ID: &str = "e13f590c2859117db29e210cc08263b1f0da3d3f74928791b129438083edfa31";
 
 static EA1: Pubkey = pubkey!("3b6DR2gbTJwrrX27VLEZ2FJcHrDvTSLKEcTLVhdxCoaf");
 static EA2: Pubkey = pubkey!("g7dD1FHSemkUQrX1Eak37wzvDjscgBW2pFCENwjLdMX");
@@ -119,13 +119,17 @@ fn main<'a>(
                 && callback_output.committed_outputs[0] == 1
             {
                 msg!("Correct Json Attestation");
+                Ok(())
+            } else {
+                msg!("Incorrect Json Attestation");
+                Err(ProgramError::Custom(0))
             }
-            Ok(())
         }
         //only callback test
         2 => {
             let callback_output: BonsolCallback =
                 handle_callback(SIMPLE_IMAGE_ID, accounts[0].key, accounts, data)?;
+            msg!("Callback output: {:?}", callback_output.committed_outputs);
             if sol_memcmp(accounts[1].key.as_ref(), EA1.as_ref(), 32) != 0 {
                 return Err(ProgramError::InvalidInstructionData);
             }
@@ -142,8 +146,11 @@ fn main<'a>(
                 && callback_output.committed_outputs[0] == 1
             {
                 msg!("Correct Json Attestation");
+                Ok(())
+            } else {
+                msg!("Incorrect Json Attestation");
+                Err(ProgramError::Custom(0))
             }
-            Ok(())
         }
 
         _ => Err(ProgramError::InvalidInstructionData),
