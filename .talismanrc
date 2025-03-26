@@ -6,5 +6,5 @@ fileignoreconfig:
 - filename: .pre-commit-config.yaml
   checksum: 80d9c50573e73a7273a825ce15e6ac1d4c5ee6820dbfa505aa50a44e4f2d7e89
 - filename: .github/workflows/build-node-containers.yaml
-  checksum: 9c9e46d0ef8ca8a0dfeb2ed3c997fc8f22d5aab5fa046d98021ded1784710551
+  checksum: d971193611dfbf9b2538f3642818c69f1ef3eb375f5f465d743f32a519ad5989
 version: ""
