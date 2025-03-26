@@ -2,11 +2,11 @@ name: Build Bonsol node images
 
 on:
   workflow_call:
-#    inputs:
-#      is_fork:
-#        required: false
-#        type: boolean
-#        default: false
+    inputs:
+      is_fork:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-node-container-image:
