@@ -3,13 +3,14 @@ name: Pull request workflow
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - main
 
 permissions:
   contents: read
   pull-requests: write
-  packages: read
+  packages: read  # Only needed for pulling base images
 
 jobs:
 
@@ -89,65 +90,15 @@ jobs:
           fi
 
   call-build-node-container-image:
+    name: Build and Test Docker Images
     permissions:
       contents: read
-      packages: write
+      packages: read  # Only need read access to pull base images
     needs: check-fork-pr
     uses: ./.github/workflows/build-node-containers.yaml
     with:
       is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
+      quick_test_mode: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
-  e2e-test:
-
-    name: E2E Test
-    runs-on:
-      labels: ubicloud-standard-30
-    needs: call-build-node-container-image
-
-    container:
-      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
-      options: "-it"
-      volumes:
-        - local:/workspaces/bonsol
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: E2E Test
-        shell: bash
-        run: |
-          set -euxo pipefail
-          cd /usr/opt/bonsol/
-          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
-          git clone https://github.com/bonsol-collective/bonsol.git src
-          cp -pr src/elf .
-          solana-keygen new -s --no-bip39-passphrase -f
-          solana-test-validator \
-            --ledger ./ledger \
-            -q \
-            --limit-ledger-size 0 \
-            --bind-address 0.0.0.0 \
-            --rpc-pubsub-enable-block-subscription \
-            --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
-            --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
-            -r 1>/dev/null 2>/dev/null &
-          sleep 15
-          solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
-          solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
-          solana -u http://localhost:8899 airdrop 1
-          ulimit -s unlimited
-          echo "Starting node"
-          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
-          sleep 15
-          echo "Deploying"
-          /usr/opt/bonsol/bonsol \
-            --keypair ~/.config/solana/id.json \
-            --rpc-url http://127.0.0.1:8899 \
-            deploy \
-            url \
-            -m src/cli/src/tests/test_data/test_manifest.json \
-            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
-            -y
-          echo "Running Tests"
-          /usr/opt/bonsol/bonsol-tester 500
+  # E2E tests are now run inside the build-node-container-image job
+  # The entire workflow is consolidated onto a single runner
