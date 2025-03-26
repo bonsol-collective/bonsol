@@ -71,31 +71,31 @@ jobs:
       - name: Test
         run: cargo test -- --nocapture
 
-#  check-fork-pr:
-#    name: Check if PR is from fork
-#    runs-on: ubuntu-latest
-#    outputs:
-#      is_fork: ${{ steps.check.outputs.is_fork }}
-#    steps:
-#      - name: Check if PR is from fork
-#        id: check
-#        run: |
-#          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-#            echo "is_fork=true" >> $GITHUB_OUTPUT
-#            echo "PR is from a fork repository"
-#          else
-#            echo "is_fork=false" >> $GITHUB_OUTPUT
-#            echo "PR is from the same repository"
-#          fi
+  check-fork-pr:
+    name: Check if PR is from fork
+    runs-on: ubuntu-latest
+    outputs:
+      is_fork: ${{ steps.check.outputs.is_fork }}
+    steps:
+      - name: Check if PR is from fork
+        id: check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "PR is from a fork repository"
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+            echo "PR is from the same repository"
+          fi
 
   call-build-node-container-image:
     permissions:
       contents: read
       packages: write
-#    needs: check-fork-pr
+    needs: check-fork-pr
     uses: ./.github/workflows/build-node-containers.yaml
-#    with:
-#      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
+    with:
+      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
   e2e-test:
 
@@ -105,8 +105,7 @@ jobs:
     needs: call-build-node-container-image
 
     container:
-#      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
-      image: docker.io/zerocomputing/bonsol-node:stark-cuda-${{ github.sha }}
+      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol

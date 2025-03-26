@@ -28,36 +28,22 @@ jobs:
 
       # Always login to GitHub Container Registry to access base images
       # This is needed for both fork and non-fork PRs to access base images
-#      - name: Login to GitHub Container Registry
-#        uses: docker/login-action@v3
-#        with:
-#          registry: ghcr.io
-#          username: ${{ github.actor }}
-#          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Debug Docker Hub Creds
-        run: |
-          echo "Username: ${{ vars.DOCKERHUB_USERNAME }}"
-          echo "Token: ${{ secrets.DOCKERHUB_TOKEN }}" | base64
-
-
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Set different tags based on whether this is a tag push or main branch push
       # Tags:
       # - PR     - commit number
       # - Release - version number
 
-#          ORG=$(echo "${{ github.event.pull_request.head.repo.full_name }}" | awk -F/ '{ print $1}')
-#          echo "REGISTRY=ghcr.io/${ORG}/bonsol-node" >> $GITHUB_OUTPUT
-
       - name: Set Docker Tags
         id: docker_tags
         run: |
+          echo "REGISTRY=ghcr.io/bonsol-collective/bonsol-node" >> $GITHUB_OUTPUT
           echo "REGISTRY=docker.io/zerocomputing/bonsol-node" >> $GITHUB_OUTPUT
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # For tag releases, use flavor-v{version}
@@ -68,23 +54,23 @@ jobs:
           fi
           cat $GITHUB_OUTPUT
 
-#      # For fork PRs: build images and load them into Docker daemon (not push to registry)
-#      # Use docker/build-push-action but with load: true and push: false
-#      # This only builds the image without pushing to verify that the code updates didn't break the build
-#      - name: Build and Load Docker Image slim (fork PR)
-#        if: ${{ inputs.is_fork }}
-#        uses: docker/build-push-action@v6
-#        with:
-#          context: .
-#          push: false
-#          load: true
-#          file: docker/Dockerfile.slim
-#          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
-#          platforms: linux/amd64
+      # For fork PRs: build images and load them into Docker daemon (not push to registry)
+      # Use docker/build-push-action but with load: true and push: false
+      # This only builds the image without pushing to verify that the code updates didn't break the build
+      - name: Build and Load Docker Image slim (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
 
       # For non-fork PRs: build and push images to registry
       - name: Build and Push Docker Image slim
-#        if: ${{ !inputs.is_fork }}
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -96,7 +82,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image start
-#        if: ${{ !inputs.is_fork }}
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -110,7 +96,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image full
-#        if: ${{ !inputs.is_fork }}
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
