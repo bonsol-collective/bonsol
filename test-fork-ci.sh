@@ -13,7 +13,7 @@ if [[ -z "${GITHUB_TOKEN}" ]]; then
   echo "export GITHUB_TOKEN=your_token_here"
 else
   echo "🔑 Logging in to GitHub Container Registry..."
-  echo "${GITHUB_TOKEN}" | docker login ghcr.io -u $USER --password-stdin
+  echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "$USER" --password-stdin
 fi
 
 # Clean up any existing images
@@ -47,4 +47,4 @@ echo "✅ All images built successfully!"
 echo "Docker images now available:"
 docker images | grep bonsol-node
 
-echo "This confirms the workflow will work for fork PRs" 
+echo "This confirms the workflow will work for fork PRs"
