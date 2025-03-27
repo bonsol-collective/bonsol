@@ -3,14 +3,12 @@ use std::path::PathBuf;
 use anyhow::Result;
 use bytes::Bytes;
 use risc0_binfmt::{MemoryImage, Program};
-use risc0_zkvm::{GUEST_MAX_MEM, PAGE_SIZE};
+use risc0_zkvm::GUEST_MAX_MEM;
 use tokio::fs::read;
 
 pub struct Image {
     pub id: String,
-    pub data: Option<Program>,
     bytes: Option<Bytes>,
-    pub size: u64,
     pub path: PathBuf,
     pub last_used: u64,
 }
@@ -21,8 +19,8 @@ impl Image {
         Ok(program)
     }
 
-    fn mem_img(program: &Program) -> Result<MemoryImage> {
-        let image = MemoryImage::new(program, PAGE_SIZE as u32)?;
+    fn mem_img(program: Program) -> Result<MemoryImage> {
+        let image = MemoryImage::new_user(program);
         Ok(image)
     }
 
@@ -30,14 +28,12 @@ impl Image {
         self.bytes.as_ref()
     }
 
-    pub fn from_bytes(bytes: Bytes) -> Result<Image> {
+    pub fn from_bytes(bytes: Bytes) -> Result<Self> {
         let program = Image::load_elf(&bytes)?;
-        let img = Image::mem_img(&program)?;
-        Ok(Image {
-            id: img.compute_id().to_string(),
+        let mut img = Image::mem_img(program)?;
+        Ok(Self {
+            id: img.image_id().to_string(),
             bytes: Some(bytes),
-            data: Some(program),
-            size: img.pages.len() as u64 * PAGE_SIZE as u64,
             path: PathBuf::new(),
             last_used: 0,
         })
@@ -46,39 +42,28 @@ impl Image {
     pub async fn new(path: PathBuf) -> Result<Image> {
         let data = read(&path).await?;
         let program = Image::load_elf(&data)?;
-        let img = Image::mem_img(&program)?;
+        let mut img = Image::mem_img(program)?;
 
         Ok(Image {
-            id: img.compute_id().to_string(),
+            id: img.image_id().to_string(),
             bytes: Some(Bytes::from(data)),
-            data: Some(program),
-            size: img.pages.len() as u64 * PAGE_SIZE as u64,
             path,
             last_used: 0,
         })
     }
 
     pub fn compress(&mut self) {
-        self.data = None;
         self.bytes = None;
     }
 
     pub async fn load(&mut self) -> Result<()> {
-        if self.data.is_some() {
-            return Ok(());
-        }
         let data = read(&self.path).await?;
-        let program = Image::load_elf(&data)?;
-        self.data = Some(program);
         self.bytes = Some(Bytes::from(data));
         Ok(())
     }
 
     pub fn get_memory_image(&self) -> Result<MemoryImage> {
-        let program = self
-            .data
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("No data"))?;
+        let program = Image::load_elf(&self.bytes.as_ref().unwrap())?;
         let image = Image::mem_img(program)?;
         Ok(image)
     }

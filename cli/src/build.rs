@@ -1,4 +1,5 @@
 use std::fs::{self, File};
+use std::io::BufRead;
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
@@ -196,13 +197,29 @@ fn build_zkprogram_manifest(
         .join(RISCV_DOCKER_PATH)
         .join(&cargo_package_name)
         .join(&cargo_package_name);
-    let output = Command::new(CARGO_COMMAND)
+    let mut child = Command::new(CARGO_COMMAND)
         .current_dir(image_path)
         .args(CARGO_RISCZERO_BUILD_ARGS)
         .env("CARGO_TARGET_DIR", image_path.join(TARGET_DIR))
-        .output()?;
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    // Log the output of the build process
+    let stdout = child.stdout.take().unwrap();
+    let stdout_reader = std::io::BufReader::new(stdout);
+    std::thread::spawn(move || {
+        for line in stdout_reader.lines() {
+            if let Ok(line) = line {
+                println!("{}", line);
+            }
+        }
+    });
+
+    let output = child.wait_with_output()?;
 
     if output.status.success() {
+        println!("Build successful at {:?}", binary_path);
         let elf_contents = fs::read(&binary_path)?;
         let image_id = compute_image_id(&elf_contents).map_err(|err| {
             BonsolCliError::FailedToComputeImageId {
@@ -225,5 +242,6 @@ fn build_zkprogram_manifest(
         return Ok(zkprogram_manifest);
     }
 
+    println!("{:?}", String::from_utf8_lossy(&output.stdout).to_string());
     Err(BonsolCliError::BuildFailure(String::from_utf8_lossy(&output.stderr).to_string()).into())
 }

@@ -5,8 +5,7 @@ use std::path::Path;
 use atty::Stream;
 use bonsol_sdk::BonsolClient;
 use clap::Parser;
-use risc0_circuit_rv32im::prove::emu::exec::DEFAULT_SEGMENT_LIMIT_PO2;
-use risc0_circuit_rv32im::prove::emu::testutil::DEFAULT_SESSION_LIMIT;
+use risc0_circuit_rv32im::execute::{testutil::DEFAULT_SESSION_LIMIT, DEFAULT_SEGMENT_LIMIT_PO2};
 use risc0_zkvm::ExecutorEnv;
 use solana_sdk::signer::Signer;
 

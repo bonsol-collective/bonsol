@@ -671,10 +671,10 @@ async fn handle_image_deployment<'a>(
 
 // proving function, no async this is cpu/gpu intesive
 fn risc0_prove(
-    memory_image: MemoryImage,
+    mut memory_image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
 ) -> Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>)> {
-    let image_id = memory_image.compute_id().to_string();
+    let image_id = memory_image.image_id().to_string();
     let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
     let session = exec.run()?;
     // Obtain the default prover.
@@ -760,12 +760,7 @@ async fn risc0_compress_proof(
     let seal: Seal = proof.try_into()?;
     let claim = succinct_receipt.claim;
     if let MaybePruned::Value(rc) = claim {
-        let (system, user) = match rc.exit_code {
-            ExitCode::Halted(user_exit) => (0, user_exit),
-            ExitCode::Paused(user_exit) => (1, user_exit),
-            ExitCode::SystemSplit => (2, 0),
-            ExitCode::SessionLimit => (2, 2),
-        };
+        let (system, user) = rc.exit_code.into_pair();
         Ok(CompressedReceipt {
             execution_digest: rc.post.digest().as_bytes().to_vec(),
             exit_code_system: system,

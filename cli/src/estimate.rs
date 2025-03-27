@@ -5,7 +5,6 @@
 use anyhow::Result;
 use risc0_binfmt::{MemoryImage, Program};
 use risc0_zkvm::{ExecutorEnv, ExecutorImpl, Session, GUEST_MAX_MEM};
-use risc0_zkvm_platform::PAGE_SIZE;
 
 pub fn estimate<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<()> {
     let session = get_session(elf, env)?;
@@ -32,7 +31,7 @@ pub trait MkImage {
 impl<'a> MkImage for &'a [u8] {
     fn mk_image(self) -> Result<MemoryImage> {
         let program = Program::load_elf(self, GUEST_MAX_MEM as u32)?;
-        MemoryImage::new(&program, PAGE_SIZE as u32)
+        Ok(MemoryImage::new_user(program))
     }
 }
 
@@ -40,11 +39,11 @@ impl<'a> MkImage for &'a [u8] {
 mod estimate_tests {
     use anyhow::Result;
     use risc0_binfmt::MemoryImage;
-    use risc0_circuit_rv32im::prove::emu::{
-        exec::DEFAULT_SEGMENT_LIMIT_PO2,
-        testutil::{basic as basic_test_program, DEFAULT_SESSION_LIMIT},
+    use risc0_circuit_rv32im::execute::{
+        testutil::{user::basic as basic_test_program, DEFAULT_SESSION_LIMIT},
+        DEFAULT_SEGMENT_LIMIT_PO2,
     };
-    use risc0_zkvm::{ExecutorEnv, PAGE_SIZE};
+    use risc0_zkvm::ExecutorEnv;
 
     use super::MkImage;
     use crate::estimate;
@@ -62,8 +61,7 @@ mod estimate_tests {
         env = env
             .segment_limit_po2(DEFAULT_SEGMENT_LIMIT_PO2 as u32)
             .session_limit(DEFAULT_SESSION_LIMIT);
-        let image = MemoryImage::new(&program, PAGE_SIZE as u32)
-            .expect("failed to create image from basic program");
+        let image = MemoryImage::new_user(program);
         let res = estimate::get_session(image, env.build().unwrap());
 
         assert_eq!(res.ok().map(|session| session.total_cycles), Some(16384));
