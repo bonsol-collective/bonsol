@@ -24,8 +24,8 @@ Interested in contributing? Head over to the [broken-reference](broken-reference
 
 Build with Bonsol by installing the following components:
 
-* RISC Zero zkVM – Write secure off-chain logic.
-* Bonsol CLI – Initialize, build, and deploy your off-chain programs.
+- RISC Zero zkVM – Write secure off-chain logic.
+- Bonsol CLI – Initialize, build, and deploy your off-chain programs.
 
 You can install these tools using the provided install script or opt for manual installation.
 
@@ -40,11 +40,11 @@ Make sure the script completed without errors. Otherwise use the manual install 
 
 ### Manual Install
 
-Install the RISC Zero version management library and CLI using `rzup`. Bonsol currently supports version 1.2.1.
+Install the RISC Zero version management library and CLI using `rzup`. Bonsol currently supports version 2.0.0.
 
 ```bash
 curl -L https://risczero.com/install | bash
-rzup install cargo-risczero 1.2.1
+rzup install cargo-risczero 2.0.0
 ```
 
 Then install the Bonsol CLI depending on your architecture:

@@ -14,10 +14,8 @@ members = [
   "prover",
   "tester",
 ]
-
-
 resolver = "2"
-package.version = "0.4.5"
+package = { version = "0.4.5" }
 
 [workspace.dependencies]
 solana-sdk = "~2.0"
@@ -34,18 +32,18 @@ solana-account-decoder = "~2.0"
 solana-cli-config = "~2.0"
 yellowstone-grpc-client = "3.1.1"
 yellowstone-grpc-proto = "3.1.1"
-risc0-zkvm = { version = "1.2.1", features = [
+risc0-zkvm = { version = "2.0.0", features = [
   "prove",
 ], default-features = false }
-risc0-core = { version = "1.2.1" }
-risc0-zkp = { version = "1.2.1" }
-risc0-groth16 = { version = "1.2.1" }
-risc0-binfmt = { version = "1.2.1" }
-risc0-circuit-recursion = { version = "1.2.1" }
-risc0-sys = { version = "1.2.1" }
-risc0-zkvm-platform = { version = "1.2.1" }
-risc0-circuit-rv32im = { version = "1.2.1" }
-risc0-circuit-recursion-sys = { version = "1.2.1" }
+risc0-core = { version = "2.0.0" }
+risc0-zkp = { version = "2.0.0" }
+risc0-groth16 = { version = "1.4.0" }
+risc0-binfmt = { version = "2.0.0" }
+risc0-circuit-recursion = { version = "1.4.0" }
+risc0-sys = { version = "2.0.0" }
+risc0-zkvm-platform = { version = "2.0.0" }
+risc0-circuit-rv32im = { version = "2.0.0" }
+risc0-circuit-recursion-sys = { version = "1.4.0" }
 tokio-test = "0.4.3"
 bonsol-interface = { version = "0.4.5", path = "./onchain/interface" }
 bonsol-schema = { version = "0.4.5", path = "./schemas" }
