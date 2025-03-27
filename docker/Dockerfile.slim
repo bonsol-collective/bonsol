@@ -1,6 +1,7 @@
 ARG RUST_VERSION=1.81.0
 ARG FLAT_BUFFERS_VERSION=24.3.25
 ARG CUDA_VERSION=12.5
+ARG RISC0_VERSION="v2024-05-17.1"
 
 ######################################################################
 # Cargo chef container
@@ -108,23 +109,23 @@ RUN set -euxo pipefail \
 &&  dpkg -i cuda-keyring_1.1-1_all.deb \
 &&  add-apt-repository contrib \
 &&  apt-get update \
-&&  apt-get -y install cuda-toolkit-${CUDA_VERSION} \
+&&  apt-get -y install --no-install-recommends cuda-toolkit-${CUDA_VERSION} \
 &&  export PATH=/usr/local/cuda-${CUDA_VERSION}/bin${PATH:+:${PATH}} \
-&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json
+&&  cargo chef cook --bin bonsol-node --features=cuda --release --recipe-path recipe.json \
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
 RUN set -euxo pipefail \
-&&  cargo build -p bonsol-node --features=cuda --release \
-&&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/*
+&&  cargo build -p bonsol-node --features=cuda --release
 
 
 ######################################################################
 # Create an optimized container with Bonsol node
 ######################################################################
 
-FROM rust:${RUST_VERSION}-slim
+FROM rust:${RUST_VERSION}-slim AS slim
 
 LABEL org.opencontainers.image.source=https://github.com/bonsolcollective/bonsol
 LABEL org.opencontainers.image.title="bonsol-node"

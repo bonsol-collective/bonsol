@@ -5,6 +5,7 @@ use std::path::Path;
 use atty::Stream;
 use bonsol_sdk::BonsolClient;
 use clap::Parser;
+use env_logger::Env;
 use risc0_circuit_rv32im::execute::{testutil::DEFAULT_SESSION_LIMIT, DEFAULT_SEGMENT_LIMIT_PO2};
 use risc0_zkvm::ExecutorEnv;
 use solana_sdk::signer::Signer;
@@ -29,6 +30,9 @@ pub(crate) mod error;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Initialize env_logger to enable debug! log statements
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     let BonsolCli {
         config,
         keypair,

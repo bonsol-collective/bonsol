@@ -39,7 +39,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:latest
+      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
       volumes:
         - local:/workspaces/bonsol
     steps:
@@ -71,11 +71,31 @@ jobs:
       - name: Test
         run: cargo test -- --nocapture
 
+  check-fork-pr:
+    name: Check if PR is from fork
+    runs-on: ubuntu-latest
+    outputs:
+      is_fork: ${{ steps.check.outputs.is_fork }}
+    steps:
+      - name: Check if PR is from fork
+        id: check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "PR is from a fork repository"
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+            echo "PR is from the same repository"
+          fi
+
   call-build-node-container-image:
     permissions:
       contents: read
       packages: write
+    needs: check-fork-pr
     uses: ./.github/workflows/build-node-containers.yaml
+    with:
+      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
 
   e2e-test:
 
@@ -99,7 +119,7 @@ jobs:
         run: |
           set -euxo pipefail
           cd /usr/opt/bonsol/
-          echo "Using image ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}"
+          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
           git clone https://github.com/bonsol-collective/bonsol.git src
           cp -pr src/elf .
           solana-keygen new -s --no-bip39-passphrase -f
