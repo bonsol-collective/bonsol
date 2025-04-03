@@ -172,8 +172,8 @@ jobs:
           file: docker/Dockerfile.slim
           load: true
           tags: localhost/bonsol-node-slim:local
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-slim:cache
+          cache-to: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-slim:cache,mode=max
 
       - name: Build stark node image
         uses: docker/build-push-action@v5
@@ -184,8 +184,8 @@ jobs:
           tags: localhost/bonsol-node-stark:local
           build-args: |
             IMAGE=localhost/bonsol-node-slim:local
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-stark:cache
+          cache-to: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-stark:cache,mode=max
           platforms: linux/amd64
 
       - name: Build full node image
@@ -197,8 +197,8 @@ jobs:
           tags: localhost/bonsol-node-stark-cuda:local
           build-args: |
             IMAGE=localhost/bonsol-node-stark:local
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-stark-cuda:cache
+          cache-to: type=registry,ref=ghcr.io/bonsol-collective/bonsol-node-stark-cuda:cache,mode=max
           platforms: linux/amd64
 
       - name: Check & Format
