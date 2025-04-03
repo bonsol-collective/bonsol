@@ -164,7 +164,7 @@ jobs:
           load: true
           tags: localhost/bonsol-ci-env:local
 
-      # Build full node image for E2E tests
+      # Build slim node image for E2E tests
       - name: Build slim node image
         uses: docker/build-push-action@v5
         with:
@@ -172,6 +172,8 @@ jobs:
           file: docker/Dockerfile.slim
           load: true
           tags: localhost/bonsol-node-slim:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build stark node image
         uses: docker/build-push-action@v5
@@ -182,6 +184,9 @@ jobs:
           tags: localhost/bonsol-node-stark:local
           build-args: |
             IMAGE=localhost/bonsol-node-slim:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Build full node image
         uses: docker/build-push-action@v5
@@ -192,6 +197,9 @@ jobs:
           tags: localhost/bonsol-node-stark-cuda:local
           build-args: |
             IMAGE=localhost/bonsol-node-stark:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Check & Format
         run: |
