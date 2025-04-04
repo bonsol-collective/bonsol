@@ -159,10 +159,8 @@ jobs:
           file: docker/Dockerfile.github-actions-ci
           load: true
           tags: bonsol-ci-env:local
-          cache-from: type=inline
-          cache-to: type=inline
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Build slim node image for E2E tests
       - name: Build slim node image
@@ -172,10 +170,8 @@ jobs:
           file: docker/Dockerfile.slim
           load: true
           tags: bonsol-node-slim:local
-          cache-from: type=inline
-          cache-to: type=inline
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build stark node image
         uses: docker/build-push-action@v5
@@ -186,9 +182,8 @@ jobs:
           tags: bonsol-node-stark:local
           build-args: |
             IMAGE=bonsol-node-slim:local
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: type=inline
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: linux/amd64
 
       - name: Build full node image
@@ -200,9 +195,8 @@ jobs:
           tags: bonsol-node-stark-cuda:local
           build-args: |
             IMAGE=bonsol-node-stark:local
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: type=inline
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: linux/amd64
 
       - name: Check & Format
