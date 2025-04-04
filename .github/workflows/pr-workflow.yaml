@@ -146,6 +146,10 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:master
+            network=host
 
       # Build CI environment for running tests
       - name: Build CI environment
@@ -157,6 +161,8 @@ jobs:
           tags: bonsol-ci-env:local
           cache-from: type=inline
           cache-to: type=inline
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       # Build slim node image for E2E tests
       - name: Build slim node image
@@ -168,6 +174,8 @@ jobs:
           tags: bonsol-node-slim:local
           cache-from: type=inline
           cache-to: type=inline
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Build stark node image
         uses: docker/build-push-action@v5
@@ -178,6 +186,7 @@ jobs:
           tags: bonsol-node-stark:local
           build-args: |
             IMAGE=bonsol-node-slim:local
+            BUILDKIT_INLINE_CACHE=1
           cache-from: type=inline
           cache-to: type=inline
           platforms: linux/amd64
@@ -191,26 +200,27 @@ jobs:
           tags: bonsol-node-stark-cuda:local
           build-args: |
             IMAGE=bonsol-node-stark:local
+            BUILDKIT_INLINE_CACHE=1
           cache-from: type=inline
           cache-to: type=inline
           platforms: linux/amd64
 
       - name: Check & Format
         run: |
-          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-ci-env:local bash -c "
+          docker run --rm -v $(pwd):/workspaces/bonsol:ro bonsol-ci-env:local bash -c "
             cargo check &&
             cargo +nightly fmt --all -- --check
           "
 
       - name: Unit Tests
         run: |
-          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-ci-env:local bash -c "
+          docker run --rm -v $(pwd):/workspaces/bonsol:ro bonsol-ci-env:local bash -c "
             cargo test -- --nocapture
           "
 
       - name: E2E Tests
         run: |
-          docker run --rm -v $(pwd):/workspaces/bonsol bonsol-node-stark-cuda:local bash -c "
+          docker run --rm -v $(pwd):/workspaces/bonsol:ro bonsol-node-stark-cuda:local bash -c "
             set -euxo pipefail
             cd /usr/opt/bonsol/
             git clone https://github.com/bonsol-collective/bonsol.git src
