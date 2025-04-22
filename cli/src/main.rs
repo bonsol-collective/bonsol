@@ -33,7 +33,6 @@ pub(crate) mod error;
 async fn main() -> anyhow::Result<()> {
     // Initialize env_logger to enable debug! log statements
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-
     let BonsolCli {
         config,
         keypair,
