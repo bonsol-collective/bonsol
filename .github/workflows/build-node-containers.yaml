@@ -2,6 +2,11 @@ name: Build Bonsol node images
 
 on:
   workflow_call:
+    inputs:
+      is_fork:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-node-container-image:
@@ -18,7 +23,11 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
+      # Always login to GitHub Container Registry to access base images
+      # This is needed for both fork and non-fork PRs to access base images
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -42,8 +51,25 @@ jobs:
             # For main branch pushes, use flavor-{commit_sha}
             echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
+          cat $GITHUB_OUTPUT
 
+      # For fork PRs: build images and load them into Docker daemon (not push to registry)
+      # Use docker/build-push-action but with load: true and push: false
+      # This only builds the image without pushing to verify that the code updates didn't break the build
+      - name: Build and Load Docker Image slim (fork PR)
+        if: ${{ inputs.is_fork }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          file: docker/Dockerfile.slim
+          tags: ${{ steps.docker_tags.outputs.REGISTRY }}:slim-${{ steps.docker_tags.outputs.TAG }}
+          platforms: linux/amd64
+
+      # For non-fork PRs: build and push images to registry
       - name: Build and Push Docker Image slim
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -55,6 +81,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image start
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -68,6 +95,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and Push Docker Image full
+        if: ${{ !inputs.is_fork }}
         uses: docker/build-push-action@v6
         with:
           context: .

@@ -113,7 +113,6 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
             println!("Image uploaded to S3");
             debug!("S3 path: s3://{}/{}", bucket, dest);
             debug!("HTTPS URL (used for download): {}", https_url);
-            
             // Return the HTTPS URL for compatibility with the HTTP client
             https_url
         }
