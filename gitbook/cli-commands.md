@@ -204,10 +204,6 @@ For example: `http://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff19101974
 
 </details>
 
-#### Local-URL
-
-First, create an S3 bucket (skip this if you already have one):
-
 ### execute: Requesting Execution
 
 Request execution of your ZK program:
