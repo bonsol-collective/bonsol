@@ -7,7 +7,7 @@ icon: globe-pointer
 
 {% stepper %}
 {% step %}
-### Verify installation
+#### Verify installation
 
 ```bash
 $ bonsol --version
@@ -16,9 +16,13 @@ bonsol-cli 0.4.5
 {% endstep %}
 
 {% step %}
-### Initialize a new project
+#### Initialize a new project
 
 The `init` command creates a new verifiable program with the basic project structure and configuration needed to get started.
+
+{% hint style="info" %}
+Note: We suggest using an _underscore_ when naming multi-word files as this can prevent issues with the `cargo risczero` docker build process.
+{% endhint %}
 
 ```bash
 $ bonsol init --project-name say_hello
@@ -46,7 +50,7 @@ Valid input options are: `["Public", "Private", "PublicProof"]`.
 {% endstep %}
 
 {% step %}
-### Write a verifiable program
+#### Write a verifiable program
 
 Navigate to `src/` and inspect `main.rs`:
 
@@ -73,7 +77,7 @@ cargo build
 {% endstep %}
 
 {% step %}
-### Build the verifiable program
+#### Build the verifiable program
 
 The `build` command compiles your verifiable program and generates a manifest file containing the deployment information. Ensure your Docker daemon is running and build your verifiable program:
 
@@ -108,7 +112,7 @@ Example `manifest.json`:
 {% endstep %}
 
 {% step %}
-### Deploy the verifiable program
+#### Deploy the verifiable program
 
 Verify you're on devnet:
 
@@ -142,7 +146,7 @@ y
 {% endstep %}
 
 {% step %}
-### Create an execution request
+#### Create an execution request
 
 An execution request is specified in a JSON file with the following structure:
 
@@ -164,16 +168,16 @@ An execution request is specified in a JSON file with the following structure:
 }
 ```
 
-#### Required Fields
+**Required Fields**
 
-* **imageId:** The unique identifier of the verifiable program image to execute. This is generated when building your program and is found in your `manifest.json`.&#x20;
+* **imageId:** The unique identifier of the verifiable program image to execute. This is generated when building your program and is found in your `manifest.json`.
 * **inputs**: An array of input objects that will be passed to the verifiable program. This program just uses one input.
 * **inputType**: Type of input data.
 * **data**: The actual input data, properly formatted as a string.
 {% endstep %}
 
 {% step %}
-### Execute the verifiable program
+#### Execute the verifiable program
 
 Use the `execute` command to submit your execution request to the prover network:
 
