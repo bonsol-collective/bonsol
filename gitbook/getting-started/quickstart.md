@@ -21,7 +21,7 @@ bonsol-cli 0.4.5
 The `init` command creates a new verifiable program with the basic project structure and configuration needed to get started.
 
 {% hint style="info" %}
-Note: We suggest using an _underscore_ when naming multi-word files as this can prevent issues with the `cargo risczero` docker build process.
+Note: We suggest using an _underscore_ when initializing multi-word projects as this can prevent issues with the downstream `cargo risczero` docker build process.
 {% endhint %}
 
 ```bash
