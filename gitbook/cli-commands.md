@@ -77,9 +77,11 @@ bonsol deploy <COMMAND>
 Commands:
 
 * `s3`: Deploy using an AWS S3 bucket
-* `url`: Deploy manually with a URL
+* `url`: Deploy with a custom URL (e.g. localhost)
 
-#### S3 Deployment
+<details>
+
+<summary>S3 Deployment</summary>
 
 First, create an S3 bucket (skip this if you already have one):
 
@@ -101,6 +103,110 @@ bonsol deploy s3 \
     --manifest-path <PATH_TO_MANIFEST> \
     --storage-account s3://<BUCKET_NAME>
 ```
+
+</details>
+
+<details>
+
+<summary>URL</summary>
+
+The `bonsol deploy url` command allows you to deploy your program by either uploading your binary to a URL endpoint or using an existing binary at a URL.
+
+### Usage
+
+```warp-runnable-command
+bonsol deploy url --url <URL> --manifest-path <MANIFEST_PATH> [OPTIONS]
+```
+
+### Required Arguments
+
+* `--url <URL>`
+* The base URL endpoint for your binary
+* Example: `http://localhost:8080`
+* The actual binary will be stored at `<URL>/<program-name>-<image-id>`
+* `--manifest-path <MANIFEST_PATH>`
+* Path to your program's manifest file (manifest.json)
+* Example: `images/simple/manifest.json`&#x20;
+
+### Optional Arguments
+
+* `--no-post`
+* By default, the command uploads your binary to the URL
+* With this flag, it instead verifies that the correct binary already exists at the URL
+* Useful when your binary is already hosted and you just want to deploy it to Solana
+* `--auto-confirm` or `-y`
+* Skip the confirmation prompt for Solana deployment
+* Use with caution as deployments cost real money
+
+### Examples
+
+1. Upload and deploy a new binary:
+
+```warp-runnable-command
+bonsol deploy url \
+    --url http://localhost:8080 \
+    --manifest-path images/simple/manifest.json
+```
+
+2. Deploy using an existing binary (verifies the binary first):
+
+```warp-runnable-command
+bonsol deploy url \
+    --url http://localhost:8080 \
+    --manifest-path images/simple/manifest.json \
+    --no-post
+```
+
+### How It Works
+
+1. The command constructs the full URL by appending your program name and image ID:
+
+```warp-runnable-command
+   <base-url>/<program-name>-<image-id>
+```
+
+For example: `http://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff191019740ff83f589e334153126c02f5772e`
+
+2. Without `--no-post` (default):
+
+* POSTs your binary to this URL
+* Proceeds with Solana deployment after successful upload
+
+3. With `--no-post`:
+
+* Attempts to GET the binary from this URL
+* Verifies it matches your local binary
+* Only proceeds with Solana deployment if verification succeeds
+
+### Common Errors
+
+1. "Binary does not match":
+
+```warp-runnable-command
+   Error: The binary uploaded does not match the local binary at path '...'
+   
+```
+
+* This occurs when using `--no-post` and either:
+  * No binary exists at the URL
+  * The binary at the URL is different from your local binary
+
+2. "Failed to connect":
+
+* Check that your URL endpoint is accessible
+* Ensure you have the correct permissions
+
+### Notes
+
+* The command always requires a local binary for verification, even when using `--no-post`
+* Deployments to Solana are immutable and cost real money
+* The URL endpoint must support both POST and GET operations
+
+</details>
+
+#### Local-URL
+
+First, create an S3 bucket (skip this if you already have one):
 
 ### execute: Requesting Execution
 
@@ -199,4 +305,4 @@ echo '"{"attestation":"test"}" "nottest"' | bonsol prove -e <execution_id> -m im
 
 If proving succeeds, the CLI will save a serialized RISC-0 receipt file named `<execution_id>.bin` in the current directory or the specified output location.
 
-:bulb: Note: Only private local inputs are supported for the prove command.\
+:bulb: Note: Only private local inputs are supported for the prove command.\\
