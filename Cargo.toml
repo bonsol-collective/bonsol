@@ -18,7 +18,7 @@ members = [
 
 
 resolver = "2"
-package.version = "0.4.5"
+package.version = "0.5.0"
 
 [workspace.dependencies]
 solana-sdk = "~2.0"
@@ -43,10 +43,10 @@ risc0-binfmt = { version = "2.0.0" }
 risc0-circuit-recursion = { version = "2.0.0" }
 risc0-zkvm-platform = { version = "2.0.0" }
 risc0-circuit-rv32im = { version = "2.0.0" }
-bonsol-interface = { version = "0.4.5", path = "./onchain/interface" }
-bonsol-schema = { version = "0.4.5", path = "./schemas" }
-bonsol-sdk = { version = "0.4.5", path = "./sdk" }
-bonsol-prover = { version = "0.4.5", path = "./prover" }
+bonsol-interface = { version = "0.5.0", path = "./onchain/interface" }
+bonsol-schema = { version = "0.5.0", path = "./schemas" }
+bonsol-sdk = { version = "0.5.0", path = "./sdk" }
+bonsol-prover = { version = "0.5.0", path = "./prover" }
 
 [patch.crates-io.curve25519-dalek]
 git = "https://github.com/anza-xyz/curve25519-dalek.git"
