@@ -8,11 +8,11 @@ use tokio::fs::read;
 
 pub struct Image {
     pub id: String,
-    pub data: Option<Program>,
     bytes: Option<Bytes>,
     pub size: u64,
     pub path: PathBuf,
     pub last_used: u64,
+    pub image: MemoryImage,
 }
 
 impl Image {
@@ -21,65 +21,54 @@ impl Image {
         Ok(program)
     }
 
-    fn mem_img(program: &Program) -> Result<MemoryImage> {
-        let image = MemoryImage::new(program, PAGE_SIZE as u32)?;
-        Ok(image)
-    }
-
     pub fn bytes(&self) -> Option<&Bytes> {
         self.bytes.as_ref()
     }
 
     pub fn from_bytes(bytes: Bytes) -> Result<Image> {
         let program = Image::load_elf(&bytes)?;
-        let img = Image::mem_img(&program)?;
+        let mut img = MemoryImage::new_kernel(program);
         Ok(Image {
-            id: img.compute_id().to_string(),
+            id: img.image_id().to_string(),
             bytes: Some(bytes),
-            data: Some(program),
-            size: img.pages.len() as u64 * PAGE_SIZE as u64,
+            size: img.get_page_indexes().len() as u64 * PAGE_SIZE as u64,
             path: PathBuf::new(),
             last_used: 0,
+            image: img,
         })
     }
 
     pub async fn new(path: PathBuf) -> Result<Image> {
         let data = read(&path).await?;
         let program = Image::load_elf(&data)?;
-        let img = Image::mem_img(&program)?;
+        let mut img = MemoryImage::new_kernel(program);
 
         Ok(Image {
-            id: img.compute_id().to_string(),
+            id: img.image_id().to_string(),
             bytes: Some(Bytes::from(data)),
-            data: Some(program),
-            size: img.pages.len() as u64 * PAGE_SIZE as u64,
+            size: img.get_page_indexes().len() as u64 * PAGE_SIZE as u64,
             path,
             last_used: 0,
+            image: img,
         })
     }
 
     pub fn compress(&mut self) {
-        self.data = None;
         self.bytes = None;
     }
 
     pub async fn load(&mut self) -> Result<()> {
-        if self.data.is_some() {
+        if self.bytes.is_some() {
             return Ok(());
         }
         let data = read(&self.path).await?;
         let program = Image::load_elf(&data)?;
-        self.data = Some(program);
+        self.image = MemoryImage::new_kernel(program);
         self.bytes = Some(Bytes::from(data));
         Ok(())
     }
 
     pub fn get_memory_image(&self) -> Result<MemoryImage> {
-        let program = self
-            .data
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("No data"))?;
-        let image = Image::mem_img(program)?;
-        Ok(image)
+        Ok(self.image.clone())
     }
 }

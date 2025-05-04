@@ -11,10 +11,14 @@ pub const DIGEST_V1_0_1_BYTES: &str =
 pub const DIGEST_V1_2_1_BYTES: &str =
     "c101b42bcacd62e35222b1207223250814d05dd41d41f8cadc1f16f86707ae15";
 
+pub const DIGEST_V2_0_0_BYTES: &str =
+    "9f39696cb3ae9d6038d6b7a55c09017f0cf35e226ad7582b82dbabb0dae53385";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProverVersion {
     V1_0_1 { verifier_digest: &'static str },
     V1_2_1 { verifier_digest: &'static str },
+    V2_0_0 { verifier_digest: &'static str },
     UnsupportedVersion,
 }
 
@@ -23,6 +27,7 @@ impl Display for ProverVersion {
         match self {
             ProverVersion::V1_0_1 { .. } => write!(f, "V1_0_1"),
             ProverVersion::V1_2_1 { .. } => write!(f, "V1_2_1"),
+            ProverVersion::V2_0_0 { .. } => write!(f, "V2_0_0"),
             ProverVersion::UnsupportedVersion => write!(f, "UnsupportedVersion"),
         }
     }
@@ -35,7 +40,7 @@ pub enum ProverVersionError {
 
 impl Default for ProverVersion {
     fn default() -> Self {
-        VERSION_V1_2_1
+        VERSION_V2_0_0
     }
 }
 
@@ -45,7 +50,8 @@ impl TryFrom<FBSProverVersion> for ProverVersion {
     fn try_from(prover_version: FBSProverVersion) -> Result<Self, Self::Error> {
         match prover_version {
             FBSProverVersion::V1_0_1 => Ok(VERSION_V1_0_1),
-            FBSProverVersion::V1_2_1 | FBSProverVersion::DEFAULT => Ok(VERSION_V1_2_1),
+            FBSProverVersion::V1_2_1 => Ok(VERSION_V1_2_1),
+            FBSProverVersion::V2_0_0 | FBSProverVersion::DEFAULT => Ok(VERSION_V2_0_0),
             _ => Err(ProverVersionError::UnsupportedVersion),
         }
     }
@@ -60,6 +66,7 @@ impl TryInto<FBSProverVersion> for ProverVersion {
         match self {
             ProverVersion::V1_0_1 { .. } => Ok(FBSProverVersion::V1_0_1),
             ProverVersion::V1_2_1 { .. } => Ok(FBSProverVersion::V1_2_1),
+            ProverVersion::V2_0_0 { .. } => Ok(FBSProverVersion::V2_0_0),
             _ => Err(ProverVersionError::UnsupportedVersion),
         }
     }
@@ -73,13 +80,17 @@ pub const VERSION_V1_2_1: ProverVersion = ProverVersion::V1_2_1 {
     verifier_digest: DIGEST_V1_2_1_BYTES,
 };
 
+pub const VERSION_V2_0_0: ProverVersion = ProverVersion::V2_0_0 {
+    verifier_digest: DIGEST_V2_0_0_BYTES,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_default_version() {
-        assert_eq!(ProverVersion::default(), VERSION_V1_2_1);
+        assert_eq!(ProverVersion::default(), VERSION_V2_0_0);
     }
 
     #[test]
@@ -131,6 +142,6 @@ mod tests {
         let default_version = FBSProverVersion::DEFAULT;
         let version = ProverVersion::try_from(default_version);
         assert!(version.is_ok());
-        assert_eq!(version.unwrap(), VERSION_V1_2_1);
+        assert_eq!(version.unwrap(), VERSION_V2_0_0);
     }
 }

@@ -23,8 +23,8 @@ reqwest = { version = "0.11.26", features = [
   "stream",
   "native-tls-vendored",
 ] }
-risc0-binfmt = "1.2.1"
-risc0-zkvm = { version = "1.2.1", features = ["prove"], default-features = false }
+risc0-binfmt = "2.0.0"
+risc0-zkvm = { version = "2.0.0", features = ["prove"], default-features = false }
 serde = { version = "1.0.197" }
 serde_json = "1.0.104"
 solana-rpc-client = "~2.0"

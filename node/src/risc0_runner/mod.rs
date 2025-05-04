@@ -1,6 +1,7 @@
 mod utils;
 pub mod verify_prover_version;
 
+use anyhow::anyhow;
 use crate::transaction_sender::TransactionStatus;
 
 use {
@@ -18,7 +19,7 @@ use {
     },
     bonsol_interface::{
         bonsol_schema::{ClaimV1, DeployV1, ExecutionRequestV1},
-        prover_version::{ProverVersion, VERSION_V1_2_1},
+        prover_version::{ProverVersion, VERSION_V2_0_0},
     },
     dashmap::DashMap,
     risc0_binfmt::MemoryImage,
@@ -54,7 +55,7 @@ use {
     verify_prover_version::verify_prover_version,
 };
 
-const REQUIRED_PROVER: ProverVersion = VERSION_V1_2_1;
+const REQUIRED_PROVER: ProverVersion = VERSION_V2_0_0;
 
 #[derive(Debug, Error)]
 pub enum Risc0RunnerError {
@@ -380,7 +381,7 @@ pub async fn handle_claim<'a>(
         emit_event!(MetricEvents::ClaimReceived, execution_id => execution_id);
         if let ClaimStatus::Claiming = claim.status {
             if let Some(image) = loaded_images.get(&claim.image_id) {
-                if image.data.is_none() {
+                if image.bytes().is_none() {
                     return Err(Risc0RunnerError::ImageDataUnavailable.into());
                 }
                 //if image is not loaded at claim, fail
@@ -689,10 +690,10 @@ async fn handle_image_deployment<'a>(
 
 // proving function, no async this is cpu/gpu intesive
 fn risc0_prove(
-    memory_image: MemoryImage,
+    mut memory_image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
 ) -> Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>)> {
-    let image_id = memory_image.compute_id().to_string();
+    let image_id = memory_image.image_id().to_string();
     let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
     let session = exec.run()?;
     // Obtain the default prover.
@@ -783,6 +784,12 @@ async fn risc0_compress_proof(
             ExitCode::Paused(user_exit) => (1, user_exit),
             ExitCode::SystemSplit => (2, 0),
             ExitCode::SessionLimit => (2, 2),
+            _ => {
+                // Log a warning or error for debugging
+                error!("Encountered unexpected ExitCode variant: {:?}", rc.exit_code);
+                // Return an error indicating that this specific variant is not supported by this function
+                return Err(anyhow!("Unsupported ExitCode variant encountered during compression"));
+            }
         };
         Ok(CompressedReceipt {
             execution_digest: rc.post.digest().as_bytes().to_vec(),

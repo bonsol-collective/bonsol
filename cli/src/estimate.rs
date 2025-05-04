@@ -5,7 +5,6 @@
 use anyhow::Result;
 use risc0_binfmt::{MemoryImage, Program};
 use risc0_zkvm::{ExecutorEnv, ExecutorImpl, Session, GUEST_MAX_MEM};
-use risc0_zkvm_platform::PAGE_SIZE;
 
 pub fn estimate<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<()> {
     let session = get_session(elf, env)?;
@@ -22,7 +21,9 @@ pub fn estimate<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<()> {
 /// Get the total number of cycles by stepping through the ELF using emulation
 /// tools from the risc0_circuit_rv32im module.
 pub fn get_session<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<Session> {
-    ExecutorImpl::new(env, elf.mk_image()?)?.run()
+    let x = ExecutorImpl::new(env, elf.mk_image()?)?.run();
+    println!("{:?}", x.is_err());
+    x
 }
 
 /// Helper trait for loading an image from an elf.
@@ -32,7 +33,7 @@ pub trait MkImage {
 impl<'a> MkImage for &'a [u8] {
     fn mk_image(self) -> Result<MemoryImage> {
         let program = Program::load_elf(self, GUEST_MAX_MEM as u32)?;
-        MemoryImage::new(&program, PAGE_SIZE as u32)
+        Ok(MemoryImage::new_kernel(program))
     }
 }
 
@@ -40,11 +41,9 @@ impl<'a> MkImage for &'a [u8] {
 mod estimate_tests {
     use anyhow::Result;
     use risc0_binfmt::MemoryImage;
-    use risc0_circuit_rv32im::prove::emu::{
-        exec::DEFAULT_SEGMENT_LIMIT_PO2,
-        testutil::{basic as basic_test_program, DEFAULT_SESSION_LIMIT},
-    };
-    use risc0_zkvm::{ExecutorEnv, PAGE_SIZE};
+    use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
+    use risc0_circuit_rv32im::execute::testutil::{DEFAULT_SESSION_LIMIT, user};
+    use risc0_zkvm::{ExecutorEnv};
 
     use super::MkImage;
     use crate::estimate;
@@ -57,15 +56,14 @@ mod estimate_tests {
 
     #[test]
     fn estimate_basic() {
-        let program = basic_test_program();
+        let program = user::basic();
         let mut env = &mut ExecutorEnv::builder();
         env = env
             .segment_limit_po2(DEFAULT_SEGMENT_LIMIT_PO2 as u32)
             .session_limit(DEFAULT_SESSION_LIMIT);
-        let image = MemoryImage::new(&program, PAGE_SIZE as u32)
-            .expect("failed to create image from basic program");
+        let image = MemoryImage::new_kernel(program);
         let res = estimate::get_session(image, env.build().unwrap());
 
-        assert_eq!(res.ok().map(|session| session.total_cycles), Some(16384));
+        assert_eq!(res.ok().map(|session| session.total_cycles), Some(8192));
     }
 }
