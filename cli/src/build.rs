@@ -188,20 +188,36 @@ fn build_zkprogram_manifest(
     cargo_package_name: String,
     input_order: Vec<String>,
 ) -> Result<ZkProgramManifest> {
-    const RISCV_DOCKER_PATH: &str = "target/riscv-guest/riscv32im-risc0-zkvm-elf/docker";
+    const RISCV_DOCKER_PATH: &str = "target/riscv32im-risc0-zkvm-elf/docker";
     const CARGO_RISCZERO_BUILD_ARGS: &[&str; 4] =
         &["risczero", "build", "--manifest-path", "Cargo.toml"];
 
     let binary_path = image_path
         .join(RISCV_DOCKER_PATH)
-        .join(&cargo_package_name)
-        .join(&cargo_package_name);
-    let output = Command::new(CARGO_COMMAND)
-        .current_dir(image_path)
-        .args(CARGO_RISCZERO_BUILD_ARGS)
-        .env("CARGO_TARGET_DIR", image_path.join(TARGET_DIR))
-        .output()?;
+        .join(format!("{cargo_package_name}.bin"));
 
+    let mut command = Command::new(CARGO_COMMAND);
+    command.current_dir(image_path)
+        .args(CARGO_RISCZERO_BUILD_ARGS)
+        .env("CARGO_TARGET_DIR", image_path.join(TARGET_DIR));
+
+    // Construct the command string for printing
+    let program = command.get_program().to_string_lossy();
+    let args_str = command.get_args().map(|s| s.to_string_lossy()).collect::<Vec<_>>().join(" ");
+    let env_str = command.get_envs().map(|(k, v)| format!("{}=\"{}\"", k.to_string_lossy(), v.unwrap().to_string_lossy())).collect::<Vec<_>>().join(" ");
+    let current_dir_str = if let Some(dir) = command.get_current_dir() {
+        format!("cd {}; ", dir.to_string_lossy())
+    } else {
+        String::new()
+    };
+
+    println!("Executing command: {}{program} {}", current_dir_str, args_str);
+    if !env_str.is_empty() {
+        println!("Environment variables: {}", env_str);
+    }
+
+    let output = command.output()?;
+    println!("status: {:?}",output.status);
     if output.status.success() {
         let elf_contents = fs::read(&binary_path)?;
         let image_id = compute_image_id(&elf_contents).map_err(|err| {

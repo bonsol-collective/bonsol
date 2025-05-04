@@ -19,7 +19,7 @@ use {
     },
     bonsol_interface::{
         bonsol_schema::{ClaimV1, DeployV1, ExecutionRequestV1},
-        prover_version::{ProverVersion, VERSION_V2_0_0},
+        prover_version::{ProverVersion, VERSION_V2_0_2},
     },
     dashmap::DashMap,
     risc0_binfmt::MemoryImage,
@@ -55,7 +55,7 @@ use {
     verify_prover_version::verify_prover_version,
 };
 
-const REQUIRED_PROVER: ProverVersion = VERSION_V2_0_0;
+const REQUIRED_PROVER: ProverVersion = VERSION_V2_0_2;
 
 #[derive(Debug, Error)]
 pub enum Risc0RunnerError {

@@ -6,8 +6,8 @@
 use crate::status_v1_generated::*;
 use crate::input_type_generated::*;
 use crate::deploy_v1_generated::*;
-use crate::claim_v1_generated::*;
 use crate::execution_request_v1_generated::*;
+use crate::claim_v1_generated::*;
 use core::mem;
 use core::cmp::Ordering;
 
