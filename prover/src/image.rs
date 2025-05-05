@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use bytes::Bytes;
-use risc0_binfmt::{MemoryImage, Program};
-use risc0_zkvm::{GUEST_MAX_MEM, PAGE_SIZE};
+use risc0_binfmt::{MemoryImage, ProgramBinary};
+use risc0_zkvm::{PAGE_SIZE};
 use tokio::fs::read;
 
 pub struct Image {
@@ -12,12 +12,12 @@ pub struct Image {
     pub size: u64,
     pub path: PathBuf,
     pub last_used: u64,
-    pub image: MemoryImage,
+    pub image: MemoryImage
 }
 
 impl Image {
-    fn load_elf(elf: &[u8]) -> Result<Program> {
-        let program = Program::load_elf(elf, GUEST_MAX_MEM as u32)?;
+    fn load_bin(blob: &[u8]) -> Result<ProgramBinary> {
+        let program = ProgramBinary::decode(blob)?;
         Ok(program)
     }
 
@@ -26,10 +26,11 @@ impl Image {
     }
 
     pub fn from_bytes(bytes: Bytes) -> Result<Image> {
-        let program = Image::load_elf(&bytes)?;
-        let mut img = MemoryImage::new_kernel(program);
+        let program = Image::load_bin(&bytes)?;
+        let img_id = program.compute_image_id()?.to_string();
+        let img = program.to_image()?;
         Ok(Image {
-            id: img.image_id().to_string(),
+            id: img_id,
             bytes: Some(bytes),
             size: img.get_page_indexes().len() as u64 * PAGE_SIZE as u64,
             path: PathBuf::new(),
@@ -40,11 +41,12 @@ impl Image {
 
     pub async fn new(path: PathBuf) -> Result<Image> {
         let data = read(&path).await?;
-        let program = Image::load_elf(&data)?;
-        let mut img = MemoryImage::new_kernel(program);
+        let program = Image::load_bin(&data)?;
+        let img_id = program.compute_image_id()?.to_string();
+        let img = program.to_image()?;
 
         Ok(Image {
-            id: img.image_id().to_string(),
+            id: img_id,
             bytes: Some(Bytes::from(data)),
             size: img.get_page_indexes().len() as u64 * PAGE_SIZE as u64,
             path,
@@ -62,8 +64,8 @@ impl Image {
             return Ok(());
         }
         let data = read(&self.path).await?;
-        let program = Image::load_elf(&data)?;
-        self.image = MemoryImage::new_kernel(program);
+        let program = Image::load_bin(&data)?;
+        self.image = program.to_image()?;
         self.bytes = Some(Bytes::from(data));
         Ok(())
     }

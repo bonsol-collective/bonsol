@@ -26,9 +26,18 @@ pub const PROVER_CONSTANTS_V1_2_1: ProverConstants = ProverConstants {
     receipt_claim_hash: hex!("cb1fefcd1f2d9a64975cbbbf6e161e2914434b0cbb9960b84df5d717e86b48af"),
 };
 
+pub const PROVER_CONSTANTS_V2_0_2: ProverConstants = ProverConstants {
+    control_root: hex!("539032186827b06719244873b17b2d4c122e2d02cfb1994fe958b2523b844576"),
+    bn254_control_id_bytes: hex!(
+        "04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0"
+    ),
+    output_hash: hex!("77eafeb366a78b47747de0d7bb176284085ff5564887009a5be63da32d3559d4"),
+    receipt_claim_hash: hex!("cb1fefcd1f2d9a64975cbbbf6e161e2914434b0cbb9960b84df5d717e86b48af"),
+};
+
 impl Default for ProverConstants {
     fn default() -> Self {
-        PROVER_CONSTANTS_V1_2_1
+        PROVER_CONSTANTS_V2_0_2
     }
 }
 
@@ -39,7 +48,7 @@ mod tests {
     #[test]
     fn test_prover_constant_default() {
         let prover_constants = ProverConstants::default();
-        assert_eq!(prover_constants, PROVER_CONSTANTS_V1_2_1);
+        assert_eq!(prover_constants, PROVER_CONSTANTS_V2_0_2);
     }
 
     #[test]
@@ -73,6 +82,27 @@ mod tests {
         assert_eq!(
             prover_constants.bn254_control_id_bytes,
             hex!("04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0")
+        );
+        assert_eq!(
+            prover_constants.output_hash,
+            hex!("77eafeb366a78b47747de0d7bb176284085ff5564887009a5be63da32d3559d4")
+        );
+        assert_eq!(
+            prover_constants.receipt_claim_hash,
+            hex!("cb1fefcd1f2d9a64975cbbbf6e161e2914434b0cbb9960b84df5d717e86b48af")
+        );
+    }
+
+    #[test]
+    fn test_prover_constant_v2_0_2() {
+        let prover_constants = PROVER_CONSTANTS_V2_0_2;
+        assert_eq!(
+            prover_constants.control_root,
+            hex!("539032186827b06719244873b17b2d4c122e2d02cfb1994fe958b2523b844576")
+        );
+        assert_eq!(
+            prover_constants.bn254_control_id_bytes,
+            hex!("c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404")
         );
         assert_eq!(
             prover_constants.output_hash,

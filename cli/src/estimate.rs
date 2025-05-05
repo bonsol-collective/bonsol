@@ -3,7 +3,7 @@
 //! to extract the cycle count from an elf.
 
 use anyhow::Result;
-use risc0_binfmt::{MemoryImage, Program};
+use risc0_binfmt::{MemoryImage, Program, ProgramBinary};
 use risc0_zkvm::{ExecutorEnv, ExecutorImpl, Session, GUEST_MAX_MEM};
 
 pub fn estimate<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<()> {
@@ -32,8 +32,8 @@ pub trait MkImage {
 }
 impl<'a> MkImage for &'a [u8] {
     fn mk_image(self) -> Result<MemoryImage> {
-        let program = Program::load_elf(self, GUEST_MAX_MEM as u32)?;
-        Ok(MemoryImage::new_kernel(program))
+        let program = ProgramBinary::decode(self)?;
+        Ok(program.to_image()?)
     }
 }
 
