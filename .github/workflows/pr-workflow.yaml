@@ -129,10 +129,10 @@ jobs:
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
-    needs: call-build-node-container-image
+    needs: [call-build-node-container-image, check-fork-pr]
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
+      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
