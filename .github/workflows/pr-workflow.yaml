@@ -30,8 +30,35 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit
 
+      - name: Inspect files before pre-commit
+        run: |
+          echo "--- Inspecting node/src/risc0_runner/mod.rs ---"
+          echo "Head:"
+          head -n 20 node/src/risc0_runner/mod.rs
+          echo "Hexdump:"
+          hexdump -C node/src/risc0_runner/mod.rs | head -n 20
+          echo "File command output:"
+          file node/src/risc0_runner/mod.rs
+          echo "--- Inspecting gitbook/cli-commands.md ---"
+          echo "File command output:"
+          file gitbook/cli-commands.md
+          echo "--- Inspecting cli/src/deploy.rs ---"
+          echo "File command output:"
+          file cli/src/deploy.rs
+
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
+
+      - name: Show diff after pre-commit
+        if: always() # Ensures this step runs even if 'Run pre-commit' fails
+        run: |
+          echo "--- Git diff for affected files after pre-commit run ---"
+          echo "Diff for node/src/risc0_runner/mod.rs:"
+          git diff -- node/src/risc0_runner/mod.rs || echo "No diff or error diffing node/src/risc0_runner/mod.rs"
+          echo "Diff for gitbook/cli-commands.md:"
+          git diff -- gitbook/cli-commands.md || echo "No diff or error diffing gitbook/cli-commands.md"
+          echo "Diff for cli/src/deploy.rs:"
+          git diff -- cli/src/deploy.rs || echo "No diff or error diffing cli/src/deploy.rs"
 
   check-formatting:
 
@@ -102,10 +129,10 @@ jobs:
     name: E2E Test
     runs-on:
       labels: ubicloud-standard-30
-    needs: call-build-node-container-image
+    needs: [call-build-node-container-image, check-fork-pr]
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-node:stark-cuda-${{ github.sha }}
+      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
       options: "-it"
       volumes:
         - local:/workspaces/bonsol
