@@ -414,10 +414,10 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
             println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully deserialized JSON into InputFile struct.");
             let len = ifile.inputs.len();
             println!("[BONSOL_DEBUG] proof_parse_input_file: Number of input entries in JSON: {}", len);
-            
+
             let mut parsed_inputs_accumulator: Vec<ProgramInput> = Vec::new();
             for (index, cli_input_item) in ifile.inputs.into_iter().enumerate() {
-                println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType='{}', data='{}'", index, cli_input_item.input_type, cli_input_item.data);
+                println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType=\'{}\', data=\'{}\'", index, cli_input_item.input_type, cli_input_item.data);
                 match proof_parse_entry(index as u8, &cli_input_item.data, &cli_input_item.input_type) {
                     Ok(program_input) => {
                         println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully parsed entry {}", index);
@@ -430,12 +430,6 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
                     }
                 }
             }
-            
-            // This check is essentially done by the loop returning an error on first failure.
-            // if parsed_inputs_accumulator.len() != len {
-            //     println!("[BONSOL_DEBUG] proof_parse_input_file: Mismatch in parsed entries count. Expected: {}, Got: {}", len, parsed_inputs_accumulator.len());
-            //     return Err(anyhow::anyhow!("Invalid input file (an entry failed to parse - count mismatch)"));
-            // }
             println!("[BONSOL_DEBUG] proof_parse_input_file: All entries processed successfully.");
             return Ok(parsed_inputs_accumulator);
         }
