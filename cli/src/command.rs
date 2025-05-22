@@ -95,6 +95,13 @@ pub struct UrlUploadArgs {
     #[arg(help = "Specify a URL endpoint to deploy to", long, required = true)]
     pub url: String,
 
+    #[arg(
+        long = "no-post",
+        help = "Skip posting the binary to the URL endpoint and assume it's already there",
+        action = clap::ArgAction::SetTrue
+    )]
+    pub no_post: bool,
+
     #[command(flatten)]
     pub shared_args: SharedDeployArgs,
 }
@@ -227,5 +234,11 @@ pub enum Command {
 
         #[arg(short = 'n', long)]
         project_name: String,
+    },
+
+    #[command(about = "Read and display the journal from a binary proof receipt file")]
+    ReadReceipt {
+        #[arg(help = "The path to the binary proof receipt file (.bin)")]
+        receipt_path: String,
     },
 }

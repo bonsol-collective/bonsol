@@ -21,6 +21,7 @@ mod estimate;
 mod execute;
 mod init;
 mod prove;
+mod read_receipt;
 
 #[cfg(all(test, feature = "integration-tests"))]
 mod tests;
@@ -33,7 +34,6 @@ pub(crate) mod error;
 async fn main() -> anyhow::Result<()> {
     // Initialize env_logger to enable debug! log statements
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-
     let BonsolCli {
         config,
         keypair,
@@ -159,5 +159,8 @@ async fn main() -> anyhow::Result<()> {
             .await
         }
         Command::Init { project_name, dir } => init::init_project(&project_name, dir),
+        Command::ReadReceipt { receipt_path } => {
+            read_receipt::read_receipt_file(Path::new(&receipt_path))
+        }
     }
 }
