@@ -303,7 +303,7 @@ pub fn execute_transform_cli_inputs(inputs: Vec<CliInput>) -> Result<Vec<InputT>
 }
 
 fn is_valid_hex(s: &str) -> (bool, Vec<u8>) {
-    if s.len() % 4 != 0 {
+    if s.len() % 2 != 0 {
         return (false, vec![]);
     }
     let is_hex_char = |c: char| c.is_ascii_hexdigit();
@@ -345,26 +345,32 @@ fn is_valid_number(s: &str) -> Option<NumberType> {
     None
 }
 
-fn proof_parse_entry(index: u8, s: &str) -> Result<ProgramInput> {
+fn proof_parse_entry(index: u8, s: &str, input_type_str: &str) -> Result<ProgramInput> {
+    let program_input_type = match input_type_str.to_lowercase().as_str() {
+        "public" | "publicdata" => ProgramInputType::Public,
+        "private" | "privatedata" => ProgramInputType::Private,
+        _ => ProgramInputType::Public,
+    };
+
     if let Ok(num) = s.parse::<i64>() {
         return Ok(ProgramInput::Resolved(ResolvedInput {
             index,
             data: num.to_le_bytes().to_vec(),
-            input_type: ProgramInputType::Private,
+            input_type: program_input_type,
         }));
     }
     if let Ok(num) = s.parse::<f64>() {
         return Ok(ProgramInput::Resolved(ResolvedInput {
             index,
             data: num.to_le_bytes().to_vec(),
-            input_type: ProgramInputType::Private,
+            input_type: program_input_type,
         }));
     }
     if let Ok(num) = s.parse::<u64>() {
         return Ok(ProgramInput::Resolved(ResolvedInput {
             index,
             data: num.to_le_bytes().to_vec(),
-            input_type: ProgramInputType::Private,
+            input_type: program_input_type,
         }));
     }
     let has_hex_prefix = s.starts_with("0x");
@@ -374,7 +380,7 @@ fn proof_parse_entry(index: u8, s: &str) -> Result<ProgramInput> {
             return Ok(ProgramInput::Resolved(ResolvedInput {
                 index,
                 data,
-                input_type: ProgramInputType::Private,
+                input_type: program_input_type,
             }));
         } else {
             return Err(anyhow::anyhow!("Invalid hex data"));
@@ -383,25 +389,64 @@ fn proof_parse_entry(index: u8, s: &str) -> Result<ProgramInput> {
     return Ok(ProgramInput::Resolved(ResolvedInput {
         index,
         data: s.as_bytes().to_vec(),
-        input_type: ProgramInputType::Private,
+        input_type: program_input_type,
     }));
 }
 
-fn proof_parse_input_file(input_file: &str) -> Result<Vec<ProgramInput>> {
-    if let Ok(ifile) = serde_json::from_str::<InputFile>(input_file) {
-        let len = ifile.inputs.len();
-        let parsed: Vec<ProgramInput> = ifile
-            .inputs
-            .into_iter()
-            .enumerate()
-            .flat_map(|(index, input)| proof_parse_entry(index as u8, &input.data).ok())
-            .collect();
-        if parsed.len() != len {
-            return Err(anyhow::anyhow!("Invalid input file"));
+fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
+    println!("[BONSOL_DEBUG] proof_parse_input_file: Attempting to read input file: '{}'", input_file_path);
+    let file_content_str = match std::fs::read_to_string(input_file_path) {
+        Ok(content) => {
+            println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully read file. Content length: {}. First 100 chars: {:?}", content.len(), content.chars().take(100).collect::<String>());
+            // To see all bytes, which can reveal BOMs or other non-printable chars:
+            // println!("[BONSOL_DEBUG] proof_parse_input_file: File content as bytes: {:?}", content.as_bytes());
+            content
         }
-        return Ok(parsed);
+        Err(e) => {
+            println!("[BONSOL_DEBUG] proof_parse_input_file: Failed to read file: {:?}", e);
+            return Err(e).with_context(|| format!("Failed to read input file at path: {}", input_file_path));
+        }
+    };
+
+    println!("[BONSOL_DEBUG] proof_parse_input_file: Attempting to deserialize JSON from file content...");
+    match serde_json::from_str::<InputFile>(&file_content_str) {
+        Ok(ifile) => {
+            println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully deserialized JSON into InputFile struct.");
+            let len = ifile.inputs.len();
+            println!("[BONSOL_DEBUG] proof_parse_input_file: Number of input entries in JSON: {}", len);
+            
+            let mut parsed_inputs_accumulator: Vec<ProgramInput> = Vec::new();
+            for (index, cli_input_item) in ifile.inputs.into_iter().enumerate() {
+                println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType='{}', data='{}'", index, cli_input_item.input_type, cli_input_item.data);
+                match proof_parse_entry(index as u8, &cli_input_item.data, &cli_input_item.input_type) {
+                    Ok(program_input) => {
+                        println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully parsed entry {}", index);
+                        parsed_inputs_accumulator.push(program_input);
+                    }
+                    Err(e) => {
+                        println!("[BONSOL_DEBUG] proof_parse_input_file: Failed to parse entry {}: {:?}", index, e);
+                        // Return a more specific error including which entry failed if possible
+                        return Err(anyhow::anyhow!("Invalid input file (entry {} failed to parse: {})", index, e));
+                    }
+                }
+            }
+            
+            // This check is essentially done by the loop returning an error on first failure.
+            // if parsed_inputs_accumulator.len() != len {
+            //     println!("[BONSOL_DEBUG] proof_parse_input_file: Mismatch in parsed entries count. Expected: {}, Got: {}", len, parsed_inputs_accumulator.len());
+            //     return Err(anyhow::anyhow!("Invalid input file (an entry failed to parse - count mismatch)"));
+            // }
+            println!("[BONSOL_DEBUG] proof_parse_input_file: All entries processed successfully.");
+            return Ok(parsed_inputs_accumulator);
+        }
+        Err(e) => {
+            println!("[BONSOL_DEBUG] proof_parse_input_file: JSON deserialization failed: {:?}", e);
+            let snippet_len = std::cmp::min(file_content_str.len(), 200); // Show a snippet of the problematic string
+            println!("[BONSOL_DEBUG] proof_parse_input_file: JSON parsing failed on (first {} chars): <{}>", snippet_len, &file_content_str[..snippet_len]);
+            // Return a more specific error including the serde error
+            return Err(anyhow::anyhow!("Invalid input file (JSON deserialization failed: {})", e));
+        }
     }
-    Err(anyhow::anyhow!("Invalid input file"))
 }
 
 fn proof_parse_stdin(input: &str) -> Result<Vec<ProgramInput>> {
@@ -417,7 +462,7 @@ fn proof_parse_stdin(input: &str) -> Result<Vec<ProgramInput>> {
             '}' | ']' if !in_quotes => in_brackets -= 1,
             ' ' if !in_quotes && in_brackets == 0 && !current_entry.is_empty() => {
                 let index = entries.len() as u8;
-                entries.push(proof_parse_entry(index, &current_entry)?);
+                entries.push(proof_parse_entry(index, &current_entry, "PublicData")?);
                 current_entry.clear();
                 continue;
             }
@@ -426,7 +471,7 @@ fn proof_parse_stdin(input: &str) -> Result<Vec<ProgramInput>> {
         current_entry.push(c);
     }
     if !current_entry.is_empty() {
-        entries.push(proof_parse_entry(entries.len() as u8, &current_entry)?);
+        entries.push(proof_parse_entry(entries.len() as u8, &current_entry, "PublicData")?);
     }
     Ok(entries)
 }
@@ -453,32 +498,32 @@ mod test {
             ProgramInput::Resolved(ResolvedInput {
                 index: 0,
                 data: "1234567890abcdef".as_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                input_type: ProgramInputType::Public,
             }),
             ProgramInput::Resolved(ResolvedInput {
                 index: 1,
-                data: "12345678910abcdefg".as_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                data: hex::decode("313233343536373839313061626364656667").unwrap(),
+                input_type: ProgramInputType::Public,
             }),
             ProgramInput::Resolved(ResolvedInput {
                 index: 2,
                 data: 2.1f64.to_le_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                input_type: ProgramInputType::Public,
             }),
             ProgramInput::Resolved(ResolvedInput {
                 index: 3,
                 data: 2000u64.to_le_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                input_type: ProgramInputType::Public,
             }),
             ProgramInput::Resolved(ResolvedInput {
                 index: 4,
                 data: (-2000i64).to_le_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                input_type: ProgramInputType::Public,
             }),
             ProgramInput::Resolved(ResolvedInput {
                 index: 5,
                 data: "{\"attestation\":\"test\"}".as_bytes().to_vec(),
-                input_type: ProgramInputType::Private,
+                input_type: ProgramInputType::Public,
             }),
         ];
         assert_eq!(inputs_parsed, expected_inputs);
@@ -529,7 +574,7 @@ mod test {
             parsed_inputs,
             vec![
                 InputT::public("1234567890abcdef".as_bytes().to_vec()),
-                InputT::public("12345678910abcdefg".as_bytes().to_vec()),
+                InputT::public(hex::decode("313233343536373839313061626364656667").unwrap()),
                 InputT::public(2.1f64.to_le_bytes().to_vec()),
                 InputT::public(2000u64.to_le_bytes().to_vec()),
                 InputT::public((-2000i64).to_le_bytes().to_vec()),
