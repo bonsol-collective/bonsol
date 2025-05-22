@@ -13,6 +13,7 @@ members = [
   "sdk",
   "prover",
   "tester",
+  "local-zk-program-server",
 ]
 
 
@@ -23,9 +24,7 @@ package.version = "0.4.5"
 solana-sdk = "~2.0"
 thiserror = "1.0.57"
 flatbuffers = "24.3.25"
-anyhow = "1.0.40"
 solana-program = "~2.0"
-solana-program-test = "~2.0"
 solana-rpc-client = "~2.0"
 solana-rpc-client-api = "~2.0"
 solana-pubsub-client = "~2.0"
@@ -42,14 +41,10 @@ risc0-zkp = { version = "1.2.1" }
 risc0-groth16 = { version = "1.2.1" }
 risc0-binfmt = { version = "1.2.1" }
 risc0-circuit-recursion = { version = "1.2.1" }
-risc0-sys = { version = "1.2.1" }
 risc0-zkvm-platform = { version = "1.2.1" }
 risc0-circuit-rv32im = { version = "1.2.1" }
-risc0-circuit-recursion-sys = { version = "1.2.1" }
-tokio-test = "0.4.3"
 bonsol-interface = { version = "0.4.5", path = "./onchain/interface" }
 bonsol-schema = { version = "0.4.5", path = "./schemas" }
-bonsol-cli = { version = "0.4.5", path = "./cli" }
 bonsol-sdk = { version = "0.4.5", path = "./sdk" }
 bonsol-prover = { version = "0.4.5", path = "./prover" }
 

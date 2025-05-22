@@ -1,18 +1,20 @@
 use risc0_zkvm::{
-    guest::{env, sha::Impl, rand::zkvm_getrandom},
+    guest::{env, sha::Impl},
     sha::Sha256,
 };
+use getrandom::getrandom;
 
 fn main() {
     let mut private = [0u8; 4];
     env::read_slice(&mut private);
     let mut public = [0u8; 4];
     env::read_slice(&mut public);
-    let rand = [0u8; 8];
-    zkvm_getrandom(&mut rand);
+    let mut rand_bytes = [0u8; 8];
+    getrandom(&mut rand_bytes).expect("Failed to get random bytes");
+    let random_value_for_commit = u64::from_le_bytes(rand_bytes);
     let target = i32::from_le_bytes(private);
     let range = u32::from_le_bytes(public);
-    let (a, b) = commit_to_range(target, 100, true);
+    let (a, b) = commit_to_range(target, 100, true, random_value_for_commit);
 
     let digest = Impl::hash_bytes(&private);
     env::commit_slice(digest.as_bytes());
