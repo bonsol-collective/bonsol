@@ -281,22 +281,29 @@ pub fn execute_transform_cli_inputs(inputs: Vec<CliInput>) -> Result<Vec<InputT>
         let input_type = CliInputType::from_str(&input.input_type)?.0;
         match input_type {
             InputType::PublicData => {
-                let has_hex_prefix = input.data.starts_with("0x");
-                if has_hex_prefix {
+                if input.data.starts_with("0x") {
                     let (is_valid, data) = is_valid_hex(&input.data[2..]);
                     if is_valid {
                         res.push(InputT::public(data));
+                    } else {
+                        return Err(anyhow::anyhow!(
+                            "Invalid hex string for PublicData: {}",
+                            input.data
+                        ));
                     }
-                    continue;
-                }
-                if let Some(n) = is_valid_number(&input.data) {
+                } else if let Some(n) = is_valid_number(&input.data) {
                     let data = n.into_bytes();
                     res.push(InputT::public(data));
-                    continue;
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "PublicData input \'{}\' is not a valid number (i64, u64, f64) or 0x-prefixed hex string",
+                        input.data
+                    ));
                 }
-                res.push(InputT::public(input.data.into_bytes()));
             }
-            _ => res.push(InputT::new(input_type, Some(input.data.into_bytes()))),
+            _ => {
+                res.push(InputT::new(input_type, Some(input.data.into_bytes())));
+            }
         }
     }
     Ok(res)
@@ -414,10 +421,10 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
             println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully deserialized JSON into InputFile struct.");
             let len = ifile.inputs.len();
             println!("[BONSOL_DEBUG] proof_parse_input_file: Number of input entries in JSON: {}", len);
-
+            
             let mut parsed_inputs_accumulator: Vec<ProgramInput> = Vec::new();
             for (index, cli_input_item) in ifile.inputs.into_iter().enumerate() {
-                println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType=\'{}\', data=\'{}\'", index, cli_input_item.input_type, cli_input_item.data);
+                println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType='{}', data='{}'", index, cli_input_item.input_type, cli_input_item.data);
                 match proof_parse_entry(index as u8, &cli_input_item.data, &cli_input_item.input_type) {
                     Ok(program_input) => {
                         println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully parsed entry {}", index);
@@ -430,6 +437,12 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
                     }
                 }
             }
+            
+            // This check is essentially done by the loop returning an error on first failure.
+            // if parsed_inputs_accumulator.len() != len {
+            //     println!("[BONSOL_DEBUG] proof_parse_input_file: Mismatch in parsed entries count. Expected: {}, Got: {}", len, parsed_inputs_accumulator.len());
+            //     return Err(anyhow::anyhow!("Invalid input file (an entry failed to parse - count mismatch)"));
+            // }
             println!("[BONSOL_DEBUG] proof_parse_input_file: All entries processed successfully.");
             return Ok(parsed_inputs_accumulator);
         }
@@ -482,6 +495,7 @@ pub fn rand_id(chars: usize) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+    use hex;
 
     #[test]
     fn test_proof_parse_stdin() {
@@ -542,37 +556,121 @@ mod test {
 
     #[test]
     fn test_execute_transform_cli_inputs() {
-        let input = CliInput {
+        // Case 1: Invalid PublicData (non-numeric, non-hex string) - Should now be an error
+        let invalid_public_data_str = CliInput {
             input_type: "PublicData".to_string(),
-            data: "1234567890abcdef".to_string(),
+            data: "1234567890abcdef".to_string(), // This was the old first test case
         };
+        assert!(execute_transform_cli_inputs(vec![invalid_public_data_str]).is_err());
+
+        // Case 2: Valid hex PublicData
         let hex_input = CliInput {
             input_type: "PublicData".to_string(),
-            data: "0x313233343536373839313061626364656667".to_string(),
+            data: "0x0102030405060708".to_string(), // Using a clear 8-byte hex for i64 tests later
         };
-        let hex_input2 = CliInput {
+        let expected_hex_bytes = hex::decode("0102030405060708").unwrap();
+        assert_eq!(
+            execute_transform_cli_inputs(vec![hex_input]).unwrap(),
+            vec![InputT::public(expected_hex_bytes)]
+        );
+
+        // Case 3: PublicData with f64 string
+        let float_input = CliInput {
             input_type: "PublicData".to_string(),
             data: "2.1".to_string(),
         };
-        let hex_input3 = CliInput {
+        assert_eq!(
+            execute_transform_cli_inputs(vec![float_input]).unwrap(),
+            vec![InputT::public(2.1f64.to_le_bytes().to_vec())]
+        );
+
+        // Case 4: PublicData with u64 string
+        let u64_input = CliInput {
             input_type: "PublicData".to_string(),
             data: "2000".to_string(),
         };
-        let hex_input4 = CliInput {
+        assert_eq!(
+            execute_transform_cli_inputs(vec![u64_input]).unwrap(),
+            vec![InputT::public(2000u64.to_le_bytes().to_vec())]
+        );
+
+        // Case 5: PublicData with i64 string (negative)
+        let i64_neg_input = CliInput {
             input_type: "PublicData".to_string(),
             data: "-2000".to_string(),
         };
-        let inputs = vec![input, hex_input, hex_input2, hex_input3, hex_input4];
-        let parsed_inputs = execute_transform_cli_inputs(inputs).unwrap();
         assert_eq!(
-            parsed_inputs,
+            execute_transform_cli_inputs(vec![i64_neg_input]).unwrap(),
+            vec![InputT::public((-2000i64).to_le_bytes().to_vec())]
+        );
+
+        // Case 6: New - PublicData with positive i64 string
+        let i64_pos_input = CliInput {
+            input_type: "PublicData".to_string(),
+            data: "123".to_string(),
+        };
+        assert_eq!(
+            execute_transform_cli_inputs(vec![i64_pos_input]).unwrap(),
+            vec![InputT::public(123i64.to_le_bytes().to_vec())]
+        );
+
+        // Case 7: New - PublicData with another negative i64 string
+        let i64_neg2_input = CliInput {
+            input_type: "PublicData".to_string(),
+            data: "-456".to_string(),
+        };
+        assert_eq!(
+            execute_transform_cli_inputs(vec![i64_neg2_input]).unwrap(),
+            vec![InputT::public((-456i64).to_le_bytes().to_vec())]
+        );
+
+        // Case 8: New - PublicData with invalid string (non-numeric, non-hex) - explicit test
+        let invalid_str_input = CliInput {
+            input_type: "PublicData".to_string(),
+            data: "hello".to_string(),
+        };
+        assert!(execute_transform_cli_inputs(vec![invalid_str_input]).is_err());
+
+        // Case 9: New - PublicData with invalid hex string
+        let invalid_hex_input = CliInput {
+            input_type: "PublicData".to_string(),
+            data: "0xNOTAHEX".to_string(),
+        };
+        assert!(execute_transform_cli_inputs(vec![invalid_hex_input]).is_err());
+
+        // Case 10: New - Non-PublicData type (e.g., PublicUrl) - should pass through string as bytes
+        let public_url_input = CliInput {
+            input_type: "PublicUrl".to_string(), // Assuming PublicUrl is a valid CliInputType string
+            data: "mytesturl".to_string(),
+        };
+        // Need to ensure InputT::new for PublicUrl results in the correct InputType enum variant
+        // For this, we might need to know the mapping or have CliInputType also in scope for direct construction.
+        // Assuming CliInputType::from_str("PublicUrl").unwrap().0 gives InputType::PublicUrl
+        assert_eq!(
+            execute_transform_cli_inputs(vec![public_url_input]).unwrap(),
+            vec![InputT::new(InputType::PublicUrl, Some("mytesturl".as_bytes().to_vec()))]
+        );
+        
+        // Test with multiple inputs
+        let inputs_multiple = vec![
+            CliInput { input_type: "PublicData".to_string(), data: "3".to_string() },
+            CliInput { input_type: "PublicData".to_string(), data: "0x0a00000000000000".to_string() }, // 10 as hex i64 LE
+            CliInput { input_type: "PublicUrl".to_string(), data: "test.com".to_string() },
+            CliInput { input_type: "PublicData".to_string(), data: "-5".to_string() },
+        ];
+        let parsed_multiple = execute_transform_cli_inputs(inputs_multiple).unwrap();
+        assert_eq!(
+            parsed_multiple,
             vec![
-                InputT::public("1234567890abcdef".as_bytes().to_vec()),
-                InputT::public(hex::decode("313233343536373839313061626364656667").unwrap()),
-                InputT::public(2.1f64.to_le_bytes().to_vec()),
-                InputT::public(2000u64.to_le_bytes().to_vec()),
-                InputT::public((-2000i64).to_le_bytes().to_vec()),
+                InputT::public(3i64.to_le_bytes().to_vec()),
+                InputT::public(hex::decode("0a00000000000000").unwrap()),
+                InputT::new(InputType::PublicUrl, Some("test.com".as_bytes().to_vec())),
+                InputT::public((-5i64).to_le_bytes().to_vec()),
             ]
         );
+
+        // Test with an empty input vector
+        let empty_inputs: Vec<CliInput> = Vec::new();
+        assert_eq!(execute_transform_cli_inputs(empty_inputs).unwrap(), Vec::new());
     }
 }
