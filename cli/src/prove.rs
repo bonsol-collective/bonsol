@@ -48,6 +48,21 @@ pub async fn prove(
     let program_inputs = proof_get_inputs(input_file, stdin)?;
     let mut exec = new_risc0_exec_env(memory_image, program_inputs)?;
     let session = exec.run()?;
+
+    // Print the committed output (journal)
+    if let Some(journal) = &session.journal {
+        if journal.bytes.is_empty() {
+            println!("Committed output (journal) is empty.");
+        } else {
+            match std::str::from_utf8(&journal.bytes) {
+                Ok(s) => println!("Committed output (journal) as string: \"{}\"", s),
+                Err(_) => println!("Committed output (journal) as bytes: {:?}", journal.bytes),
+            }
+        }
+    } else {
+        println!("No journal found in session.");
+    }
+
     let prover = get_risc0_prover()?;
     let ctx = VerifierContext::default();
     println!("Generating proof");

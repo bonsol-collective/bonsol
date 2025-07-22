@@ -235,4 +235,10 @@ pub enum Command {
         #[arg(short = 'n', long)]
         project_name: String,
     },
+
+    #[command(about = "Read and display the journal from a binary proof receipt file")]
+    ReadReceipt {
+        #[arg(help = "The path to the binary proof receipt file (.bin)")]
+        receipt_path: String,
+    },
 }

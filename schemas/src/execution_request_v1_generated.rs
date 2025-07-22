@@ -48,6 +48,7 @@ impl ProverVersion {
       Self::V1_0_1 => Some("V1_0_1"),
       Self::V1_2_1 => Some("V1_2_1"),
       Self::V2_0_2 => Some("V2_0_2"),
+
       _ => None,
     }
   }
