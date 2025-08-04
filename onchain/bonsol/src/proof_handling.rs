@@ -34,7 +34,7 @@ pub fn verify_risc0_v1_2_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelE
     verify_proof::<5>(proof, ins, &VERIFYINGKEY)
 }
 
-pub fn verify_risc0_v2_0_2(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelError> {
+pub fn verify_risc0_v2_3_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelError> {
     let ins: [[u8; 32]; 5] = [
         sized_range::<32>(&inputs[0..32])?,
         sized_range::<32>(&inputs[32..64])?,
@@ -177,7 +177,7 @@ pub fn prepare_inputs_v1_2_1(
     Ok(inputs)
 }
 
-pub fn output_digest_v2_0_2(
+pub fn output_digest_v2_3_1(
     input_digest: &[u8],
     committed_outputs: &[u8],
     assumption_digest: &[u8],
@@ -193,7 +193,7 @@ pub fn output_digest_v2_0_2(
         .to_bytes()
 }
 
-pub fn prepare_inputs_v2_0_2(
+pub fn prepare_inputs_v2_3_1(
     image_id: &str,
     execution_digest: &[u8],
     output_digest: &[u8],
