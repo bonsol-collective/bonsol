@@ -94,15 +94,15 @@ mod tests {
     }
 
     #[test]
-    fn test_prover_constant_v2_0_2() {
+    fn test_prover_constant_v2_3_1() {
         let prover_constants = PROVER_CONSTANTS_V2_3_1;
         assert_eq!(
             prover_constants.control_root,
-            hex!("539032186827b06719244873b17b2d4c122e2d02cfb1994fe958b2523b844576")
+            hex!("ce52bf56033842021af3cf6db8a50d1b7535c125a34f1a22c6fdcf002c5a1529")
         );
         assert_eq!(
             prover_constants.bn254_control_id_bytes,
-            hex!("c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404")
+            hex!("04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0")
         );
         assert_eq!(
             prover_constants.output_hash,
