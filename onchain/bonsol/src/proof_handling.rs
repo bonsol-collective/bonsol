@@ -6,7 +6,7 @@ use solana_program::hash::hashv;
 
 use crate::{
     error::ChannelError,
-    prover::{PROVER_CONSTANTS_V1_0_1, PROVER_CONSTANTS_V1_2_1, PROVER_CONSTANTS_V2_0_2},
+    prover::{PROVER_CONSTANTS_V1_0_1, PROVER_CONSTANTS_V1_2_1, PROVER_CONSTANTS_V2_3_1},
     verifying_key::VERIFYINGKEY,
 };
 
@@ -185,7 +185,7 @@ pub fn output_digest_v2_0_2(
     let jbytes = [input_digest, committed_outputs].concat(); // bad copy here
     let journal = hashv(&[jbytes.as_slice()]);
     hashv(&[
-        PROVER_CONSTANTS_V2_0_2.output_hash.as_ref(),
+        PROVER_CONSTANTS_V2_3_1.output_hash.as_ref(),
         journal.as_ref(),
         assumption_digest,
         &2u16.to_le_bytes(),
@@ -202,7 +202,7 @@ pub fn prepare_inputs_v2_0_2(
 ) -> Result<Vec<u8>, ChannelError> {
     let imgbytes = hex::decode(image_id).map_err(|_| ChannelError::InvalidFieldElement)?;
     let mut digest = hashv(&[
-        PROVER_CONSTANTS_V2_0_2.receipt_claim_hash.as_ref(),
+        PROVER_CONSTANTS_V2_3_1.receipt_claim_hash.as_ref(),
         &[0u8; 32],
         &imgbytes,
         execution_digest,
@@ -212,7 +212,7 @@ pub fn prepare_inputs_v2_0_2(
         &4u16.to_le_bytes(),
     ])
         .to_bytes();
-    let (c0, c1) = split_digest_reversed(&mut PROVER_CONSTANTS_V2_0_2.control_root.clone())
+    let (c0, c1) = split_digest_reversed(&mut PROVER_CONSTANTS_V2_3_1.control_root.clone())
         .map_err(|_| ChannelError::InvalidFieldElement)?;
     let (half1_bytes, half2_bytes) =
         split_digest_reversed(&mut digest).map_err(|_| ChannelError::InvalidFieldElement)?;
@@ -221,7 +221,7 @@ pub fn prepare_inputs_v2_0_2(
         c1,
         half1_bytes.try_into().unwrap(),
         half2_bytes.try_into().unwrap(),
-        PROVER_CONSTANTS_V2_0_2.bn254_control_id_bytes,
+        PROVER_CONSTANTS_V2_3_1.bn254_control_id_bytes,
     ]
         .concat();
     Ok(inputs)

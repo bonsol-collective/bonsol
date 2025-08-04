@@ -33,7 +33,7 @@ pub fn verify_prover_version(required: ProverVersion) -> Result<()> {
             }
             info!("Risc0 Prover with digest {}", verifier_digest);
         }
-        ProverVersion::V2_0_2 {
+        ProverVersion::V2_3_1 {
             verifier_digest, ..
         } => {
             if verifier_digest != prover_digest {

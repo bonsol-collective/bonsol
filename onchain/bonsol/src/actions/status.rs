@@ -12,7 +12,7 @@ use bonsol_interface::{
     bonsol_schema::{
         root_as_execution_request_v1, ChannelInstruction, ExecutionRequestV1, ExitCode, StatusV1,
     },
-    prover_version::{ProverVersion, VERSION_V1_0_1, VERSION_V1_2_1, VERSION_V2_0_2},
+    prover_version::{ProverVersion, VERSION_V1_0_1, VERSION_V1_2_1, VERSION_V2_3_1},
     util::execution_address_seeds,
 };
 
@@ -226,7 +226,7 @@ fn verify_with_prover(
             )?;
             verify_risc0_v1_2_1(proof, &proof_inputs)?
         },
-        VERSION_V2_0_2 => {
+        VERSION_V2_3_1 => {
             let output_digest = output_digest_v2_0_2(input_digest, co, asud);
             let proof_inputs = prepare_inputs_v2_0_2(
                 er.image_id().unwrap(),

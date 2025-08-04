@@ -14,10 +14,10 @@ if ! command -v rzup >/dev/null 2>&1; then
     echo "Note: You may need to restart your shell or source your shell config file"
     echo "to use rzup normally in the future."
     echo "Using full path to rzup for installation..."
-    "$HOME/.risc0/bin/rzup" install cargo-risczero 2.0.0
+    "$HOME/.risc0/bin/rzup" install cargo-risczero 2.3.1
 else
     echo "rzup found in PATH, proceeding with installation..."
-    rzup install cargo-risczero 2.0.0
+    rzup install cargo-risczero 2.3.1
 fi
 
 # check os linux or mac
