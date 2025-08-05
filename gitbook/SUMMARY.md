@@ -21,6 +21,7 @@
 * [Setup a local environment](developers/setup-a-local-environment.md)
 * [Tutorial: Simple Program](developers/tutorial-simple-program.md)
 * [Input Format Guide](developers/input-format-guide.md)
+* [Bonsol Calculator Example](developers/bonsol-calculator-example.md)
 
 ## Provers
 
