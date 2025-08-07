@@ -43,33 +43,8 @@ pub enum CliError {
     InvalidTransactionSender,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Set the stack size to unlimited
-    match rlimit::setrlimit(Resource::STACK, u64::MAX, u64::MAX) {
-        Ok(_) => {}
-        Err(e) => error!("Error setting rlimit: {}", e),
-    }
-    tracing_subscriber::fmt()
-        .json()
-        .with_timer(tracing_subscriber::fmt::time::UtcTime::rfc_3339())
-        .init();
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 3 || args[1] != "-f" {
-        error!("Usage: bonsol-node -f <config_file>");
-        return Ok(());
-    }
-    let config_file = &args[2];
-    let config = config::load_config(config_file);
+async fn node(config: ProverNodeConfig) -> Result<()> {
     let program = Pubkey::from_str(&config.bonsol_program)?;
-    if let MetricsConfig::Prometheus {} = config.metrics_config {
-        let builder = PrometheusBuilder::new();
-        builder
-            .install()
-            .expect("failed to install prometheus exporter");
-        info!("Prometheus exporter installed");
-    }
-    emit_event!(MetricEvents::BonsolStartup, up => true);
     //todo use traits for signer
     let signer = match config.signer_config.clone() {
         SignerConfig::KeypairFile { path } => {
@@ -100,7 +75,6 @@ async fn main() -> Result<()> {
         }
         _ => return Err(CliError::InvalidIngester.into()),
     };
-
     let (mut transaction_sender, solana_rpc_client) = match config.transaction_sender_config.clone()
     {
         TransactionSenderConfig::Rpc { rpc_url } => (
@@ -128,7 +102,7 @@ async fn main() -> Result<()> {
     .await?;
     let runner_chan = runner.start()?;
     let mut ingester_chan = ingester.start(program)?;
-    let handle = tokio::spawn(async move {
+    let ingestor = tokio::spawn(async move {
         while let Some(bix) = ingester_chan.recv().await {
             for ix in bix {
                 println!("Sending to runner");
@@ -137,17 +111,47 @@ async fn main() -> Result<()> {
         }
     });
     select! {
-        e = handle => {
+        e = ingestor => {
             info!("Runner exited: {:?}", e);
-            let _ = ingester.stop();
-            let _ = runner.stop();
+            ingester.stop()?;
+            runner.stop()?;
         },
+    }
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Set the stack size to unlimited
+    match rlimit::setrlimit(Resource::STACK, u64::MAX, u64::MAX) {
+        Ok(_) => {}
+        Err(e) => error!("Error setting rlimit: {}", e),
+    }
+    tracing_subscriber::fmt()
+        .json()
+        .with_timer(tracing_subscriber::fmt::time::UtcTime::rfc_3339())
+        .init();
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 3 || args[1] != "-f" {
+        error!("Usage: bonsol-node -f <config_file>");
+        return Ok(());
+    }
+    let config_file = &args[2];
+    let config = config::load_config(config_file);
+    if let MetricsConfig::Prometheus {} = config.metrics_config {
+        let builder = PrometheusBuilder::new();
+        builder
+            .install()
+            .expect("failed to install prometheus exporter");
+        info!("Prometheus exporter installed");
+    }
+    emit_event!(MetricEvents::BonsolStartup, up => true);
+    node(config).await?;
+    select! {
         _ = signal::ctrl_c() => {
             info!("Received Ctrl-C");
+            info!("Exited");
             exit(1);
         },
     }
-    info!("Exited");
-
-    Ok(())
 }
