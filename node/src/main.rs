@@ -23,7 +23,7 @@ use {
     tokio::{select, signal},
     tracing::{error, info},
     tracing_subscriber,
-    transaction_sender::{RpcTransactionSender, TransactionSender},
+    transaction_sender::{rpc::RpcTransactionSender, transaction_sender::TransactionSender},
 };
 
 #[derive(Error, Debug)]
