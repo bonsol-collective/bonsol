@@ -25,7 +25,8 @@
 
 ## Provers
 
-* [Setup a prover node](provers/setup-a-prover-node.md)
+* [Setup a prover node](provers/setup-a-prover-node/README.md)
+  * [Manually Provision a Bonsol Node](provers/setup-a-prover-node/manually-provision-a-bonsol-node.md)
 
 ## Contributing
 
