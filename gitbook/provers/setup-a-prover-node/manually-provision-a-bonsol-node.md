@@ -9,9 +9,40 @@ Bonsol has a fully featured Docker image and Helm chart that can be used to run 
 * Docker on your local machine (not required on the node)
 * The node will do better if it has a gpu with cuda installed, which will require nvidia drivers and tools.
 
-note
+> **Note**: Ansible role coming soon
 
-Ansible role coming soon
+### Hardware Requirements
+
+To run a Bonsol prover node effectively, you'll need:
+
+**CPU**:
+
+* Minimum: 4 cores / 8 threads
+* Recommended: 8 cores / 16 threads for better proof generation performance
+* Architecture: x86\_64
+
+**Memory**:
+
+* Minimum: 16 GB RAM
+* Recommended: 32 GB RAM
+
+**Storage**:
+
+* Minimum: 100 GB SSD available space
+* Recommended: 250 GB+ SSD for image caching
+
+**GPU** (Optional but recommended):
+
+* Minimum: GTX 1060 6GB or equivalent
+* Recommended: RTX 3060 or better
+* Required: CUDA 11.0+
+
+**Network**:
+
+* Stable internet connection with at least 100 Mbps bandwidth
+* Low latency connection to your RPC provider
+
+> **Note**: While a GPU is optional, nodes with CUDA-capable GPUs will have significantly better proof generation performance and may be more competitive in the network.
 
 ### Installing Deps <a href="#installing-deps" id="installing-deps"></a>
 
