@@ -2,7 +2,8 @@ use crate::common::*;
 use anyhow::Result;
 use bonsol_prover::input_resolver::{DefaultInputResolver, InputResolver, ProgramInput};
 use bonsol_sdk::instructions::{ExecutionConfig, InputRef};
-use bonsol_sdk::{BonsolClient, ExecutionAccountStatus, InputType, InputT};
+use bonsol_sdk::{BonsolClient, ExecutionAccountStatus, InputT, InputType};
+use hex;
 use indicatif::ProgressBar;
 use sha2::{Digest, Sha256};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -13,7 +14,6 @@ use solana_sdk::signer::Signer;
 use std::fs::File;
 use std::sync::Arc;
 use tokio::time::Instant;
-use hex;
 
 pub async fn execution_waiter(
     sdk: &BonsolClient,
@@ -131,10 +131,15 @@ pub async fn execute(
     let transformed_cli_inputs = execute_transform_cli_inputs(inputs)?;
 
     // Declare data storage that will live long enough
-    let single_concatenated_input_data: Option<Vec<u8>> = if transformed_cli_inputs.iter().all(|i| i.input_type == InputType::PublicData) && !transformed_cli_inputs.is_empty() {
+    let single_concatenated_input_data: Option<Vec<u8>> = if transformed_cli_inputs
+        .iter()
+        .all(|i| i.input_type == InputType::PublicData)
+        && !transformed_cli_inputs.is_empty()
+    {
         let mut concatenated_bytes: Vec<u8> = Vec::new();
         for input_t_val in &transformed_cli_inputs {
-            if let Some(bytes) = &input_t_val.data { // Assuming InputT { input_type: InputType, data: Option<Vec<u8>> }
+            if let Some(bytes) = &input_t_val.data {
+                // Assuming InputT { input_type: InputType, data: Option<Vec<u8>> }
                 concatenated_bytes.extend_from_slice(bytes);
             }
         }
@@ -147,29 +152,36 @@ pub async fn execute(
         None
     };
 
-    let final_input_refs: Vec<InputRef> = if let Some(ref data_bytes) = single_concatenated_input_data {
-        // We have concatenated data, create a single InputRef
-        // Ensure data_bytes is not empty before creating InputRef if that's a requirement
-        if data_bytes.is_empty() && !transformed_cli_inputs.is_empty() {
-            // This handles the case where concatenation was attempted but resulted in empty (e.g. all inputs had None data)
-            // Depending on desired behavior, could be an empty Vec or an error.
-            // For now, if concatenation yields empty but there WERE inputs, maybe it should be an empty Vec<InputRef>
-            // or an error. If it must be one input ref, an empty one might be InputRef::new(InputType::PublicData, &[])
-            // Sticking to one ref if single_concatenated_input_data is Some:
-            vec![InputRef::new(InputType::PublicData, data_bytes.as_slice())] 
-        } else if !data_bytes.is_empty() {
-            vec![InputRef::new(InputType::PublicData, data_bytes.as_slice())]
-        } else { // single_concatenated_input_data was Some(empty_vec) and transformed_cli_inputs was empty
-            vec![]
-        }
-    } else {
-        // No concatenation, or concatenation resulted in None (e.g. no public data inputs, or mixed inputs)
-        // Use original logic for multiple inputs
-        transformed_cli_inputs
-            .iter()
-            .map(|input_t_val| InputRef::new(input_t_val.input_type, input_t_val.data.as_deref().unwrap_or_default()))
-            .collect()
-    };
+    let final_input_refs: Vec<InputRef> =
+        if let Some(ref data_bytes) = single_concatenated_input_data {
+            // We have concatenated data, create a single InputRef
+            // Ensure data_bytes is not empty before creating InputRef if that's a requirement
+            if data_bytes.is_empty() && !transformed_cli_inputs.is_empty() {
+                // This handles the case where concatenation was attempted but resulted in empty (e.g. all inputs had None data)
+                // Depending on desired behavior, could be an empty Vec or an error.
+                // For now, if concatenation yields empty but there WERE inputs, maybe it should be an empty Vec<InputRef>
+                // or an error. If it must be one input ref, an empty one might be InputRef::new(InputType::PublicData, &[])
+                // Sticking to one ref if single_concatenated_input_data is Some:
+                vec![InputRef::new(InputType::PublicData, data_bytes.as_slice())]
+            } else if !data_bytes.is_empty() {
+                vec![InputRef::new(InputType::PublicData, data_bytes.as_slice())]
+            } else {
+                // single_concatenated_input_data was Some(empty_vec) and transformed_cli_inputs was empty
+                vec![]
+            }
+        } else {
+            // No concatenation, or concatenation resulted in None (e.g. no public data inputs, or mixed inputs)
+            // Use original logic for multiple inputs
+            transformed_cli_inputs
+                .iter()
+                .map(|input_t_val| {
+                    InputRef::new(
+                        input_t_val.input_type,
+                        input_t_val.data.as_deref().unwrap_or_default(),
+                    )
+                })
+                .collect()
+        };
 
     // The verify_input_hash logic was here, it might need adjustment if it relied on the structure of transformed_inputs
     // For now, let's assume it's handled or less critical than the main execution flow.
@@ -178,14 +190,16 @@ pub async fn execute(
         .execution_config
         .verify_input_hash
         .unwrap_or(false);
-    
+
     // Hash inputs logic needs to operate on Vec<InputT> (transformed_cli_inputs)
     // because DefaultInputResolver::resolve_public_inputs expects something compatible with ProgramInputType.
     // The current transformed_cli_inputs IS Vec<InputT> (from bonsol_sdk which is ProgramInputType<Vec<u8>, Option<String>>)
     // So this part should be fine if resolve_public_inputs can take Vec<InputT>
     let hash_inputs = verify_input_hash
-        && transformed_cli_inputs.iter().all(|i| i.input_type != InputType::Private);
-    
+        && transformed_cli_inputs
+            .iter()
+            .all(|i| i.input_type != InputType::Private);
+
     if hash_inputs {
         // ... (hashing logic as it was, using transformed_cli_inputs) ...
         // This part needs to be correct based on what resolve_public_inputs expects.
@@ -197,16 +211,20 @@ pub async fn execute(
         ));
         let input_resolver =
             DefaultInputResolver::new(Arc::new(reqwest::Client::new()), rpc_client);
-        
+
         // THIS CLONE IS IMPORTANT for ProgramInputType if it's not Copy.
         // Use InputT alias which is bonsol_sdk::ProgramInputType<Vec<u8>, Option<String>>
-        let resolvable_inputs_for_hashing: Vec<InputT> = transformed_cli_inputs.iter().map(|i_t|
+        let resolvable_inputs_for_hashing: Vec<InputT> = transformed_cli_inputs
+            .iter()
+            .map(
+                |i_t|
             // Assuming i_t is ProgramInputType<Vec<u8>, Option<String>> from bonsol_sdk::InputT
             // We need to ensure it's cloned correctly if resolve_public_inputs takes ownership or modifies.
             // Or if ProgramInputType itself is not directly cloneable in this form for that function.
             // Let's assume a direct clone works for now, or that resolve_public_inputs takes references.
-            i_t.clone() // This requires InputT to be Clone.
-        ).collect();
+            i_t.clone(), // This requires InputT to be Clone.
+            )
+            .collect();
 
         let hashing_inputs = input_resolver
             .resolve_public_inputs(resolvable_inputs_for_hashing)

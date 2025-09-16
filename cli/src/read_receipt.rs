@@ -1,9 +1,12 @@
 use anyhow::Result;
-use risc0_zkvm::Receipt; 
+use risc0_zkvm::Receipt;
 use std::{fs::read, path::Path};
 
 pub fn read_receipt_file(receipt_path: &Path) -> Result<()> {
-    println!("Attempting to read receipt from: {}", receipt_path.to_string_lossy());
+    println!(
+        "Attempting to read receipt from: {}",
+        receipt_path.to_string_lossy()
+    );
     let receipt_bytes = read(receipt_path)?;
     let receipt: Receipt = bincode::deserialize(&receipt_bytes)?;
 
@@ -15,7 +18,10 @@ pub fn read_receipt_file(receipt_path: &Path) -> Result<()> {
     } else {
         match std::str::from_utf8(&receipt.journal.bytes) {
             Ok(s) => println!("Committed output (journal) as string: \"{}\"", s),
-            Err(_) => println!("Committed output (journal) as bytes: {:?}", receipt.journal.bytes),
+            Err(_) => println!(
+                "Committed output (journal) as bytes: {:?}",
+                receipt.journal.bytes
+            ),
         }
     }
 
@@ -27,4 +33,4 @@ pub fn read_receipt_file(receipt_path: &Path) -> Result<()> {
     // }
 
     Ok(())
-} 
+}

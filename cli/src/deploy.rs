@@ -59,13 +59,12 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
 
             let dest = format!("{}-{}", manifest.name, manifest.image_id);
             let store_path = object_store::path::Path::from(dest.clone());
-            
+
             // Use conventional S3 endpoint URL format
-            let endpoint_url = endpoint.clone().unwrap_or(format!(
-                "https://s3.{}.amazonaws.com",
-                region
-            ));
-            
+            let endpoint_url = endpoint
+                .clone()
+                .unwrap_or(format!("https://s3.{}.amazonaws.com", region));
+
             // Create the S3 client with the proper configuration
             let s3_client = AmazonS3Builder::new()
                 .with_bucket_name(&bucket)
@@ -98,7 +97,10 @@ pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -
                     .put(&store_path, loaded_binary.into())
                     .await
                     .map_err(|err| {
-                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed { dest: store_path.clone(), err })
+                        BonsolCliError::S3ClientError(S3ClientError::UploadFailed {
+                            dest: store_path.clone(),
+                            err,
+                        })
                     })?;
             }
 

@@ -401,7 +401,10 @@ fn proof_parse_entry(index: u8, s: &str, input_type_str: &str) -> Result<Program
 }
 
 fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
-    println!("[BONSOL_DEBUG] proof_parse_input_file: Attempting to read input file: '{}'", input_file_path);
+    println!(
+        "[BONSOL_DEBUG] proof_parse_input_file: Attempting to read input file: '{}'",
+        input_file_path
+    );
     let file_content_str = match std::fs::read_to_string(input_file_path) {
         Ok(content) => {
             println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully read file. Content length: {}. First 100 chars: {:?}", content.len(), content.chars().take(100).collect::<String>());
@@ -410,8 +413,13 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
             content
         }
         Err(e) => {
-            println!("[BONSOL_DEBUG] proof_parse_input_file: Failed to read file: {:?}", e);
-            return Err(e).with_context(|| format!("Failed to read input file at path: {}", input_file_path));
+            println!(
+                "[BONSOL_DEBUG] proof_parse_input_file: Failed to read file: {:?}",
+                e
+            );
+            return Err(e).with_context(|| {
+                format!("Failed to read input file at path: {}", input_file_path)
+            });
         }
     };
 
@@ -420,24 +428,41 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
         Ok(ifile) => {
             println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully deserialized JSON into InputFile struct.");
             let len = ifile.inputs.len();
-            println!("[BONSOL_DEBUG] proof_parse_input_file: Number of input entries in JSON: {}", len);
-            
+            println!(
+                "[BONSOL_DEBUG] proof_parse_input_file: Number of input entries in JSON: {}",
+                len
+            );
+
             let mut parsed_inputs_accumulator: Vec<ProgramInput> = Vec::new();
             for (index, cli_input_item) in ifile.inputs.into_iter().enumerate() {
                 println!("[BONSOL_DEBUG] proof_parse_input_file: Processing entry {}: inputType='{}', data='{}'", index, cli_input_item.input_type, cli_input_item.data);
-                match proof_parse_entry(index as u8, &cli_input_item.data, &cli_input_item.input_type) {
+                match proof_parse_entry(
+                    index as u8,
+                    &cli_input_item.data,
+                    &cli_input_item.input_type,
+                ) {
                     Ok(program_input) => {
-                        println!("[BONSOL_DEBUG] proof_parse_input_file: Successfully parsed entry {}", index);
+                        println!(
+                            "[BONSOL_DEBUG] proof_parse_input_file: Successfully parsed entry {}",
+                            index
+                        );
                         parsed_inputs_accumulator.push(program_input);
                     }
                     Err(e) => {
-                        println!("[BONSOL_DEBUG] proof_parse_input_file: Failed to parse entry {}: {:?}", index, e);
+                        println!(
+                            "[BONSOL_DEBUG] proof_parse_input_file: Failed to parse entry {}: {:?}",
+                            index, e
+                        );
                         // Return a more specific error including which entry failed if possible
-                        return Err(anyhow::anyhow!("Invalid input file (entry {} failed to parse: {})", index, e));
+                        return Err(anyhow::anyhow!(
+                            "Invalid input file (entry {} failed to parse: {})",
+                            index,
+                            e
+                        ));
                     }
                 }
             }
-            
+
             // This check is essentially done by the loop returning an error on first failure.
             // if parsed_inputs_accumulator.len() != len {
             //     println!("[BONSOL_DEBUG] proof_parse_input_file: Mismatch in parsed entries count. Expected: {}, Got: {}", len, parsed_inputs_accumulator.len());
@@ -447,11 +472,17 @@ fn proof_parse_input_file(input_file_path: &str) -> Result<Vec<ProgramInput>> {
             return Ok(parsed_inputs_accumulator);
         }
         Err(e) => {
-            println!("[BONSOL_DEBUG] proof_parse_input_file: JSON deserialization failed: {:?}", e);
+            println!(
+                "[BONSOL_DEBUG] proof_parse_input_file: JSON deserialization failed: {:?}",
+                e
+            );
             let snippet_len = std::cmp::min(file_content_str.len(), 200); // Show a snippet of the problematic string
             println!("[BONSOL_DEBUG] proof_parse_input_file: JSON parsing failed on (first {} chars): <{}>", snippet_len, &file_content_str[..snippet_len]);
             // Return a more specific error including the serde error
-            return Err(anyhow::anyhow!("Invalid input file (JSON deserialization failed: {})", e));
+            return Err(anyhow::anyhow!(
+                "Invalid input file (JSON deserialization failed: {})",
+                e
+            ));
         }
     }
 }
@@ -478,7 +509,11 @@ fn proof_parse_stdin(input: &str) -> Result<Vec<ProgramInput>> {
         current_entry.push(c);
     }
     if !current_entry.is_empty() {
-        entries.push(proof_parse_entry(entries.len() as u8, &current_entry, "PublicData")?);
+        entries.push(proof_parse_entry(
+            entries.len() as u8,
+            &current_entry,
+            "PublicData",
+        )?);
     }
     Ok(entries)
 }
@@ -648,15 +683,30 @@ mod test {
         // Assuming CliInputType::from_str("PublicUrl").unwrap().0 gives InputType::PublicUrl
         assert_eq!(
             execute_transform_cli_inputs(vec![public_url_input]).unwrap(),
-            vec![InputT::new(InputType::PublicUrl, Some("mytesturl".as_bytes().to_vec()))]
+            vec![InputT::new(
+                InputType::PublicUrl,
+                Some("mytesturl".as_bytes().to_vec())
+            )]
         );
-        
+
         // Test with multiple inputs
         let inputs_multiple = vec![
-            CliInput { input_type: "PublicData".to_string(), data: "3".to_string() },
-            CliInput { input_type: "PublicData".to_string(), data: "0x0a00000000000000".to_string() }, // 10 as hex i64 LE
-            CliInput { input_type: "PublicUrl".to_string(), data: "test.com".to_string() },
-            CliInput { input_type: "PublicData".to_string(), data: "-5".to_string() },
+            CliInput {
+                input_type: "PublicData".to_string(),
+                data: "3".to_string(),
+            },
+            CliInput {
+                input_type: "PublicData".to_string(),
+                data: "0x0a00000000000000".to_string(),
+            }, // 10 as hex i64 LE
+            CliInput {
+                input_type: "PublicUrl".to_string(),
+                data: "test.com".to_string(),
+            },
+            CliInput {
+                input_type: "PublicData".to_string(),
+                data: "-5".to_string(),
+            },
         ];
         let parsed_multiple = execute_transform_cli_inputs(inputs_multiple).unwrap();
         assert_eq!(
@@ -671,6 +721,9 @@ mod test {
 
         // Test with an empty input vector
         let empty_inputs: Vec<CliInput> = Vec::new();
-        assert_eq!(execute_transform_cli_inputs(empty_inputs).unwrap(), Vec::new());
+        assert_eq!(
+            execute_transform_cli_inputs(empty_inputs).unwrap(),
+            Vec::new()
+        );
     }
 }
