@@ -200,7 +200,7 @@ pub async fn execute(
         
         // THIS CLONE IS IMPORTANT for ProgramInputType if it's not Copy.
         // Use InputT alias which is bonsol_sdk::ProgramInputType<Vec<u8>, Option<String>>
-        let resolvable_inputs_for_hashing: Vec<InputT> = transformed_cli_inputs.iter().map(|i_t| 
+        let resolvable_inputs_for_hashing: Vec<InputT> = transformed_cli_inputs.iter().map(|i_t|
             // Assuming i_t is ProgramInputType<Vec<u8>, Option<String>> from bonsol_sdk::InputT
             // We need to ensure it's cloned correctly if resolve_public_inputs takes ownership or modifies.
             // Or if ProgramInputType itself is not directly cloneable in this form for that function.
