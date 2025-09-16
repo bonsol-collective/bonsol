@@ -184,7 +184,7 @@ For example: `http://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff19101974
 
 ```warp-runnable-command
    Error: The binary uploaded does not match the local binary at path '...'
-   
+
 ```
 
 * This occurs when using `--no-post` and either:

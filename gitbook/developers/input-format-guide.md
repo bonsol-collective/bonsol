@@ -93,7 +93,7 @@ let execution_instruction = execute_v1(
 // This will fail during ZK execution
 vec![
     InputRef::public("2".as_bytes()),    // [50] - only 1 byte
-    InputRef::public("7".as_bytes()),    // [55] - only 1 byte  
+    InputRef::public("7".as_bytes()),    // [55] - only 1 byte
     InputRef::public("6".as_bytes()),    // [54] - only 1 byte
 ]
 ```
@@ -109,7 +109,7 @@ Add debug printing to your client to understand exactly what's being sent:
 ```rust
 println!("📥 Input being sent:");
 println!("   Data: {:?} (length: {})", &input_data, input_data.len());
-println!("   Expected by ZK program: {} calls to env::read_slice() with {}-byte arrays", 
+println!("   Expected by ZK program: {} calls to env::read_slice() with {}-byte arrays",
          num_reads, bytes_per_read);
 ```
 
@@ -156,7 +156,7 @@ vec![InputRef::public(&combined)]
 // This may not work as expected
 vec![
     InputRef::public(&data1),
-    InputRef::public(&data2), 
+    InputRef::public(&data2),
     InputRef::public(&data3),
 ]
 ```
@@ -186,7 +186,7 @@ This example shows a complete working implementation:
 ```rust
 // Client code that works
 let operation_bytes = 2i64.to_le_bytes();     // [2,0,0,0,0,0,0,0]
-let operand_a_bytes = 7i64.to_le_bytes();     // [7,0,0,0,0,0,0,0]  
+let operand_a_bytes = 7i64.to_le_bytes();     // [7,0,0,0,0,0,0,0]
 let operand_b_bytes = 6i64.to_le_bytes();     // [6,0,0,0,0,0,0,0]
 
 let mut combined_input = Vec::with_capacity(24);
@@ -217,7 +217,7 @@ Result: ✅ Transaction succeeds + ZK execution succeeds
 ## Troubleshooting Checklist
 
 - [ ] Input byte count matches ZK program's `env::read_slice()` expectations
-- [ ] Number of inputs matches manifest's `inputOrder` length  
+- [ ] Number of inputs matches manifest's `inputOrder` length
 - [ ] Using little-endian byte order for numeric values
 - [ ] Combined sequential reads into single input
 - [ ] Tested with raw bytes before trying convenience formats
@@ -228,4 +228,4 @@ Result: ✅ Transaction succeeds + ZK execution succeeds
 
 - [Bonsol Input Types](../explanation/bonsol-input-types.md) - Overview of available input types
 - [Tutorial: Simple Program](tutorial-simple-program.md) - Complete example with JSON inputs
-- [CLI Commands](../cli-commands.md) - Bonsol CLI reference 
+- [CLI Commands](../cli-commands.md) - Bonsol CLI reference

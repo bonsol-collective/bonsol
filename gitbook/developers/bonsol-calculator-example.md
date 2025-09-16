@@ -239,7 +239,7 @@ It provides methods to:
 Lastly, run the frontend client
 
 ```tsx
-cd frontend  
+cd frontend
 npm install
 npm start
 ```

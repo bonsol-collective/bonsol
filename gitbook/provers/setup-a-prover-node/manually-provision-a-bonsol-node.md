@@ -118,7 +118,7 @@ maximum_concurrent_proofs = 1
 max_image_size_mb = 4
 image_compression_ttl_hours = 24
 env = "dev"
-stark_compression_tools_path = "<the path to the stark directory>" 
+stark_compression_tools_path = "<the path to the stark directory>"
 missing_image_strategy = "DownloadAndClaim"
 [metrics_config]
   Prometheus = {}
