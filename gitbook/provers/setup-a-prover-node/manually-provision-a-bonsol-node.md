@@ -1,6 +1,6 @@
 # Manually Provision a Bonsol Node
 
-Bonsol has a fully featured Docker image and Helm chart that can be used to run a Bonsol node on Kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](https://bonsol.sh/docs/how-to/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and tast the sour air of hot solder. We need to feed the bare metal between our fingertips.
+Bonsol has a fully featured Docker image and Helm chart that can be used to run a Bonsol node on Kubernetes. For more information on how to run a Bonsol node on kubernetes check out the [Run a Bonsol Node on Kubernetes](https://bonsol.sh/docs/how-to-guides/run-a-bonsol-node-on-k8s) guide. But for many of use we want to feel the heat of the cpu, and tast the sour air of hot solder. We need to feed the bare metal between our fingertips.
 
 ### Prerequisites <a href="#prerequisites" id="prerequisites"></a>
 

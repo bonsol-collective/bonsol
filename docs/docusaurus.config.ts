@@ -93,6 +93,12 @@ const config: Config = {
             label: 'Contributing',
           },
           {
+            href: 'https://docs.bonsol.org',
+            label: '📢 New Docs',
+            position: 'right',
+            className: 'navbar__item--highlight',
+          },
+          {
             href: 'https://github.com/bonsolcollective/bonsol',
             label: 'GitHub',
             position: 'right',
@@ -102,6 +108,19 @@ const config: Config = {
       footer: {
         style: 'dark',
         links: [
+          {
+            title: 'Documentation',
+            items: [
+              {
+                label: '📢 New Documentation Site',
+                href: 'https://docs.bonsol.org',
+              },
+              {
+                label: 'Current Docs (Legacy)',
+                href: '/docs/tutorials/a-taste-of-bonsol',
+              },
+            ],
+          },
           {
             title: 'Community',
             items: [

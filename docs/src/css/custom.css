@@ -28,3 +28,43 @@
   --ifm-color-primary-lightest: #361a34;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Disclaimer banner styling */
+.disclaimerBanner {
+  background: linear-gradient(135deg, #ff6b6b, #ffa500);
+  padding: 1rem 0;
+  margin-bottom: 0;
+}
+
+.disclaimerBanner .alert {
+  margin-bottom: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  font-weight: 500;
+}
+
+.disclaimerBanner .alert__link {
+  color: #0066cc;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.disclaimerBanner .alert__link:hover {
+  color: #004499;
+}
+
+/* Highlight navbar item */
+.navbar__item--highlight {
+  background: linear-gradient(135deg, #ff6b6b, #ffa500);
+  color: white !important;
+  border-radius: 6px;
+  padding: 0.5rem 1rem !important;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.navbar__item--highlight:hover {
+  background: linear-gradient(135deg, #ff5252, #ff9800);
+  color: white !important;
+}
