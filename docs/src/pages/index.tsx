@@ -12,7 +12,7 @@ function DisclaimerBanner() {
     <div className={styles.disclaimerBanner}>
       <div className="container">
         <div className="alert alert--warning margin-bottom--md">
-          <strong>📢 Important Notice:</strong> This documentation site is being migrated to our new platform. 
+          <strong>📢 Important Notice:</strong> This documentation site is being migrated to our new platform.
           For the most up-to-date documentation, please visit{' '}
           <Link href="https://docs.bonsol.org" className="alert__link">
             docs.bonsol.org
