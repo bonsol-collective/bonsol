@@ -35,9 +35,6 @@ pub enum BonsolCliError {
     #[error(transparent)]
     S3ClientError(#[from] S3ClientError),
 
-    #[error("This upload method is not supported")]
-    UnsupportedDeployError(),
-
     #[error("The binary uploaded does not match the local binary at path '{binary_path}', is the URL correct?\nupload_url: {url}")]
     OriginBinaryMismatch { url: String, binary_path: String },
 

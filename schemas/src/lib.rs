@@ -15,13 +15,13 @@ pub use deploy_v1_generated::*;
 pub use execution_request_v1_generated::*;
 pub use input_type_generated::*;
 pub use status_v1_generated::*;
-pub fn parse_ix_data(ix_data: &[u8]) -> Result<ChannelInstruction, ChannelSchemaError> {
+pub fn parse_ix_data<'a>(ix_data: &'a [u8]) -> Result<ChannelInstruction<'a>, ChannelSchemaError> {
     let instruction =
         root_as_channel_instruction(ix_data).map_err(|_| ChannelSchemaError::InvalidInstruction)?;
     Ok(instruction)
 }
 
-#[derive(ToPrimitive, FromPrimitive, PartialEq)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq)]
 #[repr(u8)]
 pub enum ExitCode {
     Success = 0,

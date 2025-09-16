@@ -10,6 +10,8 @@ bonsol-sdk.workspace = true
 solana-sdk.workspace = true
 solana-rpc-client.workspace = true
 solana-rpc-client-api.workspace = true
+solana-system-interface.workspace = true
+
 
 anyhow = "1.0.91"
 rand = "0.8.5"

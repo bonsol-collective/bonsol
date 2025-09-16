@@ -27,7 +27,7 @@ risc0-binfmt = "1.2.1"
 risc0-zkvm = { version = "1.2.1", features = ["prove"], default-features = false }
 serde = { version = "1.0.197" }
 serde_json = "1.0.104"
-solana-rpc-client = "~2.0"
-solana-rpc-client-api = "~2.0"
-solana-sdk = "~2.0"
+solana-rpc-client.workspace = true
+solana-rpc-client-api.workspace = true
+solana-sdk.workspace = true
 tokio = "1.36.0"

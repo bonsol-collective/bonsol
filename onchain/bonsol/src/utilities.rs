@@ -6,6 +6,7 @@ use solana_program::{
     rent::Rent,
     system_instruction,
 };
+// use solana_system_interface::instruction as system_instruction;
 
 use crate::error::ChannelError;
 pub fn cleanup_execution_account(
@@ -13,7 +14,7 @@ pub fn cleanup_execution_account(
     requester: &AccountInfo,
     exit_code: u8,
 ) -> Result<(), ProgramError> {
-    exec.realloc(1, false)?;
+    exec.resize(1)?;
     sol_memset(&mut exec.data.borrow_mut(), exit_code, 1);
     refund(exec, requester)
 }

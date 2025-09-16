@@ -15,7 +15,7 @@ risc0-zkvm = { version = "1.2.1", default-features = false, features = [
   "std",
   "getrandom",
 ] }
-getrandom = { version = "0.2", features = ["custom"] }
+getrandom = { version = "0.2.16", features = ["custom"] }
 
 [dependencies.sha2]
 git = "https://github.com/risc0/RustCrypto-hashes"

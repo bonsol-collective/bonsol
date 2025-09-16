@@ -64,6 +64,7 @@ solana-rpc-client = { workspace = true }
 solana-rpc-client-api = { workspace = true }
 solana-sdk = { workspace = true }
 solana-transaction-status = { workspace = true }
+solana-system-interface = { workspace = true }
 strum_macros = "0.26.4"
 tempfile = "3.10.1"
 thiserror = { workspace = true }
