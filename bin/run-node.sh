@@ -7,11 +7,10 @@
 # Note: This script only runs the node service. Deployment should be done separately from the client side.
 #
 # Usage:
-#   ./run-node.sh [-F cuda] [-L] [-l log_level] [-t log_target]
+#   ./run-node.sh [-F cuda] [-l log_level] [-t log_target]
 #
 # Options:
 #   -F cuda        Enable CUDA support for GPU acceleration
-#   -L            Use local build instead of installed bonsol
 #   -l level      Set global log level (error|warn|info|debug|trace)
 #   -t target     Set specific module log targets
 #
@@ -31,7 +30,7 @@
 #      ./run-node.sh -t "risc0_runner=debug,transaction_sender=debug"
 #
 #   3. Local build with CUDA:
-#      ./run-node.sh -L -F cuda
+#      ./run-node.sh -F cuda
 #
 # Key Debug Targets:
 #   risc0_runner       Image downloads, proofs, and claims
@@ -57,11 +56,10 @@ set -e
 
 NKP=node_keypair.json
 USE_CUDA=false
-USE_LOCAL_BUILD=false
 LOG_LEVEL="info"
 LOG_TARGET=""
 
-while getopts "F:Ll:t:" opt; do
+while getopts "F:l:t:" opt; do
   case $opt in
     F)
       if [ "$OPTARG" = "cuda" ]; then
@@ -71,9 +69,6 @@ while getopts "F:Ll:t:" opt; do
         exit 1
       fi
       ;;
-    L)
-      USE_LOCAL_BUILD=true
-      ;;
     l)
       LOG_LEVEL="$OPTARG"
       ;;
@@ -82,9 +77,8 @@ while getopts "F:Ll:t:" opt; do
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
-      echo "Usage: $0 [-F cuda] [-L] [-l log_level] [-t log_target]" >&2
+      echo "Usage: $0 [-F cuda] [-l log_level] [-t log_target]" >&2
       echo "  -F cuda: Enable CUDA support" >&2
-      echo "  -L: Use local build" >&2
       echo "  -l: Set log level (error|warn|info|debug|trace)" >&2
       echo "  -t: Set log target (e.g., risc0_runner=debug)" >&2
       exit 1

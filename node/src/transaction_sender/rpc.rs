@@ -24,8 +24,7 @@ use {
 
 use crate::transaction_sender::status::TransactionStatus;
 
-use std::sync::Arc;
-use tracing::error;
+use {std::sync::Arc, tracing::error};
 
 use {
     crate::types::ProgramExec,
