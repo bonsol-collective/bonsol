@@ -112,13 +112,13 @@ bonsol deploy s3 \
 
 The `bonsol deploy url` command allows you to deploy your program by either uploading your binary to a URL endpoint or using an existing binary at a URL.
 
-### Usage
+#### Usage
 
 ```warp-runnable-command
 bonsol deploy url --url <URL> --manifest-path <MANIFEST_PATH> [OPTIONS]
 ```
 
-### Required Arguments
+#### Required Arguments
 
 * `--url <URL>`
 * The base URL endpoint for your binary
@@ -126,9 +126,9 @@ bonsol deploy url --url <URL> --manifest-path <MANIFEST_PATH> [OPTIONS]
 * The actual binary will be stored at `<URL>/<program-name>-<image-id>`
 * `--manifest-path <MANIFEST_PATH>`
 * Path to your program's manifest file (manifest.json)
-* Example: `images/simple/manifest.json`&#x20;
+* Example: `images/simple/manifest.json`
 
-### Optional Arguments
+#### Optional Arguments
 
 * `--no-post`
 * By default, the command uploads your binary to the URL
@@ -138,7 +138,7 @@ bonsol deploy url --url <URL> --manifest-path <MANIFEST_PATH> [OPTIONS]
 * Skip the confirmation prompt for Solana deployment
 * Use with caution as deployments cost real money
 
-### Examples
+#### Examples
 
 1. Upload and deploy a new binary:
 
@@ -157,7 +157,7 @@ bonsol deploy url \
     --no-post
 ```
 
-### How It Works
+#### How It Works
 
 1. The command constructs the full URL by appending your program name and image ID:
 
@@ -178,13 +178,13 @@ For example: `http://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff19101974
 * Verifies it matches your local binary
 * Only proceeds with Solana deployment if verification succeeds
 
-### Common Errors
+#### Common Errors
 
 1. "Binary does not match":
 
 ```warp-runnable-command
    Error: The binary uploaded does not match the local binary at path '...'
-   
+
 ```
 
 * This occurs when using `--no-post` and either:
@@ -196,7 +196,7 @@ For example: `http://localhost:8080/simple2-ec93e0a9592a2f00c177a7fce6ff19101974
 * Check that your URL endpoint is accessible
 * Ensure you have the correct permissions
 
-### Notes
+#### Notes
 
 * The command always requires a local binary for verification, even when using `--no-post`
 * Deployments to Solana are immutable and cost real money

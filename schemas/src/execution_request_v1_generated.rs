@@ -107,8 +107,8 @@ impl flatbuffers::SimpleToVerifyInSlice for ProverVersion {}
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq)]
 pub struct Account(pub [u8; 40]);
-impl Default for Account { 
-  fn default() -> Self { 
+impl Default for Account {
+  fn default() -> Self {
     Self([0; 40])
   }
 }

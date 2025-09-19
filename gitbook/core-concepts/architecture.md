@@ -65,18 +65,9 @@ The Bonsol workflow follows these steps:
 2. **Request**: An on-chain program requests computation through Bonsol
 3. **Observation**: Prover nodes observe the request on the blockchain
 4. **Claim**: A prover claims the request
-5. **Ingestion**: The prover ingests the program and input data&#x20;
-6. **Computation & Proving**: Off-chain computation is performed and a proof is generated
+5. **Ingestion**: The prover ingests the program and input data
+6. **Computation & Proving**: Off-chain computation is performed, and a proof is generated
 7. **Verification**: Results and proofs are submitted on-chain for verification
 8. **Callback**: The verifier forwards verified results to the callback program to perform actions based on the verified results
 
-```
-┌───────────┐     ┌───────────┐     ┌───────────┐     ┌───────────┐
-│   Deploy   │────►│  Request  │────►│  Observe  │────►│  Claim    │
-└───────────┘     └───────────┘     └───────────┘     └─────┬─────┘
-                                                             │
-                                                             ▼
-┌───────────┐     ┌───────────┐     ┌───────────┐     ┌───────────┐
-│  Callback  │◄────┤  Verify   │◄────┤   Prove   │◄────┤  Ingest   │
-└───────────┘     └───────────┘     └───────────┘     └───────────┘
-```
+<figure><img src="../.gitbook/assets/6 (1).png" alt=""><figcaption></figcaption></figure>

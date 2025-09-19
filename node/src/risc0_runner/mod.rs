@@ -1,21 +1,25 @@
 mod utils;
 pub mod verify_prover_version;
 
-use anyhow::anyhow;
 use crate::transaction_sender::TransactionStatus;
+use anyhow::anyhow;
 
 use {
     solana_sdk::instruction::AccountMeta,
     utils::{check_stark_compression_tools_path, check_x86_64arch},
 };
 
+use crate::MissingImageStrategy;
+
 use {
     crate::{
         config::ProverNodeConfig,
         observe::*,
         risc0_runner::utils::async_to_json,
-        transaction_sender::{RpcTransactionSender, TransactionSender},
-        MissingImageStrategy,
+        transaction_sender::{
+            rpc::RpcTransactionSender, status::TransactionStatus,
+            transaction_sender::TransactionSender,
+        },
     },
     bonsol_interface::{
         bonsol_schema::{ClaimV1, DeployV1, ExecutionRequestV1},
@@ -652,11 +656,11 @@ async fn handle_image_deployment<'a>(
     let size = deploy.size_();
     let image_id = deploy.image_id().unwrap_or_default();
     let program_name = deploy.program_name().unwrap_or_default();
-    
+
     info!("Attempting to download image from URL: {}", url);
     info!("Image ID: {}, Size: {}", image_id, size);
     info!("Program name: {}", program_name);
-    
+
     emit_histogram!(MetricEvents::ImageDownload, size as f64, url => url.to_string());
     emit_event_with_duration!(MetricEvents::ImageDownload, {
         // The URL from deployment data already includes the full path
@@ -786,9 +790,14 @@ async fn risc0_compress_proof(
             ExitCode::SessionLimit => (2, 2),
             _ => {
                 // Log a warning or error for debugging
-                error!("Encountered unexpected ExitCode variant: {:?}", rc.exit_code);
+                error!(
+                    "Encountered unexpected ExitCode variant: {:?}",
+                    rc.exit_code
+                );
                 // Return an error indicating that this specific variant is not supported by this function
-                return Err(anyhow!("Unsupported ExitCode variant encountered during compression"));
+                return Err(anyhow!(
+                    "Unsupported ExitCode variant encountered during compression"
+                ));
             }
         };
         Ok(CompressedReceipt {

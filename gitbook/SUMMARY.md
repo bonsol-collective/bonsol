@@ -21,10 +21,12 @@
 * [Setup a local environment](developers/setup-a-local-environment.md)
 * [Tutorial: Simple Program](developers/tutorial-simple-program.md)
 * [Input Format Guide](developers/input-format-guide.md)
+* [Bonsol Calculator Example](developers/bonsol-calculator-example.md)
 
 ## Provers
 
-* [Setup a prover node](provers/setup-a-prover-node.md)
+* [Setup a prover node](provers/setup-a-prover-node/README.md)
+  * [Manually Provision a Bonsol Node](provers/setup-a-prover-node/manually-provision-a-bonsol-node.md)
 
 ## Contributing
 

@@ -27,11 +27,11 @@ solana --version
 pnpm --version
 ```
 
-## Local environment setup&#x20;
+## Local environment setup
 
 {% stepper %}
 {% step %}
-### Clone the repository
+#### Clone the repository
 
 ```bash
 git clone https://github.com/bonsol-collective/bonsol
@@ -40,7 +40,7 @@ cd bonsol
 {% endstep %}
 
 {% step %}
-### Install the RISC Zero prover
+#### Install the RISC Zero prover
 
 ```bash
 # Install the prover to the default location (current directory)
@@ -52,7 +52,7 @@ cd bonsol
 {% endstep %}
 
 {% step %}
-### Run the setup script
+#### Run the setup script
 
 * Checks that the STARK verification tools are installed
 * Generates and parses the verification key for on-chain use
@@ -67,7 +67,7 @@ cd bonsol
 {% endstep %}
 
 {% step %}
-### Run the Solana validator script
+#### Run the Solana validator script
 
 * Builds the Solana BPF programs using `cargo build-sbf`
 * Starts a local Solana validator with the Bonsol program at address `BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew`
@@ -84,7 +84,7 @@ cd bonsol
 {% endstep %}
 
 {% step %}
-### Run a local Bonsol node
+#### Run a local Bonsol node
 
 * Creates a new node keypair if one doesn't exist
 * Airdrop SOL to the node keypair for transaction fees
