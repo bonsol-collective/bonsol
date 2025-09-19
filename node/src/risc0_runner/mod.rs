@@ -1,7 +1,6 @@
 mod utils;
 pub mod verify_prover_version;
 
-use crate::transaction_sender::TransactionStatus;
 use anyhow::anyhow;
 
 use {

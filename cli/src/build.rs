@@ -298,4 +298,3 @@ fn build_zkprogram_manifest(
         );
     }
 }
-
