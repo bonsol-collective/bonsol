@@ -13,13 +13,14 @@ use self::flatbuffers::{EndianScalar, Follow};
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_PROVER_VERSION: u16 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_PROVER_VERSION: u16 = 9;
+pub const ENUM_MAX_PROVER_VERSION: u16 = 10;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_PROVER_VERSION: [ProverVersion; 3] = [
+pub const ENUM_VALUES_PROVER_VERSION: [ProverVersion; 4] = [
   ProverVersion::DEFAULT,
   ProverVersion::V1_0_1,
   ProverVersion::V1_2_1,
+  ProverVersion::V2_3_1,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -30,13 +31,15 @@ impl ProverVersion {
   pub const DEFAULT: Self = Self(0);
   pub const V1_0_1: Self = Self(1);
   pub const V1_2_1: Self = Self(9);
+  pub const V2_3_1: Self = Self(10);
 
   pub const ENUM_MIN: u16 = 0;
-  pub const ENUM_MAX: u16 = 9;
+  pub const ENUM_MAX: u16 = 10;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::DEFAULT,
     Self::V1_0_1,
     Self::V1_2_1,
+    Self::V2_3_1,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
@@ -44,6 +47,7 @@ impl ProverVersion {
       Self::DEFAULT => Some("DEFAULT"),
       Self::V1_0_1 => Some("V1_0_1"),
       Self::V1_2_1 => Some("V1_2_1"),
+      Self::V2_3_1 => Some("V2_3_1"),
       _ => None,
     }
   }
