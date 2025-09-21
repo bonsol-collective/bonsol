@@ -31,10 +31,10 @@ RUN tar xvf v${FLATC_VERSION}.tar.gz \
 
 FROM ubuntu:24.04
 
-ARG RUST_VERSION=1.89.0
-ARG SOLANA_VERSION=1.18.22
-ARG ANCHOR_VERSION=0.31.1
-ARG NODE_VERSION=22.19.0
+ARG RUST_VERSION
+ARG SOLANA_VERSION
+ARG ANCHOR_VERSION
+ARG NODE_VERSION
 
 COPY --from=flatc-build /usr/local/bin /usr/local/include /usr/local/lib /usr/local/bin
 
@@ -42,19 +42,18 @@ COPY --from=flatc-build /usr/local/bin /usr/local/include /usr/local/lib /usr/lo
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
     build-essential git \
-    pkg-config \
+    pkg-config ca-certificates \
     libudev-dev llvm libclang-dev \
     protobuf-compiler libssl-dev curl \
   && rm -rf /var/lib/apt/lists/*
 
-
 # Install Rust
-ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-RUN rustup install 1.89.0 && rustup default 1.89.0
-RUN rustup install nightly
-RUN rustup component add rustfmt rust-analyzer clippy
-RUN cargo install cargo-binstall
+ENV PATH="/root/.local/share/solana/install/active_release/bin:/root/.local/bin:/root/.cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+  && rustup install ${RUST_VERSION} && rustup default ${RUST_VERSION} \
+  && rustup install nightly \
+  && rustup component add rustfmt rust-analyzer clippy \
+  && cargo install cargo-binstall
 
 # Risc0
 RUN cargo binstall cargo-risczero
@@ -74,7 +73,6 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | ba
 # Solana
 ENV SOLANA_VERSION=v${SOLANA_VERSION}
 RUN sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
-ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 
 # Anchor
 RUN cargo install --git https://github.com/coral-xyz/anchor avm \
