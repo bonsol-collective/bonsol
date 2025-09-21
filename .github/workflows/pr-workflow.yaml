@@ -33,6 +33,13 @@ jobs:
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
 
+      - name: Show error log
+        if: failure()
+        run: |
+          echo "=== ERROR LOG CONTENTS ==="
+          cat /github/home/.cache/pre-commit/pre-commit.log
+          echo $PWD
+          ls
   check-formatting:
     name: Check & Format
     runs-on: ubicloud-standard-16
