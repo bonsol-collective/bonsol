@@ -41,8 +41,7 @@ jobs:
         run: |
           echo "=== ERROR LOG CONTENTS ==="
           cat /github/home/.cache/pre-commit/pre-commit.log
-          echo $PWD
-          ls
+
   check-formatting:
     name: Check & Format
     runs-on: ubicloud-standard-16
