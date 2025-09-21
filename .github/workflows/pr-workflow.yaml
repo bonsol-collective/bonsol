@@ -30,6 +30,9 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}
 
+      - name: Mark repo as safe for git
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
 
