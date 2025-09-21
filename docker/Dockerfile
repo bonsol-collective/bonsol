@@ -1,101 +1,80 @@
-# Bonsol Development Container
-
-# Stage 1: Node setup
-FROM debian:stable-slim AS node-slim
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install -y -q --no-install-recommends \
-    ca-certificates \
-    curl \
-    git \
-    gnupg2 \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-ENV NODE_VERSION=v22.3.0
-ENV NVM_DIR=/usr/local/nvm
-
-RUN mkdir -p ${NVM_DIR}
-ADD https://raw.githubusercontent.com/creationix/nvm/master/install.sh /usr/local/etc/nvm/install.sh
-RUN bash /usr/local/etc/nvm/install.sh
-
-# Stage 2: flatc build
-FROM debian:stable-slim AS flatc-build
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install -y -q --no-install-recommends \
-    build-essential \
-    cmake \
-    ca-certificates \
-    curl \
-    git \
-    gnupg2 \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# flatc
-WORKDIR /flatbuffers
 ARG FLATC_VERSION=24.3.25
-ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.tar.gz v${FLATC_VERSION}.tar.gz
-RUN tar -zxvf v${FLATC_VERSION}.tar.gz || { echo "Failed to extract tarball"; exit 1; }
+ARG RUST_VERSION=1.89.0
+ARG SOLANA_VERSION=1.18.22
+ARG ANCHOR_VERSION=0.31.1
+ARG NODE_VERSION=22.19.0
+
+FROM ubuntu:24.04 AS flatc-build
+
+ARG FLATC_VERSION # Need to redeclare globals
+
 WORKDIR /flatbuffers/flatbuffers-${FLATC_VERSION}
-RUN cmake -G "Unix Makefiles" && make -j && make install
-RUN strip /usr/local/bin/flatc
 
-# Stage 2: Bonsol Dev
-FROM ghcr.io/anagrambuild/risczero:v1.0.3_2
+RUN apt-get update \
+&&  apt-get install -y \
+      build-essential \
+      cmake \
+      ca-certificates \
+      curl \
+      git \
+      gnupg2 
 
-# flatbuffers
-COPY --from=flatc-build /usr/local/bin/flatc /usr/local/bin/flatc
-COPY --from=flatc-build /usr/local/include/flatbuffers /usr/local/include/flatbuffers
-COPY --from=flatc-build /usr/local/lib/libflatbuffers.a /usr/local/lib/libflatbuffers.a
-COPY --from=flatc-build /usr/local/lib/cmake/flatbuffers /usr/local/lib/cmake/flatbuffers
-COPY --from=flatc-build /usr/local/lib/pkgconfig/flatbuffers.pc /usr/local/lib/pkgconfig/flatbuffers.pc
+ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.tar.gz v${FLATC_VERSION}.tar.gz
 
-ENV USER=solana
-ARG SOLANA=1.18.22
-ENV CARGO_HOME=/usr/local/cargo
-ENV RUSTUP_HOME=/usr/local/rustup
-ENV PATH=${PATH}:/usr/local/cargo/bin:/go/bin:/home/solana/.local/share/solana/install/releases/${SOLANA}/bin
-USER solana
+RUN tar xvf v${FLATC_VERSION}.tar.gz \
+  &&  cd flatbuffers-${FLATC_VERSION}/ \
+  &&  cmake -G "Unix Makefiles" \
+  &&  make -j \
+  &&  make install \
+  &&  strip /usr/local/bin/flatc
 
-# Set user and working directory
-ARG PACKAGE=bonsol
-WORKDIR /workspaces/${PACKAGE}
+FROM ubuntu:24.04
 
-# Install Rust components
-RUN rustup component add \
-    clippy \
-    rust-analyzer
+ARG RUST_VERSION=1.89.0
+ARG SOLANA_VERSION=1.18.22
+ARG ANCHOR_VERSION=0.31.1
+ARG NODE_VERSION=22.19.0
 
-RUN rustup toolchain install nightly  && \
-    rustup component add rustfmt --toolchain nightly
+COPY --from=flatc-build /usr/local/bin /usr/local/include /usr/local/lib /usr/local/bin
 
-# Install Node
-ENV NODE_VERSION=v22.3.0
-ENV NVM_DIR=/usr/local/nvm
-ENV NVM_NODE_PATH ${NVM_DIR}/versions/node/${NODE_VERSION}
-ENV NODE_PATH ${NVM_NODE_PATH}/lib/node_modules
-ENV PATH      ${NVM_NODE_PATH}/bin:$PATH
-COPY --from=node-slim --chown=${USER}:${USER} /usr/local/nvm /usr/local/nvm
-RUN bash -c ". $NVM_DIR/nvm.sh && nvm install $NODE_VERSION && nvm alias default $NODE_VERSION && nvm use default"
+# Deps
+RUN apt-get update \
+  && apt-get install -y \
+    build-essential git \
+    pkg-config \
+    libudev-dev llvm libclang-dev \
+    protobuf-compiler libssl-dev curl
 
-RUN npm install yarn -g
+# Install Rust
+ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN rustup install 1.89.0 && rustup default 1.89.0
+RUN rustup install nightly 
+RUN rustup component add rustfmt rust-analyzer clippy
+RUN cargo install cargo-binstall
 
-# Install PNPM
-ENV PNPM_HOME=/home/solana/.local/share
-RUN curl -fsSL https://get.pnpm.io/install.sh | \
-    bash -
+# Risc0
+RUN cargo binstall cargo-risczero
 
-ENV PATH=${PATH}:/home/solana/.local/share/pnpm
+# pre-commit
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+  && uv tool install pre-commit
 
-LABEL \
-    org.label-schema.name="bonsol" \
-    org.label-schema.description="Bonsol Development Container" \
-    org.label-schema.url="https://github.com/bonsolcollective/bonsol" \
-    org.label-schema.vcs-url="git@github.com/anagrambuild/bonsol.git" \
-    org.label-schema.vendor="anagram.xyz" \
-    org.label-schema.schema-version="1.0" \
-    org.opencontainers.image.description="Bonsol Development Container"
+# NodeJS
+ENV NVM_DIR=/root/.nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash \
+    && . "$NVM_DIR/nvm.sh" \
+    && nvm install $NODE_VERSION \
+    && nvm alias default $NODE_VERSION \
+    && nvm use default
+
+# Solana
+ENV SOLANA_VERSION=v${SOLANA_VERSION}  
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
+ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
+
+# Anchor
+RUN cargo install --git https://github.com/coral-xyz/anchor avm \
+    && avm install $ANCHOR_VERSION \
+    && avm use $ANCHOR_VERSION
+

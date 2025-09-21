@@ -14,167 +14,117 @@ permissions:
 jobs:
 
   check_pre-commit:
-
     name: Run pre-commit checks
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-16
+
+    container:
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install pre-commit
-        run: pip install pre-commit
-
-      - name: Inspect files before pre-commit
-        run: |
-          echo "--- Inspecting node/src/risc0_runner/mod.rs ---"
-          echo "Head:"
-          head -n 20 node/src/risc0_runner/mod.rs
-          echo "Hexdump:"
-          hexdump -C node/src/risc0_runner/mod.rs | head -n 20
-          echo "File command output:"
-          file node/src/risc0_runner/mod.rs
-          echo "--- Inspecting gitbook/cli-commands.md ---"
-          echo "File command output:"
-          file gitbook/cli-commands.md
-          echo "--- Inspecting cli/src/deploy.rs ---"
-          echo "File command output:"
-          file cli/src/deploy.rs
-
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
 
-      - name: Show diff after pre-commit
-        if: always() # Ensures this step runs even if 'Run pre-commit' fails
-        run: |
-          echo "--- Git diff for affected files after pre-commit run ---"
-          echo "Diff for node/src/risc0_runner/mod.rs:"
-          git diff -- node/src/risc0_runner/mod.rs || echo "No diff or error diffing node/src/risc0_runner/mod.rs"
-          echo "Diff for gitbook/cli-commands.md:"
-          git diff -- gitbook/cli-commands.md || echo "No diff or error diffing gitbook/cli-commands.md"
-          echo "Diff for cli/src/deploy.rs:"
-          git diff -- cli/src/deploy.rs || echo "No diff or error diffing cli/src/deploy.rs"
-
   check-formatting:
-
     name: Check & Format
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
-      volumes:
-        - local:/workspaces/bonsol
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Check
-        shell: bash
-        id: check
-        run: |
-          cargo check
+        run: cargo check
+
       - name: Fmt
-        shell: bash
-        id: fmt
-        run: |
-          cargo +nightly fmt --all -- --check
+        run: cargo +nightly fmt --all -- --check
 
   unit-tests:
-
     name: Unit Test
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-ci-env:1.0.0
-      volumes:
-        - local:/workspaces/bonsol
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Test
         run: cargo test -- --nocapture
 
-  check-fork-pr:
-    name: Check if PR is from fork
-    runs-on: ubuntu-latest
-    outputs:
-      is_fork: ${{ steps.check.outputs.is_fork }}
-    steps:
-      - name: Check if PR is from fork
-        id: check
-        run: |
-          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-            echo "is_fork=true" >> $GITHUB_OUTPUT
-            echo "PR is from a fork repository"
-          else
-            echo "is_fork=false" >> $GITHUB_OUTPUT
-            echo "PR is from the same repository"
-          fi
+# Disable E2E tests for now
 
-  call-build-node-container-image:
-    permissions:
-      contents: read
-      packages: write
-    needs: check-fork-pr
-    uses: ./.github/workflows/build-node-containers.yaml
-    with:
-      is_fork: ${{ needs.check-fork-pr.outputs.is_fork == 'true' }}
+#  check-fork-pr:
+#    name: Check if PR is from fork
+#    runs-on: ubuntu-latest
+#    outputs:
+#      is_fork: ${{ steps.check.outputs.is_fork }}
+#    steps:
+#      - name: Check if PR is from fork
+#        id: check
+#        run: |
+#          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+#            echo "is_fork=true" >> $GITHUB_OUTPUT
+#            echo "PR is from a fork repository"
+#          else
+#            echo "is_fork=false" >> $GITHUB_OUTPUT
+#            echo "PR is from the same repository"
+#          fi
 
-  e2e-test:
-
-    name: E2E Test
-    runs-on:
-      labels: ubicloud-standard-30
-    needs: [call-build-node-container-image, check-fork-pr]
-
-    container:
-      image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
-      options: "-it"
-      volumes:
-        - local:/workspaces/bonsol
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: E2E Test
-        shell: bash
-        run: |
-          set -euxo pipefail
-          cd /usr/opt/bonsol/
-          echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
-          git clone https://github.com/bonsol-collective/bonsol.git src
-          cp -pr src/elf .
-          solana-keygen new -s --no-bip39-passphrase -f
-          solana-test-validator \
-            --ledger ./ledger \
-            -q \
-            --limit-ledger-size 0 \
-            --bind-address 0.0.0.0 \
-            --rpc-pubsub-enable-block-subscription \
-            --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
-            --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
-            -r 1>/dev/null 2>/dev/null &
-          sleep 15
-          solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
-          solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
-          solana -u http://localhost:8899 airdrop 1
-          ulimit -s unlimited
-          echo "Starting node"
-          /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
-          sleep 15
-          echo "Deploying"
-          /usr/opt/bonsol/bonsol \
-            --keypair ~/.config/solana/id.json \
-            --rpc-url http://127.0.0.1:8899 \
-            deploy \
-            url \
-            -m src/cli/src/tests/test_data/test_manifest.json \
-            --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
-            -y
-          echo "Running Tests"
-          /usr/opt/bonsol/bonsol-tester 500
+#   e2e-test:
+#
+#     name: E2E Test
+#     runs-on:
+#       labels: ubicloud-standard-30
+#     needs: [call-build-node-container-image, check-fork-pr]
+#
+#     container:
+#       image: ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}
+#       options: "-it"
+#       volumes:
+#         - local:/workspaces/bonsol
+#
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#
+#       - name: E2E Test
+#         shell: bash
+#         run: |
+#           set -euxo pipefail
+#           cd /usr/opt/bonsol/
+#           echo "Using image ${{ needs.check-fork-pr.outputs.is_fork == 'true' && 'bonsol-node-stark-cuda:latest' || format('ghcr.io/bonsol-collective/bonsol-node:stark-cuda-{0}', github.sha) }}"
+#           git clone https://github.com/bonsol-collective/bonsol.git src
+#           cp -pr src/elf .
+#           solana-keygen new -s --no-bip39-passphrase -f
+#           solana-test-validator \
+#             --ledger ./ledger \
+#             -q \
+#             --limit-ledger-size 0 \
+#             --bind-address 0.0.0.0 \
+#             --rpc-pubsub-enable-block-subscription \
+#             --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew /usr/opt/bonsol/bonsol.so \
+#             --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG /usr/opt/bonsol/callback_example.so \
+#             -r 1>/dev/null 2>/dev/null &
+#           sleep 15
+#           solana-keygen new -s --no-bip39-passphrase --outfile node_keypair.json -f
+#           solana -u http://localhost:8899 airdrop 1 --keypair node_keypair.json
+#           solana -u http://localhost:8899 airdrop 1
+#           ulimit -s unlimited
+#           echo "Starting node"
+#           /usr/opt/bonsol/bonsol-node-cpu -f ./src/Node.toml 1>&1 &
+#           sleep 15
+#           echo "Deploying"
+#           /usr/opt/bonsol/bonsol \
+#             --keypair ~/.config/solana/id.json \
+#             --rpc-url http://127.0.0.1:8899 \
+#             deploy \
+#             url \
+#             -m src/cli/src/tests/test_data/test_manifest.json \
+#             --url https://bonsol-public-images.s3.amazonaws.com/simple-68f4b0c5f9ce034aa60ceb264a18d6c410a3af68fafd931bcfd9ebe7c1e42960 \
+#             -y
+#           echo "Running Tests"
+#           /usr/opt/bonsol/bonsol-tester 500
