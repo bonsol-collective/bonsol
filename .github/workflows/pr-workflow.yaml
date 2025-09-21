@@ -22,7 +22,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}
 
       - name: Run pre-commit in check mode
         run: pre-commit run --all-files
@@ -33,9 +39,10 @@ jobs:
 
     container:
       image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check
         run: cargo check
@@ -49,9 +56,10 @@ jobs:
 
     container:
       image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Test
         run: cargo test -- --nocapture
 
