@@ -36,7 +36,9 @@ ARG SOLANA_VERSION
 ARG ANCHOR_VERSION
 ARG NODE_VERSION
 
-COPY --from=flatc-build /usr/local/bin /usr/local/include /usr/local/lib /usr/local/bin
+COPY --from=flatc-build /usr/local/bin /usr/local/bin
+COPY --from=flatc-build /usr/local/include /usr/local/include
+COPY --from=flatc-build /usr/local/lib /usr/local/lib
 
 # Deps
 RUN apt-get update \
