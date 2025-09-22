@@ -23,7 +23,6 @@ pub fn build(keypair: &impl Signer, zk_program_path: String) -> Result<()> {
     let build_result =
         build_zkprogram_manifest(image_path, &keypair, cargo_package_name, input_order);
     let manifest_path = image_path.join(MANIFEST_JSON);
-
     match build_result {
         Err(e) => {
             bar.finish_with_message(format!(
@@ -188,42 +187,120 @@ fn build_zkprogram_manifest(
     cargo_package_name: String,
     input_order: Vec<String>,
 ) -> Result<ZkProgramManifest> {
-    const RISCV_DOCKER_PATH: &str = "target/riscv-guest/riscv32im-risc0-zkvm-elf/docker";
+    const RISCV_DOCKER_PATH: &str = "target/riscv32im-risc0-zkvm-elf/docker";
     const CARGO_RISCZERO_BUILD_ARGS: &[&str; 4] =
         &["risczero", "build", "--manifest-path", "Cargo.toml"];
 
+    println!("Starting build_zkprogram_manifest");
+    println!("image_path: {:?}", image_path);
+    println!("cargo_package_name: {}", cargo_package_name);
+
     let binary_path = image_path
         .join(RISCV_DOCKER_PATH)
-        .join(&cargo_package_name)
-        .join(&cargo_package_name);
-    let output = Command::new(CARGO_COMMAND)
+        .join(format!("{cargo_package_name}.bin"));
+
+    println!("Expected binary_path: {:?}", binary_path);
+
+    let mut command = Command::new(CARGO_COMMAND);
+    command
         .current_dir(image_path)
         .args(CARGO_RISCZERO_BUILD_ARGS)
-        .env("CARGO_TARGET_DIR", image_path.join(TARGET_DIR))
-        .output()?;
+        .env(
+            "CARGO_TARGET_DIR",
+            fs::canonicalize(image_path)?.join(TARGET_DIR),
+        );
+
+    // Construct the command string for printing
+    let program = command.get_program().to_string_lossy();
+    let args_str = command
+        .get_args()
+        .map(|s| s.to_string_lossy())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let env_str = command
+        .get_envs()
+        .map(|(k, v)| {
+            format!(
+                "{}=\"{}\"",
+                k.to_string_lossy(),
+                v.unwrap_or_default().to_string_lossy()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let current_dir_str = if let Some(dir) = command.get_current_dir() {
+        format!("cd {}; ", dir.to_string_lossy())
+    } else {
+        String::new()
+    };
+
+    println!(
+        "Executing command: {}{program} {}",
+        current_dir_str, args_str
+    );
+    if !env_str.is_empty() {
+        println!("Environment variables: {}", env_str);
+    }
+
+    let output = match command.output() {
+        Ok(output) => output,
+        Err(e) => {
+            eprintln!("[ERROR] Failed to execute build command: {:?}", e);
+            return Err(e.into());
+        }
+    };
+
+    println!("Command exit status: {:?}", output.status);
 
     if output.status.success() {
-        let elf_contents = fs::read(&binary_path)?;
+        println!("Build succeeded. Reading binary from {:?}", binary_path);
+        let elf_contents = match fs::read(&binary_path) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                eprintln!("[ERROR] Failed to read binary at {:?}: {}", binary_path, e);
+                return Err(e.into());
+            }
+        };
+
+        println!("Binary size: {} bytes", elf_contents.len());
+
         let image_id = compute_image_id(&elf_contents).map_err(|err| {
+            eprintln!("[ERROR] Failed to compute image ID: {:?}", err);
             BonsolCliError::FailedToComputeImageId {
                 binary_path: binary_path.to_string_lossy().to_string(),
                 err,
             }
         })?;
+
+        println!("Computed image_id: {}", image_id);
+
         let signature = keypair.sign_message(elf_contents.as_slice());
+        println!("Signed binary");
+
         let zkprogram_manifest = ZkProgramManifest {
             name: cargo_package_name,
             binary_path: binary_path
                 .to_str()
-                .ok_or(ZkManifestError::InvalidBinaryPath)?
+                .ok_or_else(|| {
+                    eprintln!("[ERROR] Invalid binary path: {:?}", binary_path);
+                    ZkManifestError::InvalidBinaryPath
+                })?
                 .to_string(),
             input_order,
             image_id: image_id.to_string(),
             size: elf_contents.len() as u64,
             signature: signature.to_string(),
         };
-        return Ok(zkprogram_manifest);
-    }
 
-    Err(BonsolCliError::BuildFailure(String::from_utf8_lossy(&output.stderr).to_string()).into())
+        return Ok(zkprogram_manifest);
+    } else {
+        eprintln!(
+            "[ERROR] Build failed. Stderr:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Err(BonsolCliError::BuildFailure(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+        .into());
+    }
 }

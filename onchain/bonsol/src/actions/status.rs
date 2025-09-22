@@ -12,10 +12,11 @@ use bonsol_interface::{
     bonsol_schema::{
         root_as_execution_request_v1, ChannelInstruction, ExecutionRequestV1, ExitCode, StatusV1,
     },
-    prover_version::{ProverVersion, VERSION_V1_0_1, VERSION_V1_2_1},
+    prover_version::{ProverVersion, VERSION_V1_0_1, VERSION_V1_2_1, VERSION_V2_3_1},
     util::execution_address_seeds,
 };
 
+use crate::proof_handling::{output_digest_v2_3_1, prepare_inputs_v2_3_1, verify_risc0_v2_3_1};
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
@@ -224,6 +225,17 @@ fn verify_with_prover(
                 st.exit_code_user(),
             )?;
             verify_risc0_v1_2_1(proof, &proof_inputs)?
+        }
+        VERSION_V2_3_1 => {
+            let output_digest = output_digest_v2_3_1(input_digest, co, asud);
+            let proof_inputs = prepare_inputs_v2_3_1(
+                er.image_id().unwrap(),
+                exed,
+                output_digest.as_ref(),
+                st.exit_code_system(),
+                st.exit_code_user(),
+            )?;
+            verify_risc0_v2_3_1(proof, &proof_inputs)?
         }
         _ => false,
     };
