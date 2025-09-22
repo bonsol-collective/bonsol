@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  CONTAINER_IMAGE: "ghcr.io/bonsol-collective/bonsol-ci-env"
-  CONTAINER_TAG:   "1.1.0"
+  CONTAINER_IMAGE: "ghcr.io/bonsol-collective/bonsol-forge"
+  CONTAINER_TAG:   "0.1.0"
 
 jobs:
   build-ci-container:
@@ -16,9 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -45,14 +43,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/Dockerfile.github-actions-ci
+          file: docker/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ env.CONTAINER_IMAGE }}:${{ env.CONTAINER_TAG }}
-          build-args: |
-            FLATC_VERSION=24.3.25
-            PACKAGE=bonsol
-            SOLANA=1.18.22
-            RUST_VERSION=1.81.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
