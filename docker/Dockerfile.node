@@ -1,0 +1,60 @@
+ARG CUDA_VERSION=12
+ARG RISC0_VERSION="v2024-05-17.1"
+
+FROM docker.io/risczero/risc0-groth16-prover:${RISC0_VERSION} AS risczero
+
+FROM ghcr.io/bonsol-collective/bonsol-forge:0.1.0 AS base-builder
+
+ARG CUDA_VERSION #Need to redeclare globals
+
+# Get CUDA-ed
+RUN curl -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb \
+  && dpkg -i cuda-keyring_1.1-1_all.deb \
+  && apt-get update \
+  && apt-get install --no-install-recommends -y cuda-toolkit-${CUDA_VERSION} \
+  && rm -rf /var/lib/apt/lists/*
+
+# Build the GPU binaries
+ENV PATH=/usr/local/cuda/bin:${PATH}
+
+WORKDIR /bonsol
+
+COPY . .
+
+# CPU build (no CUDA feature)
+FROM base-builder AS cpu-builder
+
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/bonsol/target \
+    cargo build --release --bin bonsol-node
+
+RUN --mount=type=cache,target=/bonsol/target \
+  cp target/release/bonsol-node /bonsol-node-cpu
+
+# GPU build (with CUDA feature)
+FROM base-builder AS gpu-builder
+
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/bonsol/target \
+    cargo build --release --features=cuda --bin bonsol-node
+
+RUN --mount=type=cache,target=/bonsol/target \
+  cp target/release/bonsol-node /bonsol-node-gpu
+
+# Build runtime
+FROM ubuntu:24.04 AS runtime
+
+# Copy both binaries from builders
+COPY --from=cpu-builder /bonsol-node-cpu /opt/bonsol/bin/
+COPY --from=gpu-builder /bonsol-node-gpu /opt/bonsol/bin/
+
+# Copy Stark stuff
+COPY --from=risczero /app/stark_verify /opt/bonsol/bin/
+COPY --from=risczero /usr/local/sbin/rapidsnark /opt/bonsol/bin/
+COPY --from=risczero /app/prover.sh /opt/bonsol/bin/
+COPY --from=risczero /app/stark_verify.dat /opt/bonsol/lib/
+COPY --from=risczero /app/stark_verify_final.zkey /opt/bonsol/lib/
+
+ENV PATH="/opt/bonsol/bin:${PATH}"
+
+CMD ["/opt/bonsol/bin/bonsol-node-gpu"]
