@@ -221,7 +221,7 @@ The core endpoint, `POST /calculate`, validates input (operation and operands), 
 
 If the command was successful, you should see the code below
 
-<figure><img src="../.gitbook/assets/Screenshot 2025-07-28 at 5.46.24 PM.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="broken-reference" alt=""><figcaption></figcaption></figure>
 
 ### Step 7: Build the Frontend
 
@@ -246,7 +246,7 @@ npm start
 
 * Open `http://localhost:3000`
 
-![](<../.gitbook/assets/Screenshot 2025-07-28 at 5.47.32 PM.png>)
+![](broken-reference)
 
 ### Step 8: Test Application
 
@@ -254,16 +254,14 @@ Run the computation:
 
 * Enter numbers and select operation (e.g 25 \* 15)
 * Click "Calculate with ZK"
-* Wait \~15-30 seconds for ZK proof computation\
-
+* Wait \~15-30 seconds for ZK proof computation\\
 
 What it does - submit calculations through a web interface that:
 
 1. Sends requests to local API server
 2. Submits to Bonsol ZK network for computation
 3. Returns cryptographically verified results
-4. Displays execution IDs and transaction signatures\
-
+4. Displays execution IDs and transaction signatures\\
 
 Example successful execution:
 

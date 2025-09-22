@@ -1,6 +1,6 @@
 ---
 icon: hand-wave
-cover: .gitbook/assets/bonsol.png
+cover: .gitbook/assets/banner.jpg
 coverY: 0
 ---
 

@@ -70,4 +70,4 @@ The Bonsol workflow follows these steps:
 7. **Verification**: Results and proofs are submitted on-chain for verification
 8. **Callback**: The verifier forwards verified results to the callback program to perform actions based on the verified results
 
-<figure><img src="../.gitbook/assets/6 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/architecture.jpg" alt=""><figcaption></figcaption></figure>
