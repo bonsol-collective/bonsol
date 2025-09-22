@@ -56,7 +56,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
   && cargo install cargo-binstall
 
 # Risc0
-RUN cargo binstall cargo-risczero
+RUN cargo binstall -y cargo-risczero
 
 # pre-commit
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
