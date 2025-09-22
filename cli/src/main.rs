@@ -6,8 +6,8 @@ use atty::Stream;
 use bonsol_sdk::BonsolClient;
 use clap::Parser;
 use env_logger::Env;
-use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
 use risc0_circuit_rv32im::execute::testutil::DEFAULT_SESSION_LIMIT;
+use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
 use risc0_zkvm::ExecutorEnv;
 use solana_sdk::signer::Signer;
 

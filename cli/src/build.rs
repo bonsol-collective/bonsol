@@ -205,7 +205,10 @@ fn build_zkprogram_manifest(
     command
         .current_dir(image_path)
         .args(CARGO_RISCZERO_BUILD_ARGS)
-        .env("CARGO_TARGET_DIR", fs::canonicalize(image_path)?.join(TARGET_DIR));
+        .env(
+            "CARGO_TARGET_DIR",
+            fs::canonicalize(image_path)?.join(TARGET_DIR),
+        );
 
     // Construct the command string for printing
     let program = command.get_program().to_string_lossy();
@@ -231,7 +234,10 @@ fn build_zkprogram_manifest(
         String::new()
     };
 
-    println!("Executing command: {}{program} {}", current_dir_str, args_str);
+    println!(
+        "Executing command: {}{program} {}",
+        current_dir_str, args_str
+    );
     if !env_str.is_empty() {
         println!("Environment variables: {}", env_str);
     }
@@ -292,9 +298,9 @@ fn build_zkprogram_manifest(
             "[ERROR] Build failed. Stderr:\n{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        return Err(
-            BonsolCliError::BuildFailure(String::from_utf8_lossy(&output.stderr).to_string())
-                .into(),
-        );
+        return Err(BonsolCliError::BuildFailure(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+        .into());
     }
 }

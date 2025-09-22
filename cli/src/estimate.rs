@@ -41,9 +41,9 @@ impl<'a> MkImage for &'a [u8] {
 mod estimate_tests {
     use anyhow::Result;
     use risc0_binfmt::MemoryImage;
+    use risc0_circuit_rv32im::execute::testutil::{user, DEFAULT_SESSION_LIMIT};
     use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
-    use risc0_circuit_rv32im::execute::testutil::{DEFAULT_SESSION_LIMIT, user};
-    use risc0_zkvm::{ExecutorEnv};
+    use risc0_zkvm::ExecutorEnv;
 
     use super::MkImage;
     use crate::estimate;

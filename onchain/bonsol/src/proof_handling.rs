@@ -190,7 +190,7 @@ pub fn output_digest_v2_3_1(
         assumption_digest,
         &2u16.to_le_bytes(),
     ])
-        .to_bytes()
+    .to_bytes()
 }
 
 pub fn prepare_inputs_v2_3_1(
@@ -211,7 +211,7 @@ pub fn prepare_inputs_v2_3_1(
         &user_exit_code.to_le_bytes(),
         &4u16.to_le_bytes(),
     ])
-        .to_bytes();
+    .to_bytes();
     let (c0, c1) = split_digest_reversed(&mut PROVER_CONSTANTS_V2_3_1.control_root.clone())
         .map_err(|_| ChannelError::InvalidFieldElement)?;
     let (half1_bytes, half2_bytes) =
@@ -223,7 +223,7 @@ pub fn prepare_inputs_v2_3_1(
         half2_bytes.try_into().unwrap(),
         PROVER_CONSTANTS_V2_3_1.bn254_control_id_bytes,
     ]
-        .concat();
+    .concat();
     Ok(inputs)
 }
 

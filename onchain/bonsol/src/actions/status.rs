@@ -16,6 +16,7 @@ use bonsol_interface::{
     util::execution_address_seeds,
 };
 
+use crate::proof_handling::{output_digest_v2_3_1, prepare_inputs_v2_3_1, verify_risc0_v2_3_1};
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
@@ -26,7 +27,6 @@ use solana_program::{
     program_memory::sol_memcmp,
     sysvar::Sysvar,
 };
-use crate::proof_handling::{output_digest_v2_3_1, prepare_inputs_v2_3_1, verify_risc0_v2_3_1};
 
 struct StatusAccounts<'a, 'b> {
     pub requester: &'a AccountInfo<'a>,
@@ -225,7 +225,7 @@ fn verify_with_prover(
                 st.exit_code_user(),
             )?;
             verify_risc0_v1_2_1(proof, &proof_inputs)?
-        },
+        }
         VERSION_V2_3_1 => {
             let output_digest = output_digest_v2_3_1(input_digest, co, asud);
             let proof_inputs = prepare_inputs_v2_3_1(
@@ -236,7 +236,7 @@ fn verify_with_prover(
                 st.exit_code_user(),
             )?;
             verify_risc0_v2_3_1(proof, &proof_inputs)?
-        },
+        }
         _ => false,
     };
     Ok(verified)

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use bytes::Bytes;
 use risc0_binfmt::{MemoryImage, ProgramBinary};
-use risc0_zkvm::{PAGE_SIZE};
+use risc0_zkvm::PAGE_SIZE;
 use tokio::fs::read;
 
 pub struct Image {
@@ -12,7 +12,7 @@ pub struct Image {
     pub size: u64,
     pub path: PathBuf,
     pub last_used: u64,
-    pub image: MemoryImage
+    pub image: MemoryImage,
 }
 
 impl Image {
