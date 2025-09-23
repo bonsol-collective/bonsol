@@ -221,7 +221,7 @@ The core endpoint, `POST /calculate`, validates input (operation and operands), 
 
 If the command was successful, you should see the code below
 
-<figure><img src="broken-reference" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/Screenshot 2025-07-28 at 5.46.24 PM (1).jpg" alt=""><figcaption></figcaption></figure>
 
 ### Step 7: Build the Frontend
 
@@ -246,7 +246,7 @@ npm start
 
 * Open `http://localhost:3000`
 
-![](broken-reference)
+![](<../.gitbook/assets/Screenshot 2025-07-28 at 5.47.32 PM (1).jpg>)
 
 ### Step 8: Test Application
 
