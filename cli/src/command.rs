@@ -154,11 +154,11 @@ pub enum Command {
     #[command(about = "Build a ZK program")]
     Build {
         #[arg(
-            help = "The path to a ZK program folder containing a Cargo.toml",
+            help = "The path to a ZK program folder containing a Cargo.toml [Default: . ] ",
             short = 'z',
             long
         )]
-        zk_program_path: String,
+        zk_program_path: Option<String>,
     },
 
     #[command(about = "Estimate the execution cost of a ZK RISC0 program")]

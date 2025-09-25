@@ -1,3 +1,4 @@
+use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 use std::time::Duration;
@@ -16,9 +17,13 @@ pub fn build(keypair: &impl Signer, zk_program_path: String) -> Result<()> {
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(100));
 
-    let image_path = Path::new(&zk_program_path);
-    let (package, input_order) = parse_cargo_manifest(image_path)?;
-    let build_result = build_zkprogram(image_path, &keypair, &package, input_order);
+    let image_path = fs::canonicalize(Path::new(&zk_program_path))
+        .map_err(|_| ZkManifestError::InvalidManifestDirectory(zk_program_path.clone()))?;
+    env::set_current_dir(&image_path)
+        .map_err(|_| ZkManifestError::CantCdToManifest(zk_program_path))?;
+
+    let (package, input_order) = parse_cargo_manifest(&image_path)?;
+    let build_result = build_zkprogram(&image_path, &keypair, &package, input_order);
     let manifest_path = image_path.join(MANIFEST_JSON);
     match build_result {
         Err(e) => {
@@ -99,7 +104,7 @@ fn parse_cargo_manifest_inputs(package: &Package) -> Result<Vec<String>> {
 }
 
 fn parse_cargo_manifest(image_path: &Path) -> Result<(Package, Vec<String>)> {
-    let cargo_manifest_path = fs::canonicalize(image_path.join(CARGO_TOML))?;
+    let cargo_manifest_path = image_path.join(CARGO_TOML);
 
     if !cargo_manifest_path.exists() {
         return Err(

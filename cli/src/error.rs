@@ -34,21 +34,8 @@ pub enum BonsolCliError {
     #[error(transparent)]
     S3ClientError(#[from] S3ClientError),
 
-    #[error("This upload method is not supported")]
-    UnsupportedDeployError(),
-
     #[error("The binary uploaded does not match the local binary at path '{binary_path}', is the URL correct?\nupload_url: {url}")]
     OriginBinaryMismatch { url: String, binary_path: String },
-
-    #[error("The following build dependencies are missing: {}", missing_deps.join(", "))]
-    MissingBuildDependencies { missing_deps: Vec<String> },
-
-    #[error("Build Dependency version mismatch: {} is required at version {}, but the current version is {}", dep, version, current_version)]
-    BuildDependencyVersionMismatch {
-        dep: String,
-        version: String,
-        current_version: String,
-    },
 }
 
 #[derive(Debug, DeriveError, Clone)]
@@ -124,6 +111,12 @@ pub enum ZkManifestError {
         "Failed to produce zkprogram image binary path: Image binary path contains non-UTF8 encoded characters"
     )]
     InvalidBinaryPath,
+
+    #[error("Invalid manifest directory: {0}")]
+    InvalidManifestDirectory(String),
+
+    #[error("Can't cd to manifest directory {0}")]
+    CantCdToManifest(String),
 
     #[error("Failed to load binary from manifest at '{binary_path}': {err:?}")]
     FailedToLoadBinary { binary_path: String, err: IoError },

@@ -16,10 +16,6 @@ use crate::command::{DeployArgs, S3UploadArgs, SharedDeployArgs};
 use crate::common::ZkProgramManifest;
 use crate::error::{BonsolCliError, S3ClientError, ZkManifestError};
 
-fn get_s3_path(manifest_name: &str, image_id: &str) -> String {
-    format!("{}-{}", manifest_name, image_id)
-}
-
 pub async fn deploy(rpc_url: String, signer: Keypair, deploy_args: DeployArgs) -> Result<()> {
     let bar = ProgressBar::new_spinner();
     let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::confirmed());

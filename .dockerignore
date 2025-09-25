@@ -2,5 +2,5 @@ target
 **/target
 *.dockerfile
 rust-toolchain.toml
-relay/stark
+stark
 relaykp.json

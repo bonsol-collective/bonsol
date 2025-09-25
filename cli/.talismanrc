@@ -1,0 +1,4 @@
+allowed_patterns:
+- .*let build_result = build_zkprogram(&image_path, &keypair, &package, input_order).*
+ 
+ salam
