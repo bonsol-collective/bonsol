@@ -159,7 +159,7 @@ pub enum ZkManifestError {
     MissingPackage(String),
 
     #[error("Cargo metadata contains several matching packages with a manifest at {0}")]
-    MuliplePackages(String),
+    MultiplePackages(String),
 
     #[error("Failed to parse input: Input contains non-UTF8 encoded characters: {0}")]
     InvalidInput(serde_json::Value),

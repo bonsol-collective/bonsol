@@ -133,7 +133,7 @@ fn parse_cargo_manifest(image_path: &Path) -> Result<(Package, Vec<String>)> {
     }
 
     if matching.len() > 1 {
-        return Err(ZkManifestError::MuliplePackages(
+        return Err(ZkManifestError::MultiplePackages(
             cargo_manifest_path.to_string_lossy().to_string(),
         )
         .into());
