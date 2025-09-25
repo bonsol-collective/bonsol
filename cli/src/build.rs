@@ -1,11 +1,11 @@
 use std::fs::{self, File};
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
 use anyhow::Result;
-use cargo_toml::Manifest;
+use cargo_metadata::{MetadataCommand, Package};
 use indicatif::ProgressBar;
+use risc0_build::{DockerOptionsBuilder, GuestOptionsBuilder};
 use risc0_zkvm::compute_image_id;
 use solana_sdk::signer::Signer;
 
@@ -13,15 +13,12 @@ use crate::common::*;
 use crate::error::{BonsolCliError, ZkManifestError};
 
 pub fn build(keypair: &impl Signer, zk_program_path: String) -> Result<()> {
-    validate_build_dependencies()?;
-
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(100));
 
     let image_path = Path::new(&zk_program_path);
-    let (cargo_package_name, input_order) = parse_cargo_manifest(image_path)?;
-    let build_result =
-        build_zkprogram_manifest(image_path, &keypair, cargo_package_name, input_order);
+    let (package, input_order) = parse_cargo_manifest(image_path)?;
+    let build_result = build_zkprogram(image_path, &keypair, &package, input_order);
     let manifest_path = image_path.join(MANIFEST_JSON);
     match build_result {
         Err(e) => {
@@ -41,91 +38,37 @@ pub fn build(keypair: &impl Signer, zk_program_path: String) -> Result<()> {
     }
 }
 
-fn check_cargo_risczero_version() -> Result<(), BonsolCliError> {
-    let output = Command::new(CARGO_COMMAND)
-        .args(["risczero", "--version"])
-        .output()
-        .map_err(|e| {
-            BonsolCliError::BuildFailure(format!("Failed to get cargo-risczero version: {:?}", e))
-        })?;
-    if output.status.success() {
-        let version = String::from_utf8(output.stdout).map_err(|e| {
-            BonsolCliError::BuildFailure(format!("Failed to parse cargo-risczero version: {:?}", e))
-        })?;
-        if !version.contains(CARGO_RISCZERO_VERSION) {
-            return Err(BonsolCliError::BuildDependencyVersionMismatch {
-                dep: "cargo-risczero".to_string(),
-                version: CARGO_RISCZERO_VERSION.to_string(),
-                current_version: version,
-            });
-        }
-    }
-    Ok(())
-}
-
-fn validate_build_dependencies() -> Result<(), BonsolCliError> {
-    const CARGO_RISCZERO: &str = "risczero";
-    const DOCKER: &str = "docker";
-
-    let mut missing_deps = Vec::with_capacity(2);
-
-    if !cargo_has_plugin(CARGO_RISCZERO) {
-        missing_deps.push(format!("cargo-{}", CARGO_RISCZERO));
-    }
-
-    if !has_executable(DOCKER) {
-        missing_deps.push(DOCKER.into());
-    }
-
-    if !missing_deps.is_empty() {
-        return Err(BonsolCliError::MissingBuildDependencies { missing_deps });
-    }
-
-    check_cargo_risczero_version()?;
-
-    Ok(())
-}
-
-fn parse_cargo_manifest_inputs(
-    manifest: &Manifest,
-    manifest_path_str: String,
-) -> Result<Vec<String>> {
-    const METADATA: &str = "metadata";
+fn parse_cargo_manifest_inputs(package: &Package) -> Result<Vec<String>> {
     const ZKPROGRAM: &str = "zkprogram";
     const INPUT_ORDER: &str = "input_order";
 
-    let meta = manifest
-        .package
-        .as_ref()
-        .and_then(|p| p.metadata.as_ref())
-        .ok_or(ZkManifestError::MissingPackageMetadata(
-            manifest_path_str.clone(),
-        ))?;
-    let meta_table = meta.as_table().ok_or(ZkManifestError::ExpectedTable {
-        manifest_path: manifest_path_str.clone(),
-        name: METADATA.into(),
-    })?;
-    let zkprogram = meta_table
+    let meta = if package.metadata.is_null() {
+        return Err(ZkManifestError::MissingPackageMetadata(
+            package.manifest_path.as_str().to_owned(),
+        )
+        .into());
+    } else {
+        &package.metadata
+    };
+
+    let zkprogram = meta
         .get(ZKPROGRAM)
         .ok_or(ZkManifestError::MissingProgramMetadata {
-            manifest_path: manifest_path_str.clone(),
+            manifest_path: package.manifest_path.as_str().to_owned(),
             meta: meta.to_owned(),
         })?;
-    let zkprogram_table = zkprogram.as_table().ok_or(ZkManifestError::ExpectedTable {
-        manifest_path: manifest_path_str.clone(),
-        name: ZKPROGRAM.into(),
-    })?;
-    let input_order =
-        zkprogram_table
-            .get(INPUT_ORDER)
-            .ok_or(ZkManifestError::MissingInputOrder {
-                manifest_path: manifest_path_str.clone(),
-                zkprogram: zkprogram.to_owned(),
-            })?;
+
+    let input_order = zkprogram
+        .get(INPUT_ORDER)
+        .ok_or(ZkManifestError::MissingInputOrder {
+            manifest_path: package.manifest_path.as_str().to_owned(),
+            zkprogram: zkprogram.to_owned(),
+        })?;
+
     let inputs = input_order
         .as_array()
         .ok_or(ZkManifestError::ExpectedArray {
-            manifest_path: manifest_path_str.clone(),
+            manifest_path: package.manifest_path.as_str().to_owned(),
             name: INPUT_ORDER.into(),
         })?;
 
@@ -146,7 +89,7 @@ fn parse_cargo_manifest_inputs(
             .map(|r| format!("Error: {:?}\n", r.unwrap_err()))
             .collect();
         return Err(ZkManifestError::InvalidInputs {
-            manifest_path: manifest_path_str,
+            manifest_path: package.manifest_path.as_str().to_owned(),
             errs,
         }
         .into());
@@ -155,152 +98,125 @@ fn parse_cargo_manifest_inputs(
     Ok(input_order.into_iter().map(Result::unwrap).collect())
 }
 
-fn parse_cargo_manifest(image_path: &Path) -> Result<(String, Vec<String>)> {
-    let cargo_manifest_path = image_path.join(CARGO_TOML);
-    let cargo_manifest_path_str = cargo_manifest_path.to_string_lossy().to_string();
+fn parse_cargo_manifest(image_path: &Path) -> Result<(Package, Vec<String>)> {
+    let cargo_manifest_path = fs::canonicalize(image_path.join(CARGO_TOML))?;
+
     if !cargo_manifest_path.exists() {
         return Err(
             ZkManifestError::MissingManifest(image_path.to_string_lossy().to_string()).into(),
         );
     }
-    let cargo_manifest = cargo_toml::Manifest::from_path(&cargo_manifest_path).map_err(|err| {
-        ZkManifestError::FailedToLoadManifest {
-            manifest_path: cargo_manifest_path_str.clone(),
-            err,
-        }
-    })?;
-    let cargo_package_name = cargo_manifest
-        .package
-        .as_ref()
-        .map(|p| p.name.clone())
-        .ok_or(ZkManifestError::MissingPackageName(
-            cargo_manifest_path_str.clone(),
-        ))?;
-    let input_order = parse_cargo_manifest_inputs(&cargo_manifest, cargo_manifest_path_str)?;
 
-    Ok((cargo_package_name, input_order))
+    let meta = MetadataCommand::new()
+        .manifest_path(&cargo_manifest_path)
+        .no_deps()
+        .exec()
+        .map_err(|err| ZkManifestError::FailedToLoadManifest {
+            manifest_path: cargo_manifest_path.to_string_lossy().to_string(),
+            err,
+        })?;
+
+    let mut matching: Vec<Package> = meta
+        .packages
+        .into_iter()
+        .filter(|pkg| {
+            let std_path: &Path = pkg.manifest_path.as_ref();
+            std_path == cargo_manifest_path
+        })
+        .collect();
+
+    if matching.is_empty() {
+        return Err(ZkManifestError::MissingPackage(
+            cargo_manifest_path.to_string_lossy().to_string(),
+        )
+        .into());
+    }
+
+    if matching.len() > 1 {
+        return Err(ZkManifestError::MuliplePackages(
+            cargo_manifest_path.to_string_lossy().to_string(),
+        )
+        .into());
+    }
+
+    let package = matching.pop().unwrap();
+
+    let input_order = parse_cargo_manifest_inputs(&package)?;
+
+    Ok((package, input_order))
 }
 
-fn build_zkprogram_manifest(
+fn build_zkprogram(
     image_path: &Path,
     keypair: &impl Signer,
-    cargo_package_name: String,
+    package: &Package,
     input_order: Vec<String>,
 ) -> Result<ZkProgramManifest> {
     const RISCV_DOCKER_PATH: &str = "target/riscv32im-risc0-zkvm-elf/docker";
-    const CARGO_RISCZERO_BUILD_ARGS: &[&str; 4] =
-        &["risczero", "build", "--manifest-path", "Cargo.toml"];
 
     println!("Starting build_zkprogram_manifest");
     println!("image_path: {:?}", image_path);
-    println!("cargo_package_name: {}", cargo_package_name);
+    println!("cargo_package_name: {}", package.name);
 
     let binary_path = image_path
         .join(RISCV_DOCKER_PATH)
-        .join(format!("{cargo_package_name}.bin"));
+        .join(format!("{}.bin", package.name));
 
     println!("Expected binary_path: {:?}", binary_path);
 
-    let mut command = Command::new(CARGO_COMMAND);
-    command
-        .current_dir(image_path)
-        .args(CARGO_RISCZERO_BUILD_ARGS)
-        .env(
-            "CARGO_TARGET_DIR",
-            fs::canonicalize(image_path)?.join(TARGET_DIR),
-        );
+    // Do the build
+    let docker_options = DockerOptionsBuilder::default().build().unwrap();
 
-    // Construct the command string for printing
-    let program = command.get_program().to_string_lossy();
-    let args_str = command
-        .get_args()
-        .map(|s| s.to_string_lossy())
-        .collect::<Vec<_>>()
-        .join(" ");
-    let env_str = command
-        .get_envs()
-        .map(|(k, v)| {
-            format!(
-                "{}=\"{}\"",
-                k.to_string_lossy(),
-                v.unwrap_or_default().to_string_lossy()
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-    let current_dir_str = if let Some(dir) = command.get_current_dir() {
-        format!("cd {}; ", dir.to_string_lossy())
-    } else {
-        String::new()
-    };
+    let options = GuestOptionsBuilder::default()
+        .use_docker(docker_options)
+        .build()
+        .unwrap();
 
-    println!(
-        "Executing command: {}{program} {}",
-        current_dir_str, args_str
-    );
-    if !env_str.is_empty() {
-        println!("Environment variables: {}", env_str);
+    let r = risc0_build::build_package(&package, "target", options);
+
+    if let Err(err) = r {
+        eprintln!("[ERROR] Build failed. Error:\n{}", err);
+        return Err(BonsolCliError::BuildFailure(err.to_string()).into());
     }
 
-    let output = match command.output() {
-        Ok(output) => output,
+    println!("Build succeeded. Reading binary from {:?}", binary_path);
+    let elf_contents = match fs::read(&binary_path) {
+        Ok(bytes) => bytes,
         Err(e) => {
-            eprintln!("[ERROR] Failed to execute build command: {:?}", e);
+            eprintln!("[ERROR] Failed to read binary at {:?}: {}", binary_path, e);
             return Err(e.into());
         }
     };
 
-    println!("Command exit status: {:?}", output.status);
+    println!("Binary size: {} bytes", elf_contents.len());
 
-    if output.status.success() {
-        println!("Build succeeded. Reading binary from {:?}", binary_path);
-        let elf_contents = match fs::read(&binary_path) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                eprintln!("[ERROR] Failed to read binary at {:?}: {}", binary_path, e);
-                return Err(e.into());
-            }
-        };
+    let image_id = compute_image_id(&elf_contents).map_err(|err| {
+        eprintln!("[ERROR] Failed to compute image ID: {:?}", err);
+        BonsolCliError::FailedToComputeImageId {
+            binary_path: binary_path.to_string_lossy().to_string(),
+            err,
+        }
+    })?;
 
-        println!("Binary size: {} bytes", elf_contents.len());
+    println!("Computed image_id: {}", image_id);
 
-        let image_id = compute_image_id(&elf_contents).map_err(|err| {
-            eprintln!("[ERROR] Failed to compute image ID: {:?}", err);
-            BonsolCliError::FailedToComputeImageId {
-                binary_path: binary_path.to_string_lossy().to_string(),
-                err,
-            }
-        })?;
+    let signature = keypair.sign_message(elf_contents.as_slice());
+    println!("Signed binary");
 
-        println!("Computed image_id: {}", image_id);
+    let zkprogram_manifest = ZkProgramManifest {
+        name: package.name.clone(),
+        binary_path: binary_path
+            .to_str()
+            .ok_or_else(|| {
+                eprintln!("[ERROR] Invalid binary path: {:?}", binary_path);
+                ZkManifestError::InvalidBinaryPath
+            })?
+            .to_string(),
+        input_order,
+        image_id: image_id.to_string(),
+        size: elf_contents.len() as u64,
+        signature: signature.to_string(),
+    };
 
-        let signature = keypair.sign_message(elf_contents.as_slice());
-        println!("Signed binary");
-
-        let zkprogram_manifest = ZkProgramManifest {
-            name: cargo_package_name,
-            binary_path: binary_path
-                .to_str()
-                .ok_or_else(|| {
-                    eprintln!("[ERROR] Invalid binary path: {:?}", binary_path);
-                    ZkManifestError::InvalidBinaryPath
-                })?
-                .to_string(),
-            input_order,
-            image_id: image_id.to_string(),
-            size: elf_contents.len() as u64,
-            signature: signature.to_string(),
-        };
-
-        return Ok(zkprogram_manifest);
-    } else {
-        eprintln!(
-            "[ERROR] Build failed. Stderr:\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        return Err(BonsolCliError::BuildFailure(
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        )
-        .into());
-    }
+    return Ok(zkprogram_manifest);
 }

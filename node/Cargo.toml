@@ -78,6 +78,7 @@ tracing-subscriber = { version = "0.3.18", features = [
 yellowstone-grpc-client = { workspace = true }
 yellowstone-grpc-proto = { workspace = true, features = ["convert"] }
 metrics-exporter-prometheus = "0.16"
+env_logger = "0.11.8"
 
 [dev-dependencies]
 expect-test = "1.5.0"

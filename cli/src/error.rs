@@ -1,6 +1,5 @@
 use std::io::Error as IoError;
 
-use cargo_toml::Error as CargoManifestError;
 use object_store::Error as S3Error;
 use serde_json::Error as SerdeJsonError;
 use thiserror::Error as DeriveError;
@@ -135,17 +134,11 @@ pub enum ZkManifestError {
     #[error("Failed to load manifest at '{manifest_path}': {err:?}")]
     FailedToLoadManifest {
         manifest_path: String,
-        err: CargoManifestError,
+        err: cargo_metadata::Error,
     },
-
-    #[error("Expected '{name}' to be a table at '{manifest_path}'")]
-    ExpectedTable { manifest_path: String, name: String },
 
     #[error("Expected '{name}' to be an array at '{manifest_path}'")]
     ExpectedArray { manifest_path: String, name: String },
-
-    #[error("Manifest at '{0}' does not contain a package name")]
-    MissingPackageName(String),
 
     #[error("Manifest at '{0}' does not contain a package metadata field")]
     MissingPackageMetadata(String),
@@ -153,17 +146,23 @@ pub enum ZkManifestError {
     #[error("Manifest at '{manifest_path}' has a metadata table that is missing a zkprogram metadata key: meta: {meta:?}")]
     MissingProgramMetadata {
         manifest_path: String,
-        meta: cargo_toml::Value,
+        meta: serde_json::Value,
     },
 
     #[error("Manifest at '{manifest_path}' has a zkprogram metadata table that is missing a input_order key: zkprogram: {zkprogram:?}")]
     MissingInputOrder {
         manifest_path: String,
-        zkprogram: cargo_toml::Value,
+        zkprogram: serde_json::Value,
     },
 
+    #[error("Cargo metadata does not contain a package with a manifest at {0}")]
+    MissingPackage(String),
+
+    #[error("Cargo metadata contains several matching packages with a manifest at {0}")]
+    MuliplePackages(String),
+
     #[error("Failed to parse input: Input contains non-UTF8 encoded characters: {0}")]
-    InvalidInput(cargo_toml::Value),
+    InvalidInput(serde_json::Value),
 
     #[error("Failed to parse the following inputs at '{manifest_path}': {}", errs.join("\n"))]
     InvalidInputs {

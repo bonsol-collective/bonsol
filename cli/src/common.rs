@@ -23,18 +23,6 @@ pub(crate) const CARGO_TOML: &str = "Cargo.toml";
 pub(crate) const TARGET_DIR: &str = "target";
 pub(crate) const CARGO_RISCZERO_VERSION: &str = "2.3.1";
 
-pub fn cargo_has_plugin(plugin_name: &str) -> bool {
-    Command::new("cargo")
-        .args(["--list"])
-        .output()
-        .map(|output| {
-            String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .any(|line| line.trim().starts_with(plugin_name))
-        })
-        .unwrap_or(false)
-}
-
 pub fn has_executable(executable: &str) -> bool {
     Command::new("which")
         .arg(executable)
