@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
     match command {
         Command::Build { zk_program_path } => build::build(
             &load_solana_config(config, rpc_url, keypair)?.1,
-            zk_program_path,
+            zk_program_path.unwrap_or_else(|| ".".to_owned()),
         ),
         Command::Deploy { deploy_args } => {
             let (rpc_url, keypair) = load_solana_config(config, rpc_url, keypair)?;

@@ -1,6 +1,5 @@
 use std::io::Error as IoError;
 
-use cargo_toml::Error as CargoManifestError;
 use object_store::Error as S3Error;
 use serde_json::Error as SerdeJsonError;
 use thiserror::Error as DeriveError;
@@ -35,21 +34,8 @@ pub enum BonsolCliError {
     #[error(transparent)]
     S3ClientError(#[from] S3ClientError),
 
-    #[error("This upload method is not supported")]
-    UnsupportedDeployError(),
-
     #[error("The binary uploaded does not match the local binary at path '{binary_path}', is the URL correct?\nupload_url: {url}")]
     OriginBinaryMismatch { url: String, binary_path: String },
-
-    #[error("The following build dependencies are missing: {}", missing_deps.join(", "))]
-    MissingBuildDependencies { missing_deps: Vec<String> },
-
-    #[error("Build Dependency version mismatch: {} is required at version {}, but the current version is {}", dep, version, current_version)]
-    BuildDependencyVersionMismatch {
-        dep: String,
-        version: String,
-        current_version: String,
-    },
 }
 
 #[derive(Debug, DeriveError, Clone)]
@@ -126,6 +112,12 @@ pub enum ZkManifestError {
     )]
     InvalidBinaryPath,
 
+    #[error("Invalid manifest directory: {0}")]
+    InvalidManifestDirectory(String),
+
+    #[error("Can't cd to manifest directory {0}")]
+    CantCdToManifest(String),
+
     #[error("Failed to load binary from manifest at '{binary_path}': {err:?}")]
     FailedToLoadBinary { binary_path: String, err: IoError },
 
@@ -135,17 +127,11 @@ pub enum ZkManifestError {
     #[error("Failed to load manifest at '{manifest_path}': {err:?}")]
     FailedToLoadManifest {
         manifest_path: String,
-        err: CargoManifestError,
+        err: cargo_metadata::Error,
     },
-
-    #[error("Expected '{name}' to be a table at '{manifest_path}'")]
-    ExpectedTable { manifest_path: String, name: String },
 
     #[error("Expected '{name}' to be an array at '{manifest_path}'")]
     ExpectedArray { manifest_path: String, name: String },
-
-    #[error("Manifest at '{0}' does not contain a package name")]
-    MissingPackageName(String),
 
     #[error("Manifest at '{0}' does not contain a package metadata field")]
     MissingPackageMetadata(String),
@@ -153,17 +139,23 @@ pub enum ZkManifestError {
     #[error("Manifest at '{manifest_path}' has a metadata table that is missing a zkprogram metadata key: meta: {meta:?}")]
     MissingProgramMetadata {
         manifest_path: String,
-        meta: cargo_toml::Value,
+        meta: serde_json::Value,
     },
 
     #[error("Manifest at '{manifest_path}' has a zkprogram metadata table that is missing a input_order key: zkprogram: {zkprogram:?}")]
     MissingInputOrder {
         manifest_path: String,
-        zkprogram: cargo_toml::Value,
+        zkprogram: serde_json::Value,
     },
 
+    #[error("Cargo metadata does not contain a package with a manifest at {0}")]
+    MissingPackage(String),
+
+    #[error("Cargo metadata contains several matching packages with a manifest at {0}")]
+    MultiplePackages(String),
+
     #[error("Failed to parse input: Input contains non-UTF8 encoded characters: {0}")]
-    InvalidInput(cargo_toml::Value),
+    InvalidInput(serde_json::Value),
 
     #[error("Failed to parse the following inputs at '{manifest_path}': {}", errs.join("\n"))]
     InvalidInputs {

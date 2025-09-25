@@ -28,7 +28,6 @@ env_logger = "0.10.2"
 hex = "0.4.3"
 byte-unit = "4.0.19"
 bytes = "1.4.0"
-cargo_toml = "0.20.3"
 clap = { version = "4.4.2", features = ["derive", "env"] }
 indicatif = "0.17.8"
 log = "0.4.21"
@@ -54,6 +53,8 @@ solana-sdk = { workspace = true }
 tera = "1.17.1"
 thiserror = "1.0.65"
 tokio = { version = "1.38.0", features = ["full"] }
+cargo_metadata = "0.19"
+risc0-build = { version = "3.0.3", features = ["docker"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"

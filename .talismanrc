@@ -8,3 +8,5 @@ fileignoreconfig:
 - filename: .github/workflows/build-node-containers.yaml
   checksum: d971193611dfbf9b2538f3642818c69f1ef3eb375f5f465d743f32a519ad5989
 version: ""
+allowed_patterns:
+- .*let\ build_result.*
