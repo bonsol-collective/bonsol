@@ -233,7 +233,7 @@ pub enum Command {
         dir: Option<String>,
 
         #[arg(short = 'n', long)]
-        project_name: String,
+        project_name: Option<String>,
     },
 
     #[command(about = "Read and display the journal from a binary proof receipt file")]

@@ -3,8 +3,8 @@
 //! to extract the cycle count from an elf.
 
 use anyhow::Result;
-use risc0_binfmt::{MemoryImage, Program, ProgramBinary};
-use risc0_zkvm::{ExecutorEnv, ExecutorImpl, Session, GUEST_MAX_MEM};
+use risc0_binfmt::{MemoryImage, ProgramBinary};
+use risc0_zkvm::{ExecutorEnv, ExecutorImpl, Session};
 
 pub fn estimate<E: MkImage>(elf: E, env: ExecutorEnv) -> Result<()> {
     let session = get_session(elf, env)?;
