@@ -158,7 +158,7 @@ async fn main() -> anyhow::Result<()> {
             )
             .await
         }
-        Command::Init { project_name, dir } => init::init_project(&project_name, dir),
+        Command::Init { project_name, dir } => init::init_project(project_name, dir),
         Command::ReadReceipt { receipt_path } => {
             read_receipt::read_receipt_file(Path::new(&receipt_path))
         }
