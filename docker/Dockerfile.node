@@ -44,16 +44,20 @@ RUN --mount=type=cache,target=/bonsol/target \
 # Build runtime
 FROM ubuntu:24.04 AS runtime
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates libsodium23 libgomp1 \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy both binaries from builders
 COPY --from=cpu-builder /bonsol-node-cpu /opt/bonsol/bin/
 COPY --from=gpu-builder /bonsol-node-gpu /opt/bonsol/bin/
 
 # Copy Stark stuff
-COPY --from=risczero /app/stark_verify /opt/bonsol/bin/
-COPY --from=risczero /usr/local/sbin/rapidsnark /opt/bonsol/bin/
-COPY --from=risczero /app/prover.sh /opt/bonsol/bin/
-COPY --from=risczero /app/stark_verify.dat /opt/bonsol/lib/
-COPY --from=risczero /app/stark_verify_final.zkey /opt/bonsol/lib/
+COPY --from=risczero /app/stark_verify /opt/bonsol/stark/
+COPY --from=risczero /usr/local/sbin/rapidsnark /opt/bonsol/stark/
+COPY --from=risczero /app/prover.sh /opt/bonsol/stark/
+COPY --from=risczero /app/stark_verify.dat /opt/bonsol/stark/
+COPY --from=risczero /app/stark_verify_final.zkey /opt/bonsol/stark/
 
 ENV PATH="/opt/bonsol/bin:${PATH}"
 

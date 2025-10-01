@@ -1373,7 +1373,6 @@ dependencies = [
  "solana-rpc-client-api",
  "solana-sdk",
  "tokio",
- "tracing",
 ]
 
 [[package]]

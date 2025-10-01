@@ -60,7 +60,7 @@ fn filter_txs(
                 for group in inner_ix_groups {
                     for ix in group.instructions {
                         if let UiInstruction::Compiled(instruction) = ix {
-                            if &scc[instruction.program_id_index as usize] == program {
+                            if scc.get(instruction.program_id_index as usize) == Some(program) {
                                 let data = bs58::decode(&instruction.data).into_vec();
                                 if let Ok(data) = data {
                                     res.push(BonsolInstruction {
