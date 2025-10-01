@@ -139,6 +139,9 @@ async fn main() -> Result<()> {
     }
     let config_file = &args[2];
     let config = config::load_config(config_file);
+
+    info!("Bonsol Node v{} starting...", env!("CARGO_PKG_VERSION"));
+
     if let MetricsConfig::Prometheus {} = config.metrics_config {
         let builder = PrometheusBuilder::new();
         builder
