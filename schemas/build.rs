@@ -25,8 +25,7 @@ fn main() {
     }
     // Define schema directory and target directory for generated Rust code.
     let schema_dir = Path::new("flatbuffers");
-    let generated_src =
-        PathBuf::from(env::var("GENERATED_CODE_DIR").unwrap_or_else(|_| "src".to_string()));
+
     // Collect all .fbs files in the schema directory.
     let file_list: Vec<_> = fs::read_dir(schema_dir)
         .expect("Schema directory not found")
@@ -43,15 +42,14 @@ fn main() {
         .collect();
 
     // Build flatc arguments.
+    let out_dir = std::env::var("OUT_DIR").unwrap();
     let mut args = vec![
         "--gen-mutable",
         "--gen-object-api",
         "--reflect-names",
         "--rust",
         "-o",
-        generated_src
-            .to_str()
-            .expect("Invalid path for generated source"),
+        &out_dir,
     ];
 
     // Add schema file paths to the arguments.
@@ -70,10 +68,10 @@ fn main() {
     );
 
     // Set an environment variable with the generated source path, stripping "src/" if present.
-    let generated_path = generated_src.strip_prefix("src").unwrap_or(&generated_src);
-    println!("cargo:rustc-env=GENERATED_SRC={}", generated_path.display());
+    // let generated_path = generated_src.strip_prefix("src").unwrap_or(&generated_src);
+    // println!("cargo:rustc-env=GENERATED_SRC={}", generated_path.display());
     // Instruct Cargo to re-run this script if any files in the schema directory change.
     for file in file_list {
-        println!("cargo:rerun-if-changed={}", file.display());
+        //        println!("cargo:rerun-if-changed={}", file.display());
     }
 }

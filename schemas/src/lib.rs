@@ -1,9 +1,39 @@
-pub mod channel_instruction_generated;
-pub mod claim_v1_generated;
-pub mod deploy_v1_generated;
-pub mod execution_request_v1_generated;
-pub mod input_type_generated;
-pub mod status_v1_generated;
+#[allow(warnings)]
+pub mod channel_instruction_generated {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/channel_instruction_generated.rs"
+    ));
+}
+
+#[allow(warnings)]
+pub mod claim_v1_generated {
+    include!(concat!(env!("OUT_DIR"), "/claim_v1_generated.rs"));
+}
+
+#[allow(warnings)]
+pub mod deploy_v1_generated {
+    include!(concat!(env!("OUT_DIR"), "/deploy_v1_generated.rs"));
+}
+
+#[allow(warnings)]
+pub mod execution_request_v1_generated {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/execution_request_v1_generated.rs"
+    ));
+}
+
+#[allow(warnings)]
+pub mod input_type_generated {
+    include!(concat!(env!("OUT_DIR"), "/input_type_generated.rs"));
+}
+
+#[allow(warnings)]
+pub mod status_v1_generated {
+    include!(concat!(env!("OUT_DIR"), "/status_v1_generated.rs"));
+}
+
 use std::fmt::Display;
 
 use error::ChannelSchemaError;
@@ -15,7 +45,8 @@ pub use deploy_v1_generated::*;
 pub use execution_request_v1_generated::*;
 pub use input_type_generated::*;
 pub use status_v1_generated::*;
-pub fn parse_ix_data(ix_data: &[u8]) -> Result<ChannelInstruction, ChannelSchemaError> {
+
+pub fn parse_ix_data(ix_data: &'_ [u8]) -> Result<ChannelInstruction<'_>, ChannelSchemaError> {
     let instruction =
         root_as_channel_instruction(ix_data).map_err(|_| ChannelSchemaError::InvalidInstruction)?;
     Ok(instruction)
