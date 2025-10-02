@@ -72,6 +72,8 @@ fn main() {
     // println!("cargo:rustc-env=GENERATED_SRC={}", generated_path.display());
     // Instruct Cargo to re-run this script if any files in the schema directory change.
     for file in file_list {
-        //        println!("cargo:rerun-if-changed={}", file.display());
+        println!("cargo:rerun-if-changed={}", file.display());
     }
+    println!("cargo:rerun-if-changed=flatbuffers");
+    println!("cargo:rerun-if-changed=schemas/build.rs");
 }
