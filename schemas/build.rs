@@ -74,6 +74,4 @@ fn main() {
     for file in file_list {
         println!("cargo:rerun-if-changed={}", file.display());
     }
-    println!("cargo:rerun-if-changed=flatbuffers");
-    println!("cargo:rerun-if-changed=schemas/build.rs");
 }
