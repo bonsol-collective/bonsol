@@ -1,8 +1,9 @@
 ARG FLATC_VERSION=24.3.25
 ARG RUST_VERSION=1.89.0
-ARG SOLANA_VERSION=1.18.22
+ARG SOLANA_VERSION=2.3.11
 ARG ANCHOR_VERSION=0.31.1
 ARG NODE_VERSION=22.19.0
+ARG CUDA_VERSION=13
 
 FROM ubuntu:24.04 AS flatc-build
 
@@ -18,6 +19,8 @@ RUN apt-get update \
       curl \
       git \
       gnupg2 \
+      unzip \
+      rsync \
   && rm -rf /var/lib/apt/lists/*
 
 ADD https://github.com/google/flatbuffers/archive/refs/tags/v${FLATC_VERSION}.tar.gz v${FLATC_VERSION}.tar.gz
@@ -35,6 +38,7 @@ ARG RUST_VERSION
 ARG SOLANA_VERSION
 ARG ANCHOR_VERSION
 ARG NODE_VERSION
+ARG CUDA_VERSION
 
 COPY --from=flatc-build /usr/local/bin /usr/local/bin
 COPY --from=flatc-build /usr/local/include /usr/local/include
@@ -43,7 +47,7 @@ COPY --from=flatc-build /usr/local/lib /usr/local/lib
 # Deps
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
-    build-essential git \
+    build-essential git libsodium23 \
     pkg-config ca-certificates \
     libudev-dev llvm libclang-dev \
     protobuf-compiler libssl-dev curl \
@@ -56,6 +60,16 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
   && rustup install nightly \
   && rustup component add rustfmt rust-analyzer clippy \
   && cargo install cargo-binstall
+
+# Get CUDA-ed
+RUN curl -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb \
+  && dpkg -i cuda-keyring_1.1-1_all.deb \
+  && apt-get update \
+  && apt-get install --no-install-recommends -y cuda-toolkit-${CUDA_VERSION} \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm cuda-keyring_1.1-1_all.deb
+
+ENV PATH=/usr/local/cuda/bin:${PATH}
 
 # Risc0
 RUN cargo binstall -y cargo-risczero
