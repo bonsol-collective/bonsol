@@ -253,6 +253,6 @@ fn verify_with_prover(
         }
         _ => false,
     };
-    msg!("Proof verified with {}", prover_version.to_string());
+    msg!("Proof verified with {}", prover_version);
     Ok(verified)
 }
