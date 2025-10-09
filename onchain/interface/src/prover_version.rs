@@ -153,6 +153,6 @@ mod tests {
         let default_version = FBSProverVersion::DEFAULT;
         let version = ProverVersion::try_from(default_version);
         assert!(version.is_ok());
-        assert_eq!(version.unwrap(), VERSION_V2_3_1);
+        assert_eq!(version.unwrap(), VERSION_V3_0_3);
     }
 }
