@@ -36,5 +36,3 @@ jobs:
           tags: |
             ghcr.io/bonsol-collective/bonsol-node:latest
             ghcr.io/bonsol-collective/bonsol-node:${{ env.TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
