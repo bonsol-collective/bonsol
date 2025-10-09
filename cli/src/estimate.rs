@@ -39,9 +39,10 @@ impl<'a> MkImage for &'a [u8] {
 
 #[cfg(test)]
 mod estimate_tests {
+    use crate::DEFAULT_SESSION_LIMIT;
     use anyhow::Result;
     use risc0_binfmt::MemoryImage;
-    use risc0_circuit_rv32im::execute::testutil::{user, DEFAULT_SESSION_LIMIT};
+    use risc0_circuit_rv32im::execute::testutil::user;
     use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
     use risc0_zkvm::ExecutorEnv;
 
@@ -60,7 +61,7 @@ mod estimate_tests {
         let mut env = &mut ExecutorEnv::builder();
         env = env
             .segment_limit_po2(DEFAULT_SEGMENT_LIMIT_PO2 as u32)
-            .session_limit(DEFAULT_SESSION_LIMIT);
+            .session_limit(Some(DEFAULT_SESSION_LIMIT));
         let image = MemoryImage::new_kernel(program);
         let res = estimate::get_session(image, env.build().unwrap());
 

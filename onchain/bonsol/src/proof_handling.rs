@@ -6,7 +6,10 @@ use solana_program::hash::hashv;
 
 use crate::{
     error::ChannelError,
-    prover::{PROVER_CONSTANTS_V1_0_1, PROVER_CONSTANTS_V1_2_1, PROVER_CONSTANTS_V2_3_1},
+    prover::{
+        PROVER_CONSTANTS_V1_0_1, PROVER_CONSTANTS_V1_2_1, PROVER_CONSTANTS_V2_3_1,
+        PROVER_CONSTANTS_V3_0_3,
+    },
     verifying_key::VERIFYINGKEY,
 };
 
@@ -35,6 +38,17 @@ pub fn verify_risc0_v1_2_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelE
 }
 
 pub fn verify_risc0_v2_3_1(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelError> {
+    let ins: [[u8; 32]; 5] = [
+        sized_range::<32>(&inputs[0..32])?,
+        sized_range::<32>(&inputs[32..64])?,
+        sized_range::<32>(&inputs[64..96])?,
+        sized_range::<32>(&inputs[96..128])?,
+        sized_range::<32>(&inputs[128..160])?,
+    ];
+    verify_proof::<5>(proof, ins, &VERIFYINGKEY)
+}
+
+pub fn verify_risc0_v3_0_3(proof: &[u8], inputs: &[u8]) -> Result<bool, ChannelError> {
     let ins: [[u8; 32]; 5] = [
         sized_range::<32>(&inputs[0..32])?,
         sized_range::<32>(&inputs[32..64])?,
@@ -224,6 +238,59 @@ pub fn prepare_inputs_v2_3_1(
         PROVER_CONSTANTS_V2_3_1.bn254_control_id_bytes,
     ]
     .concat();
+    Ok(inputs)
+}
+
+pub fn output_digest_v3_0_3(
+    input_digest: &[u8],
+    committed_outputs: &[u8],
+    assumption_digest: &[u8],
+) -> [u8; 32] {
+    // Avoid extra allocation by hashing multiple slices directly
+    let journal = hashv(&[input_digest, committed_outputs]);
+    hashv(&[
+        PROVER_CONSTANTS_V3_0_3.output_hash.as_ref(),
+        journal.as_ref(),
+        assumption_digest,
+        &2u16.to_le_bytes(),
+    ])
+    .to_bytes()
+}
+
+pub fn prepare_inputs_v3_0_3(
+    image_id: &str,
+    execution_digest: &[u8],
+    output_digest: &[u8],
+    system_exit_code: u32,
+    user_exit_code: u32,
+) -> Result<Vec<u8>, ChannelError> {
+    let imgbytes = hex::decode(image_id).map_err(|_| ChannelError::InvalidFieldElement)?;
+    let mut digest = hashv(&[
+        PROVER_CONSTANTS_V3_0_3.receipt_claim_hash.as_ref(),
+        &[0u8; 32],
+        &imgbytes,
+        execution_digest,
+        output_digest,
+        &system_exit_code.to_le_bytes(),
+        &user_exit_code.to_le_bytes(),
+        &4u16.to_le_bytes(),
+    ])
+    .to_bytes();
+
+    let (c0, c1) = split_digest_reversed(&mut PROVER_CONSTANTS_V3_0_3.control_root.clone())
+        .map_err(|_| ChannelError::InvalidFieldElement)?;
+    let (half1_bytes, half2_bytes) =
+        split_digest_reversed(&mut digest).map_err(|_| ChannelError::InvalidFieldElement)?;
+
+    let inputs = [
+        c0,
+        c1,
+        half1_bytes.try_into().unwrap(),
+        half2_bytes.try_into().unwrap(),
+        PROVER_CONSTANTS_V3_0_3.bn254_control_id_bytes,
+    ]
+    .concat();
+
     Ok(inputs)
 }
 

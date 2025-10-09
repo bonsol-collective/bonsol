@@ -45,6 +45,19 @@ pub fn verify_prover_version(required: ProverVersion) -> Result<()> {
             }
             info!("Risc0 Prover with digest {}", verifier_digest);
         }
+        ProverVersion::V3_0_3 {
+            verifier_digest, ..
+        } => {
+            if verifier_digest != prover_digest {
+                return Err(anyhow::anyhow!(
+                    "Prover version mismatch, expected: {}, got: {}",
+                    verifier_digest,
+                    prover_digest
+                ));
+            }
+            info!("Risc0 Prover with digest {}", verifier_digest);
+        }
+
         _ => {
             return Err(anyhow::anyhow!("Unsupported prover version"));
         }

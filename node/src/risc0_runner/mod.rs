@@ -2,6 +2,7 @@ mod utils;
 pub mod verify_prover_version;
 
 use anyhow::anyhow;
+use bonsol_interface::prover_version::VERSION_V3_0_3;
 
 use {
     solana_sdk::instruction::AccountMeta,
@@ -22,7 +23,7 @@ use {
     },
     bonsol_interface::{
         bonsol_schema::{ClaimV1, DeployV1, ExecutionRequestV1},
-        prover_version::{ProverVersion, VERSION_V2_3_1},
+        prover_version::ProverVersion,
     },
     dashmap::DashMap,
     risc0_binfmt::MemoryImage,
@@ -58,7 +59,7 @@ use {
     verify_prover_version::verify_prover_version,
 };
 
-const REQUIRED_PROVER: ProverVersion = VERSION_V2_3_1;
+const REQUIRED_PROVER: ProverVersion = VERSION_V3_0_3;
 
 #[derive(Debug, Error)]
 pub enum Risc0RunnerError {

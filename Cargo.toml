@@ -18,7 +18,7 @@ members = [
 
 
 resolver = "2"
-package.version = "0.5.0"
+package.version = "0.6.0"
 
 [workspace.dependencies]
 solana-sdk = "2.3.1"
@@ -33,21 +33,21 @@ solana-account-decoder = "2.3.6"
 solana-cli-config = "2.3.6"
 yellowstone-grpc-client = "8.0.0"
 yellowstone-grpc-proto = "8.0.0"
-risc0-zkvm = { version = "2.3.2", features = [
+risc0-zkvm = { version = "3.0.3", features = [
   "prove",
 ], default-features = false }
-risc0-core = { version = "2.0.0" }
-risc0-zkp = { version = "2.0.3" }
-risc0-groth16 = { version = "2.0.3" }
-risc0-binfmt = { version = "2.0.3" }
-risc0-circuit-recursion = { version = "3.0.1" }
-risc0-circuit-rv32im = { version = "3.0.1" }
-risc0-zkvm-platform = { version = "2.1.0" }
-risc0-build = { version = "2.3.2" }
-bonsol-interface = { version = "0.5.0", path = "./onchain/interface" }
-bonsol-schema = { version = "0.5.0", path = "./schemas" }
-bonsol-sdk = { version = "0.5.0", path = "./sdk" }
-bonsol-prover = { version = "0.5.0", path = "./prover" }
+risc0-core = { version = "3.0.0" }
+risc0-zkp = { version = "3.0.2" }
+risc0-groth16 = { version = "3.0.2" }
+risc0-binfmt = { version = "3.0.2" }
+risc0-circuit-recursion = { version = "4.0.2" }
+risc0-circuit-rv32im = { version = "4.0.2" }
+risc0-zkvm-platform = { version = "2.2.0" }
+risc0-build = { version = "3.0.3" }
+bonsol-interface = { version = "0.6.0", path = "./onchain/interface" }
+bonsol-schema = { version = "0.6.0", path = "./schemas" }
+bonsol-sdk = { version = "0.6.0", path = "./sdk" }
+bonsol-prover = { version = "0.6.0", path = "./prover" }
 
 [patch.crates-io.curve25519-dalek]
 git = "https://github.com/anza-xyz/curve25519-dalek.git"

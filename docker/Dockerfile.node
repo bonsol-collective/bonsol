@@ -1,21 +1,8 @@
-ARG CUDA_VERSION=12-5
 ARG RISC0_VERSION="v2024-05-17.1"
 
 FROM docker.io/risczero/risc0-groth16-prover:${RISC0_VERSION} AS risczero
 
-FROM ghcr.io/bonsol-collective/bonsol-forge:0.1.0 AS base-builder
-
-ARG CUDA_VERSION #Need to redeclare globals
-
-# Get CUDA-ed
-RUN curl -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb \
-  && dpkg -i cuda-keyring_1.1-1_all.deb \
-  && apt-get update \
-  && apt-get install --no-install-recommends -y cuda-toolkit-${CUDA_VERSION} \
-  && rm -rf /var/lib/apt/lists/*
-
-# Build the GPU binaries
-ENV PATH=/usr/local/cuda/bin:${PATH}
+FROM ghcr.io/bonsol-collective/bonsol-forge:0.1.1 AS base-builder
 
 WORKDIR /bonsol
 

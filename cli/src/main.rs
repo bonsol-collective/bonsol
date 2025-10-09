@@ -6,7 +6,6 @@ use atty::Stream;
 use bonsol_sdk::BonsolClient;
 use clap::Parser;
 use env_logger::Env;
-use risc0_circuit_rv32im::execute::testutil::DEFAULT_SESSION_LIMIT;
 use risc0_circuit_rv32im::execute::DEFAULT_SEGMENT_LIMIT_PO2;
 use risc0_zkvm::ExecutorEnv;
 use solana_sdk::signer::Signer;
@@ -22,6 +21,8 @@ mod execute;
 mod init;
 mod prove;
 mod read_receipt;
+
+pub const DEFAULT_SESSION_LIMIT: u64 = 1 << 24;
 
 #[cfg(all(test, feature = "integration-tests"))]
 mod tests;
@@ -82,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
             let mut env = &mut ExecutorEnv::builder();
             env = env
                 .segment_limit_po2(DEFAULT_SEGMENT_LIMIT_PO2 as u32)
-                .session_limit(max_cycles.or(DEFAULT_SESSION_LIMIT));
+                .session_limit(max_cycles.or(Some(DEFAULT_SESSION_LIMIT)));
             if input_file.is_some() {
                 let inputs = execute_get_inputs(input_file, None)?;
                 let inputs: Vec<&str> = inputs.iter().map(|i| i.data.as_str()).collect();
