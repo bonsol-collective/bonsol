@@ -57,7 +57,6 @@ RUN apt-get update \
 ENV PATH="/root/.local/share/solana/install/active_release/bin:/root/.local/bin:/root/.cargo/bin:${PATH}"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
   && rustup install ${RUST_VERSION} && rustup default ${RUST_VERSION} \
-  && rustup install nightly \
   && rustup component add rustfmt rust-analyzer clippy \
   && cargo install cargo-binstall
 
