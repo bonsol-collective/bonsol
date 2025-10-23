@@ -18,7 +18,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.1
 
     steps:
       - name: Checkout code
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.1
 
     steps:
       - name: Checkout
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubicloud-standard-16
 
     container:
-      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.0
+      image: ghcr.io/bonsol-collective/bonsol-forge:0.1.1
 
     steps:
       - name: Checkout

@@ -79,6 +79,8 @@ pub enum ChannelError {
     InvalidExecutionAccountOwner,
     #[error("Unexpected Proof System")]
     UnexpectedProofSystem,
+    #[error("Unauthorized prover")]
+    UnauthorizedProver,
 }
 
 impl From<ChannelError> for ProgramError {

@@ -10,23 +10,13 @@ COPY . .
 
 # CPU build (no CUDA feature)
 FROM base-builder AS cpu-builder
-
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/bonsol/target \
-    cargo build --release --bin bonsol-node
-
-RUN --mount=type=cache,target=/bonsol/target \
-  cp target/release/bonsol-node /bonsol-node-cpu
+RUN cargo build --release --bin bonsol-node
+RUN cp target/release/bonsol-node /bonsol-node-cpu
 
 # GPU build (with CUDA feature)
 FROM base-builder AS gpu-builder
-
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/bonsol/target \
-    cargo build --release --features=cuda --bin bonsol-node
-
-RUN --mount=type=cache,target=/bonsol/target \
-  cp target/release/bonsol-node /bonsol-node-gpu
+RUN cargo build --release --features=cuda --bin bonsol-node
+RUN cp target/release/bonsol-node /bonsol-node-gpu
 
 # Build runtime
 FROM ubuntu:24.04 AS runtime

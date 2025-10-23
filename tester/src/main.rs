@@ -72,6 +72,7 @@ async fn example_sdk_no_callback_test(
             },
             None,
             None,
+            vec![],
         )
         .await?;
     let bh = client.get_latest_blockhash().await?;
@@ -151,6 +152,7 @@ async fn example_sdk_test(
                 ],
             }),
             None,
+            vec![],
         )
         .await?;
     let bh = client.get_latest_blockhash().await?;

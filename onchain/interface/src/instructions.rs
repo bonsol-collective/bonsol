@@ -1,7 +1,7 @@
 use bonsol_schema::{
-    Account, ChannelInstruction, ChannelInstructionArgs, ChannelInstructionIxType, DeployV1,
-    DeployV1Args, ExecutionRequestV1, ExecutionRequestV1Args, InputBuilder, InputType,
-    ProgramInputType, ProverVersion,
+    execution_request_v1_generated, Account, ChannelInstruction, ChannelInstructionArgs,
+    ChannelInstructionIxType, DeployV1, DeployV1Args, ExecutionRequestV1, ExecutionRequestV1Args,
+    InputBuilder, InputType, ProgramInputType, ProverVersion, PublicKey,
 };
 use flatbuffers::{FlatBufferBuilder, WIPOffset};
 
@@ -215,6 +215,7 @@ pub fn execute_v1<'a>(
     config: ExecutionConfig<'a>,
     callback: Option<CallbackConfig>,
     prover_version: Option<ProverVersion>,
+    authorized_provers: Vec<Pubkey>,
 ) -> Result<Instruction, ClientError> {
     let (execution_account, _) = execution_address(requester, execution_id.as_bytes());
     let (deployment_account, _) = deployment_address(image_id);
@@ -231,6 +232,7 @@ pub fn execute_v1<'a>(
         config,
         callback,
         prover_version,
+        authorized_provers,
     )
 }
 /// Executes a bonsol program with the provided accounts
@@ -249,6 +251,7 @@ pub fn execute_v1_with_accounts<'a>(
     config: ExecutionConfig,
     callback: Option<CallbackConfig>,
     prover_version: Option<ProverVersion>,
+    authorized_provers: Vec<Pubkey>,
 ) -> Result<Instruction, ClientError> {
     config.validate()?;
     let mut fbb = FlatBufferBuilder::new();
@@ -296,6 +299,17 @@ pub fn execute_v1_with_accounts<'a>(
     let execution_id = fbb.create_string(execution_id);
 
     let input_digest = config.input_hash.map(|ih| fbb.create_vector(ih));
+    let authorized_provers = if authorized_provers.is_empty() {
+        None
+    } else {
+        Some(
+            fbb.create_vector_from_iter(
+                authorized_provers
+                    .iter()
+                    .map(|key| PublicKey::new(key.as_array())),
+            ),
+        )
+    };
 
     // typically cli will pass None for the optional prover_version indicating bonsol should handle
     // the default case here
@@ -315,6 +329,7 @@ pub fn execute_v1_with_accounts<'a>(
             input_digest,
             callback_extra_accounts: extra_accounts,
             prover_version,
+            authorized_provers,
         },
     );
     fbb.finish(fbb_execute, None);

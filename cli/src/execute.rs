@@ -267,6 +267,7 @@ pub async fn execute(
             execution_config,
             callback_config.map(|c| c.into()),
             None, // A future cli change can implement prover version selection
+            vec![],
         )
         .await?;
     indicator.finish_with_message("Sending transaction");
