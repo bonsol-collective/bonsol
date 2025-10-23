@@ -177,6 +177,7 @@ impl BonsolClient {
         config: ExecutionConfig<'a>,
         callback: Option<CallbackConfig>,
         prover_version: Option<ProverVersion>,
+        authorized_provers: Vec<Pubkey>,
     ) -> Result<Vec<Instruction>> {
         let compute_price_val = self.get_fees(signer).await?;
 
@@ -199,6 +200,7 @@ impl BonsolClient {
             config,
             callback,
             fbs_version_or_none,
+            authorized_provers,
         )?;
         let compute = ComputeBudgetInstruction::set_compute_unit_limit(20_000);
         let compute_price = ComputeBudgetInstruction::set_compute_unit_price(compute_price_val);

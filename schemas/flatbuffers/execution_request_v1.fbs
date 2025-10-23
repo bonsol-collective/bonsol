@@ -13,6 +13,10 @@ struct Account (force_align: 8) {
   pubkey: [uint8:32];
 }
 
+struct PublicKey {
+  bytes: [ubyte:32];
+}
+
 table ExecutionRequestV1{
   tip: uint64;
   execution_id: string;
@@ -26,6 +30,7 @@ table ExecutionRequestV1{
   max_block_height: uint64; // max block height to accept prover commitment
   callback_extra_accounts: [Account] (force_align: 8); // extra accounts to pass to callback program
   prover_version: ProverVersion = DEFAULT;
+  authorized_provers: [PublicKey];
 }
 
 root_type ExecutionRequestV1;

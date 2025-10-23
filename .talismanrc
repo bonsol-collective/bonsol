@@ -1,12 +1,18 @@
 fileignoreconfig:
-- filename: node/src/risc0_runner/mod.rs
-  checksum: 59439ae8edf4de6406c44d47f6420d79de678525c5949b24b89fd1008cff4373
 - filename: charts/README.md
   checksum: 72fc2bed57d1f2124d7ea66ef1586141da52d2e3736aac253cda1da072678c22
 - filename: .pre-commit-config.yaml
   checksum: 80d9c50573e73a7273a825ce15e6ac1d4c5ee6820dbfa505aa50a44e4f2d7e89
 - filename: .github/workflows/build-node-containers.yaml
   checksum: d971193611dfbf9b2538f3642818c69f1ef3eb375f5f465d743f32a519ad5989
+- filename: onchain/interface/src/instructions.rs
+  checksum: 8a72139a2f7c65b36bd00a08fdc5b505b10fb240c67ad29dbba12295de485ab3
+- filename: onchain/bonsol/src/actions/claim.rs
+  checksum: 1974e17eba96b62638543aead8a11c020fb51f58888861ec7b24bc1c20a5870a
+- filename: node/src/risc0_runner/mod.rs
+  checksum: e52bee03d7f22b04b76caa8af34edd6ef7187c4649b63c748f2948cd9def386b
+version: ""
+
 version: ""
 allowed_patterns:
 - .*let\ build_result.*

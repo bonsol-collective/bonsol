@@ -71,6 +71,16 @@ impl<'a, 'b> ClaimAccounts<'a, 'b> {
             if expected_eid != executionid {
                 return Err(ChannelError::InvalidExecutionId);
             }
+
+            if let Some(authorized_provers) = execution_request.authorized_provers() {
+                if !authorized_provers
+                    .iter()
+                    .any(|key| key.bytes().iter().collect::<Vec<_>>() == ca.claimer.key.as_array())
+                {
+                    return Err(ChannelError::UnauthorizedProver);
+                }
+            }
+
             let tip = execution_request.tip();
             if ca.claimer.lamports() < tip {
                 return Err(ChannelError::InsufficientStake);

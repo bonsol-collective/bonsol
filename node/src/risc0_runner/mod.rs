@@ -296,6 +296,14 @@ impl Risc0Runner {
                                 )
                                 .into());
                             }
+                            if let Some(authorized_provers) = payload.authorized_provers() {
+                                if !authorized_provers.iter().any(|key| {
+                                    key.bytes().iter().collect::<Vec<_>>() == self_id.as_array()
+                                }) {
+                                    info!("Oops, not for us :(");
+                                    return Ok(());
+                                }
+                            }
                             handle_execution_request(
                                 &config,
                                 &inflight_proofs,
