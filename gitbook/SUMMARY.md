@@ -22,6 +22,7 @@
 * [Tutorial: Simple Program](developers/tutorial-simple-program.md)
 * [Input Format Guide](developers/input-format-guide.md)
 * [Bonsol Calculator Example](developers/bonsol-calculator-example.md)
+* [AI OCR Example](developers/ai-ocr-example.md)
 
 ## Provers
 
