@@ -1,16 +1,18 @@
-use std::rc::Rc;
+use std::{io::Write, rc::Rc};
 
 use anyhow::Result;
 use bonsol_schema::ProgramInputType;
 use risc0_binfmt::MemoryImage;
 use risc0_zkvm::{get_prover_server, ExecutorEnv, ExecutorImpl, ProverOpts, ProverServer, Receipt};
 
-use crate::input_resolver::ProgramInput;
+use crate::{input_resolver::ProgramInput, util::LogShipper};
 
 /// Creates a new risc0 executor environment from the provided inputs, it hadles setting up the execution env in the same way across types of provers.
 pub fn new_risc0_exec_env(
     image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
+    stdout: LogShipper,
+    stderr: LogShipper,
 ) -> Result<ExecutorImpl<'static>> {
     let mut env_builder = ExecutorEnv::builder();
     for input in sorted_inputs.into_iter() {
@@ -28,6 +30,8 @@ pub fn new_risc0_exec_env(
             }
         }
     }
+    env_builder.stderr(stderr).stdout(stdout);
+
     let env = env_builder.build()?;
     ExecutorImpl::new(env, image)
 }

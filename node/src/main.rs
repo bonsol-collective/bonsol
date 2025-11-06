@@ -7,6 +7,7 @@ pub mod config;
 mod risc0_runner;
 mod transaction_sender;
 use {
+    crate::ingest::BonfireIngester,
     anyhow::Result,
     bonsol_prover::input_resolver::DefaultInputResolver,
     config::*,
@@ -41,6 +42,8 @@ pub enum CliError {
     InvalidIngester,
     #[error("Invalid Transaction Sender")]
     InvalidTransactionSender,
+    #[error("Invalid Bonfire server address")]
+    InvalidBonfireAddress,
 }
 
 async fn node(config: ProverNodeConfig) -> Result<()> {
@@ -52,8 +55,13 @@ async fn node(config: ProverNodeConfig) -> Result<()> {
             read_keypair_file(&path).map_err(|_| CliError::InvalidSigner)?
         }
     };
+    let signer = Arc::new(signer);
+
     let signer_identity = signer.pubkey();
     //Todo traitify ingester
+
+    let (stdout_tx, stdout_rx) = std::sync::mpsc::channel();
+    let (stderr_tx, stderr_rx) = std::sync::mpsc::channel();
     let mut ingester: Box<dyn Ingester> = match config.ingester_config.clone() {
         IngesterConfig::RpcBlockSubscription { wss_rpc_url } => {
             info!("Using RPC Block Subscription");
@@ -72,6 +80,18 @@ async fn node(config: ProverNodeConfig) -> Result<()> {
                 Some(connection_timeout_secs),
                 Some(timeout_secs),
             ))
+        }
+        IngesterConfig::Bonfire { server_address } => {
+            info!("Using Bonfire connection");
+            let server_address = server_address
+                .parse()
+                .map_err(|_| CliError::InvalidBonfireAddress)?;
+            Box::new(BonfireIngester::new(
+                server_address,
+                signer.clone(),
+                stdout_rx,
+                stderr_rx,
+            )?)
         }
         _ => return Err(CliError::InvalidIngester.into()),
     };
@@ -98,6 +118,8 @@ async fn node(config: ProverNodeConfig) -> Result<()> {
         signer_identity,
         Arc::new(transaction_sender),
         Arc::new(input_resolver),
+        stdout_tx,
+        stderr_tx,
     )
     .await?;
     let runner_chan = runner.start()?;

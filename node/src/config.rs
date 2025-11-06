@@ -4,7 +4,7 @@ use {
         Figment,
     },
     serde::{Deserialize, Serialize},
-    std::path::Path,
+    std::{ path::Path},
 };
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -17,6 +17,9 @@ pub enum IngesterConfig {
         connection_timeout_secs: u32,
         timeout_secs: u32,
         token: String,
+    },
+    Bonfire {
+        server_address: String
     },
     WebsocketSub, //not implemented
 }
