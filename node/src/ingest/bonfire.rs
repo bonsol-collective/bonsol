@@ -11,6 +11,7 @@ use quinn::{
     ClientConfig, Endpoint,
 };
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
+use sysinfo::System;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedSender},
     Mutex,
@@ -60,7 +61,6 @@ impl BonfireIngester {
             |rx: EventChannelRx, source: LogSource, logs_tx: UnboundedSender<LogEvent>| {
                 tokio::task::spawn_blocking(move || {
                     while let Ok(msg) = rx.recv() {
-                        println!("loggo is here");
                         logs_tx
                             .send(bonsol_bonfire::LogEvent {
                                 source,
@@ -135,22 +135,7 @@ impl BonfireIngester {
         }
 
         // 4) Send basic hardware specs, then wait for SpecsAck
-        let mut m = machine_info::Machine::new();
-        let system = m.system_info();
-        let specs = HardwareSpecs {
-            cpu_type: system.processor.brand,
-            cpu_mhz: system.processor.frequency as u32,
-            cpu_cores: system.total_processors as u32,
-            memory_bytes: system.memory,
-            gpus: system
-                .graphics
-                .iter()
-                .map(|g| Gpu {
-                    gpu_memory_bytes: g.memory,
-                    gpu_model: g.name.clone(),
-                })
-                .collect(),
-        };
+        let specs = Self::get_hw_specs()?;
         sig_writer.send(specs.into()).await?;
         let _ack = sig_reader
             .next()
@@ -234,9 +219,46 @@ impl BonfireIngester {
         };
 
         // "Guillotine" join, if one future fails, everything else is aborted, and we reconnect
-        try_join3(ping_future, log_future, bix_future).await?;
+        try_join3(ping_future, log_future, bix_future)
+            .await
+            .unwrap();
 
         Ok(())
+    }
+
+    fn get_hw_specs() -> Result<HardwareSpecs> {
+        let mut sys = System::new_all();
+        sys.refresh_all();
+
+        let nvml = nvml_wrapper::Nvml::init()?;
+
+        let gpus = (0..nvml.device_count()?)
+            .filter_map(|i| {
+                nvml.device_by_index(i).ok().and_then(|d| {
+                    Some(Gpu {
+                        gpu_model: d.name().ok()?,
+                        gpu_memory_bytes: d.memory_info().ok()?.total,
+                    })
+                })
+            })
+            .collect();
+
+        let cpu_cores = sys.cpus().len() as u32;
+        let first_cpu = sys
+            .cpus()
+            .first()
+            .ok_or_else(|| anyhow!("Can't detect any CPU"))?;
+        let cpu_type = first_cpu.brand().to_owned();
+        let cpu_mhz = first_cpu.frequency() as u32;
+        let memory_bytes = sys.total_memory();
+
+        Ok(HardwareSpecs {
+            cpu_type,
+            cpu_mhz,
+            cpu_cores,
+            memory_bytes,
+            gpus,
+        })
     }
 }
 

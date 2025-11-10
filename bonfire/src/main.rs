@@ -1,28 +1,38 @@
 use std::{
     sync::{
         Arc,
-        atomic::{AtomicU16, AtomicU64, Ordering},
+        atomic::{AtomicU64, Ordering},
     },
     time::{Duration, SystemTime},
 };
 
-use anyhow::{Error, Result, anyhow};
-use futures::{
-    SinkExt, Stream, StreamExt,
-    channel::mpsc::{UnboundedSender, unbounded},
-    stream,
+use actix_web::{
+    App, HttpResponse, HttpServer, Responder, get,
+    web::{Data, Query},
 };
+use actix_web_lab::sse;
+use anyhow::{Error, Result, anyhow};
+use futures::{SinkExt, Stream, StreamExt, stream};
 use quinn::{
     Connection, Endpoint, ServerConfig,
     rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
 };
+use serde::{Deserialize, Serialize};
 use solana_client::rpc_config::{RpcBlockSubscribeConfig, RpcBlockSubscribeFilter};
 use solana_pubsub_client::nonblocking::pubsub_client::PubsubClient;
 use solana_sdk::{bs58, commitment_config::CommitmentConfig, pubkey::Pubkey};
 use solana_transaction_status::{
     UiInstruction, UiTransactionEncoding, option_serializer::OptionSerializer,
 };
-use tokio::{sync::Mutex, time::sleep};
+use tokio::{
+    sync::{
+        Mutex,
+        broadcast::{self, Receiver, Sender},
+        mpsc::{self, UnboundedSender},
+    },
+    time::sleep,
+};
+use tokio_stream::wrappers::BroadcastStream;
 
 use crate::protocol::{
     BonfireMessage, BonfireReader, BonfireWriter, BonsolInstruction, Challenge, HardwareSpecs,
@@ -31,15 +41,95 @@ use crate::protocol::{
 
 mod protocol;
 
+type ClientsList = Arc<Mutex<Vec<BonfireConnectedClient>>>;
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let clients = Arc::new(Mutex::new(Vec::new()));
+
+    let (log_tx, log_rx) = broadcast::channel(100);
+
+    let quic_future = quic_server(clients.clone(), log_tx);
+    let web_future = web_server(clients, log_rx);
+
+    futures::try_join!(quic_future, web_future).unwrap();
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct Node {
+    pubkey: String,
+    hw: HardwareSpecs,
+    latency: u64,
+}
+#[get("/nodes")]
+async fn nodes(clients: Data<ClientsList>) -> impl Responder {
+    HttpResponse::Ok().json(
+        clients
+            .lock()
+            .await
+            .iter()
+            .map(|client| Node {
+                pubkey: client.key.to_string(),
+                latency: client.latency.load(Ordering::Relaxed),
+                hw: client.hw.clone(),
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
+#[derive(Deserialize, Clone)]
+struct LogsQuery {
+    image_id: Option<String>,
+    job_id: Option<String>,
+}
+
+#[get("/logs")]
+async fn logs(log_rx: Data<Receiver<LogEvent>>, params: Query<LogsQuery>) -> impl Responder {
+    let stream = BroadcastStream::new(log_rx.resubscribe()).filter_map(move |log| {
+        let params = params.clone();
+        async move {
+            log.ok()
+                .filter(|log| match &params.image_id {
+                    None => true,
+                    Some(image_id) => &*log.image_id == image_id,
+                })
+                .filter(|log| match &params.job_id {
+                    None => true,
+                    Some(job_id) => &*log.job_id == job_id,
+                })
+                .map(|log| {
+                    let json = serde_json::to_string(&log)?;
+                    Ok::<_, Error>(sse::Event::Data(sse::Data::new(json)))
+                })
+        }
+    });
+
+    sse::Sse::from_stream(stream)
+}
+
+async fn web_server(clients: ClientsList, log_rx: Receiver<LogEvent>) -> Result<()> {
+    let log_rx = Data::new(log_rx);
+    HttpServer::new(move || {
+        App::new()
+            .service(nodes)
+            .service(logs)
+            .app_data(Data::new(clients.clone()))
+            .app_data(log_rx.clone())
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await?;
+
+    Ok(())
+}
+
+async fn quic_server(clients: ClientsList, log_tx: Sender<LogEvent>) -> Result<()> {
     let key = PrivateKeyDer::from_pem_file("server.key.pem")?;
     let cert = CertificateDer::from_pem_file("server.cert.pem")?;
     let config = ServerConfig::with_single_cert(vec![cert], key)?;
 
     let endpoint = Endpoint::server(config, "0.0.0.0:8041".parse()?)?;
-
-    let clients: Arc<Mutex<Vec<BonfireConnectedClient>>> = Arc::new(Mutex::new(Vec::new()));
 
     let clients_clone = clients.clone();
     tokio::spawn(async move {
@@ -67,10 +157,11 @@ async fn main() -> Result<()> {
     loop {
         if let Some(incoming) = endpoint.accept().await {
             let clients = clients.clone();
+            let log_tx = log_tx.clone();
             tokio::spawn(async move {
                 // accept connection in dedicated thread
                 let conn = incoming.await?;
-                let client = BonfireConnectedClient::new(conn).await?;
+                let client = BonfireConnectedClient::connect(conn, log_tx).await?;
                 clients.lock().await.push(client);
                 Ok::<(), anyhow::Error>(())
             });
@@ -174,58 +265,62 @@ struct BonfireConnectedClient {
 }
 
 impl BonfireConnectedClient {
-    pub async fn new(conn: Connection) -> Result<BonfireConnectedClient> {
+    pub async fn connect(
+        conn: Connection,
+        log_tx: Sender<LogEvent>,
+    ) -> Result<BonfireConnectedClient> {
         //        let conn = Arc::new(Mutex::new(BonfireConnection::new(writer, reader)));
         let (mut sig_writer, mut sig_reader) = protocol::framed(conn.open_bi().await?);
         let (hw, key) = Self::handshake(&mut sig_writer, &mut sig_reader).await?;
 
-        println!("Yata");
-
         // Event Stream
         let mut event_writer = protocol::writer(conn.open_uni().await?);
-
-        println!("Event writero");
 
         // Ping loop
         let latency = Arc::new(AtomicU64::new(0));
         let latency_clone = latency.clone();
-        tokio::spawn(async move {
+        let ping_future = async move {
             loop {
                 let time = SystemTime::now();
                 sig_writer.send(Ping.into()).await.unwrap();
                 sig_reader
                     .next()
                     .await
-                    .ok_or_else(|| anyhow!("QUIC signalling closed"))
-                    .unwrap()
-                    .unwrap()
+                    .ok_or_else(|| anyhow!("QUIC signalling closed"))??
                     .as_pong()
                     .unwrap();
-                let latency_duration = time.elapsed().unwrap();
+                let latency_duration = time.elapsed()?;
                 latency_clone.store(latency_duration.as_micros() as u64, Ordering::Relaxed);
-                println!("Latency {}", latency_clone.load(Ordering::Relaxed));
+
                 sleep(Duration::from_secs(10)).await;
             }
             #[allow(unreachable_code)]
             Ok::<_, Error>(())
-        });
+        };
 
-        let (tx_out, mut rx_out) = unbounded();
-        tokio::spawn(async move {
-            while let Some(msg) = rx_out.next().await {
+        let (tx_out, mut rx_out) = mpsc::unbounded_channel();
+        let event_future = async move {
+            while let Some(msg) = rx_out.recv().await {
                 event_writer.send(msg).await?;
             }
 
             Ok::<_, Error>(())
-        });
+        };
 
-        tokio::spawn(async move {
-            let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await.unwrap());
+        let log_future = async move {
+            let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await?);
 
             while let Some(Ok(msg)) = log_reader.next().await {
-                println!("LOGGO! {:?}", msg);
+                log_tx.send(msg)?;
             }
-        });
+            Ok::<_, Error>(())
+        };
+
+        tokio::spawn(futures::future::try_join3(
+            log_future,
+            event_future,
+            ping_future,
+        ));
 
         Ok(BonfireConnectedClient {
             hw,
@@ -247,10 +342,10 @@ impl BonfireConnectedClient {
             .next()
             .await
             .ok_or_else(|| anyhow!("Can't read challenge"))??;
-        println!("response {:?}", challenge_response);
+
         let challenge_response = challenge_response.as_challenge_response()?;
         let verified = challenge.verify(&challenge_response);
-        println!("Challenge verified: {verified}");
+
         writer.send(LoginResponse(verified).into()).await?;
         if !verified {
             return Err(anyhow!("Invalid challenge response"));
@@ -269,6 +364,6 @@ impl BonfireConnectedClient {
     }
 
     fn send_event(&self, msg: Vec<BonsolInstruction>) {
-        self.tx.unbounded_send(msg).unwrap();
+        self.tx.send(msg).unwrap();
     }
 }

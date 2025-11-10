@@ -4,6 +4,7 @@ use anyhow::{Result, anyhow};
 use bincode::{Decode, Encode};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use rand::RngCore;
+use serde::{Serialize, Serializer};
 use solana_sdk::{
     signature::{Keypair, Signature},
     signer::Signer,
@@ -87,7 +88,7 @@ pub struct Ping;
 #[derive(Encode, Decode, Debug)]
 pub struct Pong;
 
-#[derive(Encode, Decode, Debug, Clone)]
+#[derive(Serialize, Encode, Decode, Debug, Clone)]
 pub struct HardwareSpecs {
     /// CPU model or architecture string, e.g. "AMD Ryzen 7 5800X" or "Apple M2"
     pub cpu_type: String,
@@ -105,7 +106,7 @@ pub struct HardwareSpecs {
     pub gpus: Vec<Gpu>,
 }
 
-#[derive(Encode, Decode, Debug, Clone)]
+#[derive(Serialize, Encode, Decode, Debug, Clone)]
 pub struct Gpu {
     /// GPU model string, e.g. "NVIDIA RTX 3080"
     pub gpu_model: String,
@@ -252,16 +253,26 @@ impl BonfireMessage {
     }
 }
 
-#[derive(Encode, Decode, Debug, Clone, Copy)]
+#[derive(Serialize, Encode, Decode, Debug, Clone, Copy)]
 pub enum LogSource {
     Stdout,
     Stderr,
 }
 
-#[derive(Encode, Decode, Clone, Debug)]
+fn arc_str_serializer<S>(value: &Arc<str>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    // serialize the Arc<str> as a &str
+    serializer.serialize_str(value.as_ref())
+}
+
+#[derive(Serialize, Encode, Decode, Clone, Debug)]
 pub struct LogEvent {
     pub source: LogSource,
+    #[serde(serialize_with = "arc_str_serializer")]
     pub image_id: Arc<str>,
+    #[serde(serialize_with = "arc_str_serializer")]
     pub job_id: Arc<str>,
     pub log: Vec<u8>,
 }
