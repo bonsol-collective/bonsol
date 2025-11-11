@@ -19,7 +19,7 @@ use {
     rlimit::Resource,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signature::read_keypair_file, signer::Signer},
-    std::{process::exit, str::FromStr, sync::Arc, time::Duration},
+    std::{net::ToSocketAddrs, process::exit, str::FromStr, sync::Arc, time::Duration},
     thiserror::Error,
     tokio::{select, signal},
     tracing::{error, info},
@@ -83,9 +83,6 @@ async fn node(config: ProverNodeConfig) -> Result<()> {
         }
         IngesterConfig::Bonfire { server_address } => {
             info!("Using Bonfire connection");
-            let server_address = server_address
-                .parse()
-                .map_err(|_| CliError::InvalidBonfireAddress)?;
             Box::new(BonfireIngester::new(
                 server_address,
                 signer.clone(),

@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, pin::Pin, sync::Arc};
+use std::{net::ToSocketAddrs, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Error, Result};
 use bonsol_bonfire::{
@@ -6,10 +6,7 @@ use bonsol_bonfire::{
 };
 use bonsol_prover::util::EventChannelRx;
 use futures::{future::try_join3, stream::Peekable, SinkExt, StreamExt};
-use quinn::{
-    rustls::{pki_types::CertificateDer, RootCertStore},
-    ClientConfig, Endpoint,
-};
+use quinn::{ClientConfig, Endpoint};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 use sysinfo::System;
 use tokio::sync::{
@@ -20,8 +17,6 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::{debug, warn};
 
 use crate::ingest::{Ingester, TxChannel};
-
-const ROOT_CERT: &[u8] = include_bytes!("../../../bonfire/cert.der");
 
 impl From<bonsol_bonfire::BonsolInstruction> for crate::types::BonsolInstruction {
     fn from(other: bonsol_bonfire::BonsolInstruction) -> crate::types::BonsolInstruction {
@@ -41,7 +36,7 @@ impl From<bonsol_bonfire::BonsolInstruction> for crate::types::BonsolInstruction
 type LogEventStream = Pin<Box<Peekable<UnboundedReceiverStream<LogEvent>>>>;
 
 pub struct BonfireIngester {
-    server_addr: SocketAddr,
+    server_addr: String,
     op_handle: Option<tokio::task::JoinHandle<Result<()>>>,
     keypair: Arc<Keypair>,
     logs_rx: Arc<Mutex<LogEventStream>>,
@@ -54,8 +49,6 @@ impl BonfireIngester {
         stdout: EventChannelRx,
         stderr: EventChannelRx,
     ) -> Result<BonfireIngester> {
-        let server_addr = server_addr.parse()?;
-
         let (logs_tx, logs_rx) = unbounded_channel();
         let log_pump =
             |rx: EventChannelRx, source: LogSource, logs_tx: UnboundedSender<LogEvent>| {
@@ -89,20 +82,25 @@ impl BonfireIngester {
     async fn connect(
         txchan: UnboundedSender<Vec<crate::types::BonsolInstruction>>,
         logs_rx: Arc<Mutex<LogEventStream>>,
-        server_addr: SocketAddr,
+        server_addr: String,
         keypair: Arc<Keypair>,
     ) -> Result<()> {
+        let server_name = server_addr
+            .split(":")
+            .next()
+            .ok_or_else(|| anyhow!("Can't parse server address"))?;
+        let server_socket_addr = server_addr
+            .to_socket_addrs()?
+            .next()
+            .ok_or_else(|| anyhow!("Can't parse server address"))?;
+
         // Configure TLS roots
-        let mut roots = RootCertStore::empty();
-        let cert = CertificateDer::from_slice(ROOT_CERT);
-        roots.add(cert)?;
 
-        let client_config = ClientConfig::with_root_certificates(Arc::new(roots))?;
-
+        let client_config = ClientConfig::try_with_platform_verifier()?;
         let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;
         endpoint.set_default_client_config(client_config);
         debug!("Connecting to Bonfire server");
-        let conn = endpoint.connect(server_addr, "localhost")?.await?;
+        let conn = endpoint.connect(server_socket_addr, server_name)?.await?;
         let (mut sig_writer, mut sig_reader) =
             bonsol_bonfire::framed::<_, _, BonfireMessage>(conn.accept_bi().await?);
 

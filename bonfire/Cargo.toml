@@ -1,6 +1,6 @@
 [package]
 name = "bonsol-bonfire"
-version = "0.0.1"
+version.workspace = true
 edition = "2024"
 
 [dependencies]
@@ -15,9 +15,12 @@ rand = "0.9.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 solana-client = { workspace = true }
+solana-program = { workspace = true }
 solana-pubsub-client = { workspace = true}
 solana-sdk = { workspace = true}
 solana-transaction-status = { workspace = true }
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.17", features = ["codec"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["time", "json", "env-filter"] }

@@ -1433,7 +1433,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "ark-bn254 0.4.0",
  "ark-serialize 0.4.2",
@@ -1449,7 +1449,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-bonfire"
-version = "0.0.1"
+version = "0.7.0"
 dependencies = [
  "actix-web",
  "actix-web-lab",
@@ -1462,17 +1462,20 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-client",
+ "solana-program",
  "solana-pubsub-client",
  "solana-sdk",
  "solana-transaction-status",
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "tracing",
+ "tracing-subscriber 0.3.20",
 ]
 
 [[package]]
 name = "bonsol-cli"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1513,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-interface"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "arrayref",
  "bonsol-schema",
@@ -1529,7 +1532,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-node"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "ark-bn254 0.4.0",
@@ -1598,7 +1601,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-prover"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "arrayref",
@@ -1622,7 +1625,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-schema"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bytemuck",
  "flatbuffers",
@@ -1633,7 +1636,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-sdk"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "bonsol-interface",
@@ -1651,7 +1654,7 @@ dependencies = [
 
 [[package]]
 name = "bonsol-tester"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "bonsol-interface",
@@ -1851,7 +1854,7 @@ dependencies = [
 
 [[package]]
 name = "callback-example"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bonsol-interface",
  "solana-program",
@@ -3989,7 +3992,7 @@ dependencies = [
  "hyper 1.7.0",
  "hyper-util",
  "rustls 0.23.32",
- "rustls-native-certs 0.8.1",
+ "rustls-native-certs 0.8.2",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.4",
@@ -4288,7 +4291,7 @@ dependencies = [
 
 [[package]]
 name = "iop"
-version = "0.6.1"
+version = "0.7.0"
 
 [[package]]
 name = "ipnet"
@@ -4625,7 +4628,7 @@ checksum = "4d873d7c67ce09b42110d801813efbc9364414e356be9935700d368351657487"
 
 [[package]]
 name = "local-zk-program-server"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "actix-web",
  "tokio",
@@ -7138,9 +7141,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-native-certs"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fcff2dd52b58a8d98a70243663a0d234c4e2b79235637849d15913394a247d3"
+checksum = "9980d917ebb0c0536119ba501e90834767bffc3d60641457fd84a1f3fd337923"
 dependencies = [
  "openssl-probe",
  "rustls-pki-types",
@@ -7188,7 +7191,7 @@ dependencies = [
  "log",
  "once_cell",
  "rustls 0.23.32",
- "rustls-native-certs 0.8.1",
+ "rustls-native-certs 0.8.2",
  "rustls-platform-verifier-android",
  "rustls-webpki 0.103.7",
  "security-framework 3.5.1",
@@ -10918,7 +10921,7 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "prost",
- "rustls-native-certs 0.8.1",
+ "rustls-native-certs 0.8.2",
  "rustls-pemfile 2.2.0",
  "socket2 0.5.10",
  "tokio",
