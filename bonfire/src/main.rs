@@ -14,7 +14,7 @@ use actix_web_lab::sse;
 use anyhow::{Error, Result, anyhow};
 use futures::{SinkExt, StreamExt, stream};
 use quinn::{
-    Connection, Endpoint, IdleTimeout, ServerConfig, TransportConfig,
+    Connection, Endpoint, ServerConfig, TransportConfig,
     rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
 };
 use serde::{Deserialize, Serialize};
@@ -316,7 +316,6 @@ impl BonfireClientBuilder {
             protocol::framed::<_, _, BonfireMessage>(conn.open_bi().await?);
 
         // Start handshake
-        println!("Sending challenge");
         let challenge = Challenge::new();
         sig_writer.send(challenge.clone().into()).await?;
 
@@ -339,7 +338,7 @@ impl BonfireClientBuilder {
             .ok_or_else(|| anyhow!("Can't read Hardware specs"))??
             .as_client_hardware_specs()?
             .clone();
-        println!("New client connected! Specs {:?}", hw);
+        debug!("New client connected! Specs {:?}", hw);
         sig_writer.send(SpecsAck.into()).await?;
 
         // Handshake done!

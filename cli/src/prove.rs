@@ -2,12 +2,14 @@ use crate::common::{proof_get_inputs, ZkProgramManifest};
 use anyhow::{anyhow, Result};
 use bonsol_prover::image::Image;
 use bonsol_prover::prover::{get_risc0_prover, new_risc0_exec_env};
+use bonsol_prover::util::LogShipper;
 use bonsol_sdk::BonsolClient;
 use bytes::Bytes;
 use risc0_zkvm::VerifierContext;
 use std::fs::{read, File};
 use std::io::Write;
 use std::path::Path;
+use std::sync::mpsc::channel;
 
 pub async fn prove(
     sdk: &BonsolClient,
@@ -46,8 +48,41 @@ pub async fn prove(
     let image = Image::from_bytes(image_bytes)?;
     let memory_image = image.get_memory_image()?;
     let program_inputs = proof_get_inputs(input_file, stdin)?;
-    let mut exec = new_risc0_exec_env(memory_image, program_inputs)?;
+
+    let (stdout_tx, stdout_rx) = channel();
+    let (stderr_tx, stderr_rx) = channel();
+
+    let stdout = LogShipper::new(
+        stdout_tx,
+        program_id.as_ref().unwrap_or(&"image".to_owned()),
+        &execution_id,
+    );
+    let stderr = LogShipper::new(
+        stderr_tx,
+        program_id.as_ref().unwrap_or(&"image".to_owned()),
+        &execution_id,
+    );
+
+    let mut exec = new_risc0_exec_env(memory_image, program_inputs, stdout, stderr)?;
     let session = exec.run()?;
+
+    tokio::task::spawn_blocking(move || {
+        while let Ok(msg) = stdout_rx.recv() {
+            println!(
+                "Stdout: {}",
+                String::from_utf8(msg.log).unwrap_or(String::new())
+            );
+        }
+    });
+
+    tokio::task::spawn_blocking(move || {
+        while let Ok(msg) = stderr_rx.recv() {
+            println!(
+                "Stderr: {}",
+                String::from_utf8(msg.log).unwrap_or(String::new())
+            );
+        }
+    });
 
     // Print the committed output (journal)
     if let Some(journal) = &session.journal {
