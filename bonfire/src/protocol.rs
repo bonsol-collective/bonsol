@@ -248,7 +248,7 @@ impl BonfireMessage {
     pub fn as_ping(&self) -> Result<&Ping> {
         match self {
             BonfireMessage::Server(ServerMessage::Ping(resp)) => Ok(resp),
-            _ => Err(anyhow!("BonfireMessage is not a Client ChallengeResponse")),
+            _ => Err(anyhow!("BonfireMessage is not a Server Ping")),
         }
     }
 }
