@@ -3,6 +3,7 @@ pub mod verify_prover_version;
 
 use anyhow::anyhow;
 use bonsol_interface::prover_version::VERSION_V3_0_3;
+use bonsol_prover::util::{EventChannelTx, LogShipper};
 
 use {
     solana_sdk::instruction::AccountMeta,
@@ -123,6 +124,8 @@ pub struct Risc0Runner {
     self_identity: Arc<Pubkey>,
     inflight_proofs: InflightProofs,
     input_resolver: Arc<dyn InputResolver + 'static>,
+    stdout: EventChannelTx,
+    stderr: EventChannelTx,
 }
 
 impl Risc0Runner {
@@ -131,6 +134,8 @@ impl Risc0Runner {
         self_identity: Pubkey,
         txn_sender: Arc<RpcTransactionSender>,
         input_resolver: Arc<dyn InputResolver + 'static>,
+        stdout: EventChannelTx,
+        stderr: EventChannelTx,
     ) -> Result<Risc0Runner> {
         if !check_x86_64arch() {
             warn!("Bonsol node will not compress STARKs to SNARKs after successful risc0vm\nproving due to stark compression tooling requiring x86_64 architectures - virtualization will also fail");
@@ -163,6 +168,8 @@ impl Risc0Runner {
             self_identity: Arc::new(self_identity),
             inflight_proofs: Arc::new(DashMap::new()),
             input_resolver,
+            stdout,
+            stderr,
         })
     }
 
@@ -247,6 +254,8 @@ impl Risc0Runner {
         let inflight_proofs = self.inflight_proofs.clone();
         let txn_sender = self.txn_sender.clone();
         let input_resolver = self.input_resolver.clone();
+        let stdout = self.stdout.clone();
+        let stderr = self.stderr.clone();
         self.worker_handle = Some(tokio::spawn(async move {
             while let Some(bix) = rx.recv().await {
                 let txn_sender = txn_sender.clone();
@@ -257,6 +266,8 @@ impl Risc0Runner {
                 let self_id = self_id.clone();
                 let input_staging_area = input_staging_area.clone();
                 let inflight_proofs = inflight_proofs.clone();
+                let stdout = stdout.clone();
+                let stderr = stderr.clone();
                 tokio::spawn(async move {
                     let bonsol_ix_type =
                         parse_ix_data(&bix.data).map_err(|_| Risc0RunnerError::InvalidData)?;
@@ -325,6 +336,7 @@ impl Risc0Runner {
                                 .ok_or::<anyhow::Error>(
                                 Risc0RunnerError::EmptyInstruction.into(),
                             )?;
+
                             handle_claim(
                                 &config,
                                 &self_id,
@@ -335,6 +347,8 @@ impl Risc0Runner {
                                 &input_staging_area,
                                 payload,
                                 &bix.accounts,
+                                stdout,
+                                stderr,
                             )
                             .await
                         }
@@ -371,6 +385,8 @@ pub async fn handle_claim<'a>(
     input_staging_area: InputStagingAreaRef<'a>,
     claim: ClaimV1<'a>,
     accounts: &[Pubkey], // need to create canonical parsing of accounts per instruction type for my flatbuffer model or use shank
+    stdout: EventChannelTx,
+    stderr: EventChannelTx,
 ) -> Result<()> {
     info!("Received claim event");
     let claimer = accounts[3];
@@ -427,11 +443,15 @@ pub async fn handle_claim<'a>(
                     .remove(execution_id)
                     .ok_or(Risc0RunnerError::InvalidData)?;
                 let mem_image = image.get_memory_image()?;
+
+                let stdout = LogShipper::new(stdout, &claim.image_id, &claim.execution_id);
+                let stderr = LogShipper::new(stderr, &claim.image_id, &claim.execution_id);
+
                 let result: Result<
                     (Journal, Digest, SuccinctReceipt<ReceiptClaim>),
                     Risc0RunnerError,
                 > = tokio::task::spawn_blocking(move || {
-                    risc0_prove(mem_image, inputs).map_err(|e| {
+                    risc0_prove(mem_image, inputs, stdout, stderr).map_err(|e| {
                         info!("Error generating proof: {:?}", e);
                         Risc0RunnerError::ProofGenerationError
                     })
@@ -704,9 +724,11 @@ async fn handle_image_deployment<'a>(
 fn risc0_prove(
     mut memory_image: MemoryImage,
     sorted_inputs: Vec<ProgramInput>,
+    stdout: LogShipper,
+    stderr: LogShipper,
 ) -> Result<(Journal, Digest, SuccinctReceipt<ReceiptClaim>)> {
     let image_id = memory_image.image_id().to_string();
-    let mut exec = new_risc0_exec_env(memory_image, sorted_inputs)?;
+    let mut exec = new_risc0_exec_env(memory_image, sorted_inputs, stdout, stderr)?;
     let session = exec.run()?;
     // Obtain the default prover.
     let prover = get_risc0_prover()?;

@@ -45,13 +45,13 @@ use crate::transaction_sender::transaction_sender::TransactionSender;
 pub struct RpcTransactionSender {
     pub rpc_client: Arc<RpcClient>,
     pub bonsol_program: Pubkey,
-    pub signer: Keypair,
+    pub signer: Arc<Keypair>,
     pub txn_status_handle: Option<JoinHandle<()>>,
     pub sigs: Arc<DashMap<Signature, TransactionStatus>>,
 }
 
 impl RpcTransactionSender {
-    pub fn new(rpc_url: String, bonsol_program: Pubkey, signer: Keypair) -> Self {
+    pub fn new(rpc_url: String, bonsol_program: Pubkey, signer: Arc<Keypair>) -> Self {
         Self {
             rpc_client: Arc::new(RpcClient::new(rpc_url)),
             signer,

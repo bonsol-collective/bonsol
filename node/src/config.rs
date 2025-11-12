@@ -18,6 +18,9 @@ pub enum IngesterConfig {
         timeout_secs: u32,
         token: String,
     },
+    Bonfire {
+        server_address: String,
+    },
     WebsocketSub, //not implemented
 }
 
