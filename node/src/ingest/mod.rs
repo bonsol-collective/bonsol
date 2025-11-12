@@ -3,7 +3,7 @@ mod bonfire;
 mod grpc_stream;
 
 use anyhow::Result;
-pub use {block_subscription::RpcIngester, grpc_stream::GrpcIngester, bonfire::BonfireIngester};
+pub use {block_subscription::RpcIngester, bonfire::BonfireIngester, grpc_stream::GrpcIngester};
 
 use {
     crate::types::BonsolInstruction, solana_sdk::pubkey::Pubkey,
