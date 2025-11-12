@@ -242,7 +242,7 @@ impl BonfireMessage {
     pub fn as_pong(&self) -> Result<&Pong> {
         match self {
             BonfireMessage::Client(ClientMessage::Pong(resp)) => Ok(resp),
-            _ => Err(anyhow!("BonfireMessage is not a Client ChallengeResponse")),
+            _ => Err(anyhow!("BonfireMessage is not a Client Pong")),
         }
     }
     pub fn as_ping(&self) -> Result<&Ping> {
