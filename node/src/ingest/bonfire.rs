@@ -228,18 +228,20 @@ impl BonfireIngester {
         let mut sys = System::new_all();
         sys.refresh_all();
 
-        let nvml = nvml_wrapper::Nvml::init()?;
-
-        let gpus = (0..nvml.device_count()?)
-            .filter_map(|i| {
-                nvml.device_by_index(i).ok().and_then(|d| {
-                    Some(Gpu {
-                        gpu_model: d.name().ok()?,
-                        gpu_memory_bytes: d.memory_info().ok()?.total,
+        let gpus = if let Ok(nvml) = nvml_wrapper::Nvml::init() {
+            (0..nvml.device_count().unwrap_or(0))
+                .filter_map(|i| {
+                    nvml.device_by_index(i).ok().and_then(|d| {
+                        Some(Gpu {
+                            gpu_model: d.name().ok()?,
+                            gpu_memory_bytes: d.memory_info().ok()?.total,
+                        })
                     })
                 })
-            })
-            .collect();
+                .collect()
+        } else {
+            vec![]
+        };
 
         let cpu_cores = sys.cpus().len() as u32;
         let first_cpu = sys
