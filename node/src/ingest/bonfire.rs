@@ -217,9 +217,7 @@ impl BonfireIngester {
         };
 
         // "Guillotine" join, if one future fails, everything else is aborted, and we reconnect
-        try_join3(ping_future, log_future, bix_future)
-            .await
-            .unwrap();
+        try_join3(ping_future, log_future, bix_future).await?;
 
         Ok(())
     }
