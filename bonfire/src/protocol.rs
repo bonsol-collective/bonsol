@@ -1,6 +1,6 @@
 use std::{pin::Pin, sync::Arc};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use bincode::{Decode, Encode};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use rand::RngCore;
@@ -274,5 +274,5 @@ pub struct LogEvent {
     pub image_id: Arc<str>,
     #[serde(serialize_with = "arc_str_serializer")]
     pub job_id: Arc<str>,
-    pub log: Vec<u8>,
+    pub log: String,
 }

@@ -81,10 +81,14 @@ async fn node(config: ProverNodeConfig) -> Result<()> {
                 Some(timeout_secs),
             ))
         }
-        IngesterConfig::Bonfire { server_address } => {
+        IngesterConfig::Bonfire {
+            server_address,
+            ca_cert,
+        } => {
             info!("Using Bonfire connection");
             Box::new(BonfireIngester::new(
                 server_address,
+                ca_cert,
                 signer.clone(),
                 stdout_rx,
                 stderr_rx,
