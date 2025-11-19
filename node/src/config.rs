@@ -20,6 +20,7 @@ pub enum IngesterConfig {
     },
     Bonfire {
         server_address: String,
+        ca_cert: Option<String>,
     },
     WebsocketSub, //not implemented
 }

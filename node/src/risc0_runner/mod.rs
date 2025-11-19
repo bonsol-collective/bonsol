@@ -447,6 +447,8 @@ pub async fn handle_claim<'a>(
                 let stdout = LogShipper::new(stdout, &claim.image_id, &claim.execution_id);
                 let stderr = LogShipper::new(stderr, &claim.image_id, &claim.execution_id);
 
+                let num_inputs = inputs.len();
+
                 let result: Result<
                     (Journal, Digest, SuccinctReceipt<ReceiptClaim>),
                     Risc0RunnerError,
@@ -469,7 +471,11 @@ pub async fn handle_claim<'a>(
                             Risc0RunnerError::ProofCompressionError
                         })?;
 
-                        let (input_digest, committed_outputs) = journal.bytes.split_at(32);
+                        let (input_digest, committed_outputs) = if num_inputs > 0 {
+                            journal.bytes.split_at(32)
+                        } else {
+                            (&[] as &[u8], journal.bytes.as_slice())
+                        };
                         let sig = transaction_sender
                             .submit_proof(
                                 &eid,

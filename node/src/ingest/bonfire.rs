@@ -1,4 +1,4 @@
-use std::{net::ToSocketAddrs, pin::Pin, sync::Arc};
+use std::{net::ToSocketAddrs, pin::Pin, sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Error, Result};
 use bonsol_bonfire::{
@@ -6,7 +6,13 @@ use bonsol_bonfire::{
 };
 use bonsol_prover::util::EventChannelRx;
 use futures::{future::try_join3, stream::Peekable, SinkExt, StreamExt};
-use quinn::{ClientConfig, Endpoint};
+use quinn::{
+    rustls::{
+        pki_types::{pem::PemObject, CertificateDer},
+        RootCertStore,
+    },
+    ClientConfig, Endpoint,
+};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 use sysinfo::System;
 use tokio::sync::{
@@ -37,6 +43,7 @@ type LogEventStream = Pin<Box<Peekable<UnboundedReceiverStream<LogEvent>>>>;
 
 pub struct BonfireIngester {
     server_addr: String,
+    ca_cert: Option<String>,
     op_handle: Option<tokio::task::JoinHandle<Result<()>>>,
     keypair: Arc<Keypair>,
     logs_rx: Arc<Mutex<LogEventStream>>,
@@ -45,6 +52,7 @@ pub struct BonfireIngester {
 impl BonfireIngester {
     pub fn new(
         server_addr: String,
+        ca_cert: Option<String>,
         keypair: Arc<Keypair>,
         stdout: EventChannelRx,
         stderr: EventChannelRx,
@@ -59,7 +67,7 @@ impl BonfireIngester {
                                 source,
                                 image_id: msg.image_id,
                                 job_id: msg.job_id,
-                                log: msg.log,
+                                log: String::from_utf8_lossy(&msg.log).into_owned(),
                             })
                             .expect("Log channel dropped. This shouldn't happen!");
                     }
@@ -71,6 +79,7 @@ impl BonfireIngester {
 
         Ok(BonfireIngester {
             server_addr,
+            ca_cert,
             op_handle: None,
             keypair,
             logs_rx: Arc::new(Mutex::new(Box::pin(
@@ -81,6 +90,7 @@ impl BonfireIngester {
 
     async fn connect(
         txchan: UnboundedSender<Vec<crate::types::BonsolInstruction>>,
+        ca_cert: Option<String>,
         logs_rx: Arc<Mutex<LogEventStream>>,
         server_addr: String,
         keypair: Arc<Keypair>,
@@ -96,7 +106,14 @@ impl BonfireIngester {
 
         // Configure TLS roots
 
-        let client_config = ClientConfig::try_with_platform_verifier()?;
+        let client_config = if let Some(ca_cert) = ca_cert {
+            let mut cert_store = RootCertStore::empty();
+            cert_store.add(CertificateDer::from_pem_file(ca_cert)?)?;
+            ClientConfig::with_root_certificates(Arc::new(cert_store))?
+        } else {
+            ClientConfig::try_with_platform_verifier()?
+        };
+
         let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;
         endpoint.set_default_client_config(client_config);
         debug!("Connecting to Bonfire server");
@@ -267,17 +284,20 @@ impl Ingester for BonfireIngester {
         let keypair = self.keypair.clone();
         let server_addr = self.server_addr.clone();
         let logs_rx = self.logs_rx.clone();
+        let ca_cert = self.ca_cert.clone();
 
         self.op_handle = Some(tokio::spawn(async move {
             loop {
                 let r = Self::connect(
                     txchan.clone(),
+                    ca_cert.clone(),
                     logs_rx.clone(),
                     server_addr.clone(),
                     keypair.clone(),
                 )
                 .await;
                 warn!("Disconnected! Reason: {:?}\nTrying to reconnect...", r);
+                tokio::time::sleep(Duration::from_secs(5)).await; //5 second wait before retrying
             }
         }));
 
