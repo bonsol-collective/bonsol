@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
 
 async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Result<()> {
     debug!("QUIC thread starting...");
-    let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE).unwrap();
+    let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
     let mut transport = TransportConfig::default();
     transport.max_idle_timeout(Some(Duration::from_secs(15).try_into()?)); // 15 sec timeout
