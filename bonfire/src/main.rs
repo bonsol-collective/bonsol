@@ -459,7 +459,7 @@ struct BonfireClient {
 
 impl BonfireClient {
     pub fn send_event(&self, msg: Vec<BonsolInstruction>) {
-        self.tx.unbounded_send(msg).unwrap();
+        let _ = self.tx.unbounded_send(msg);
     }
 }
 
