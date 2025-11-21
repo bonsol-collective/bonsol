@@ -157,13 +157,13 @@ async fn bix_thread(
                     .for_each(|c| c.send_event(bixes.clone().into()));
 
                 // Parse instructions
-                let pixes = bixes
+                let parsed_bixes = bixes
                     .iter()
                     .filter_map(|bix| Some((parse_ix_data(&bix.data).ok()?, bix.accounts.clone())));
 
                 let mut jobs = jobs.lock().await;
 
-                for (pix, accounts) in pixes {
+                for (pix, accounts) in parsed_bixes {
                     let (execution_id, new_status) = match pix.ix_type() {
                         ChannelInstructionIxType::ExecuteV1 => {
                             let ix = some_or_continue!(pix.execute_v1_nested_flatbuffer());
