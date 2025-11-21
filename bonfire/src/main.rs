@@ -1,21 +1,22 @@
 use std::{
+    collections::HashMap,
     sync::{
-        Arc, LazyLock, Weak,
         atomic::{AtomicU64, Ordering},
+        Arc, LazyLock, Weak,
     },
     time::{Duration, SystemTime},
 };
 
-use actix_web::{
-    App, HttpResponse, HttpServer, Responder, get,
-    web::{Data, Query},
+use anyhow::{anyhow, Error, Result};
+use bonsol_schema::{parse_ix_data, ChannelInstructionIxType};
+use chrono::{DateTime, Utc};
+use futures::{
+    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    stream, SinkExt, StreamExt,
 };
-use actix_web_lab::sse;
-use anyhow::{Error, Result, anyhow};
-use futures::{SinkExt, StreamExt, stream};
 use quinn::{
+    rustls::pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
     Connection, Endpoint, ServerConfig, TransportConfig,
-    rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
 };
 use serde::{Deserialize, Serialize};
 use solana_client::rpc_config::{RpcBlockSubscribeConfig, RpcBlockSubscribeFilter};
@@ -23,17 +24,15 @@ use solana_program::pubkey;
 use solana_pubsub_client::nonblocking::pubsub_client::PubsubClient;
 use solana_sdk::{bs58, commitment_config::CommitmentConfig, pubkey::Pubkey};
 use solana_transaction_status::{
-    UiInstruction, UiTransactionEncoding, option_serializer::OptionSerializer,
+    option_serializer::OptionSerializer, UiInstruction, UiTransactionEncoding,
 };
 use tokio::{
     sync::{
+        broadcast::{self, Sender},
         Mutex,
-        broadcast::{self, Receiver, Sender},
-        mpsc::{self, UnboundedSender},
     },
     time::sleep,
 };
-use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, info, trace};
 
 use crate::protocol::{
@@ -42,6 +41,7 @@ use crate::protocol::{
 };
 
 mod protocol;
+mod web;
 
 const BONSOL_PROGRAM: Pubkey = pubkey!("BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew");
 
@@ -54,6 +54,22 @@ const TLS_CERT_FILE: LazyLock<String> =
 const WEBSOCKET_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("WEBSOCKET_URL").expect("WEBSOCKET_URL must be set!"));
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub enum JobStatus {
+    Submitted,
+    Claimed,
+    Done,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Job {
+    status: JobStatus,
+    execution_id: String,
+    node: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
@@ -65,93 +81,21 @@ async fn main() -> Result<()> {
     info!("Bonfire {} is starting!", env!("CARGO_PKG_VERSION"));
 
     let clients = BonfireClientList::new();
+    let jobs = Arc::new(Mutex::new(HashMap::new()));
 
     let (log_tx, log_rx) = broadcast::channel(100);
+    let (bix_tx, bix_rx) = unbounded();
 
-    tokio::spawn(subscription(clients.clone()));
+    tokio::spawn(subscription(bix_tx));
     tokio::spawn(quic_server(clients.clone(), log_tx));
-    web_server(clients, log_rx).await?;
-    Ok(())
-}
-
-#[derive(Serialize)]
-struct Node {
-    pubkey: String,
-    hw: HardwareSpecs,
-    latency: u64,
-}
-#[get("/nodes")]
-async fn nodes(clients: Data<BonfireClientList>) -> impl Responder {
-    HttpResponse::Ok().json(
-        clients
-            .get_all()
-            .await
-            .iter()
-            .map(|client| Node {
-                pubkey: client.pubkey.to_string(),
-                latency: client.latency.load(Ordering::Relaxed),
-                hw: client.hw.clone(),
-            })
-            .collect::<Vec<_>>(),
-    )
-}
-
-#[derive(Deserialize, Clone)]
-struct LogsQuery {
-    image_id: Option<String>,
-    job_id: Option<String>,
-}
-
-#[get("/logs")]
-async fn logs(log_rx: Data<Receiver<LogEvent>>, params: Query<LogsQuery>) -> impl Responder {
-    let stream = BroadcastStream::new(log_rx.resubscribe()).filter_map(move |log| {
-        let params = params.clone();
-        async move {
-            log.ok()
-                .filter(|log| match &params.image_id {
-                    None => true,
-                    Some(image_id) => &*log.image_id == image_id,
-                })
-                .filter(|log| match &params.job_id {
-                    None => true,
-                    Some(job_id) => &*log.job_id == job_id,
-                })
-                .map(|log| {
-                    let json = serde_json::to_string(&log)?;
-                    Ok::<_, Error>(sse::Event::Data(sse::Data::new(json)))
-                })
-        }
-    });
-
-    sse::Sse::from_stream(stream)
-}
-
-#[get("/health")]
-async fn health() -> impl Responder {
-    "Healthy!"
-}
-
-async fn web_server(clients: BonfireClientList, log_rx: Receiver<LogEvent>) -> Result<()> {
-    debug!("Web thread starting...");
-    let log_rx = Data::new(log_rx);
-    HttpServer::new(move || {
-        App::new()
-            .service(nodes)
-            .service(logs)
-            .service(health)
-            .app_data(Data::new(clients.clone()))
-            .app_data(log_rx.clone())
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await?;
-
+    tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
+    web::web_server(clients, jobs, log_rx).await?;
     Ok(())
 }
 
 async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Result<()> {
     debug!("QUIC thread starting...");
-    let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
+    let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE).unwrap();
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
     let mut transport = TransportConfig::default();
     transport.max_idle_timeout(Some(Duration::from_secs(15).try_into()?)); // 15 sec timeout
@@ -182,109 +126,206 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Re
     }
 }
 
-async fn subscription(clients: BonfireClientList) -> Result<()> {
-    debug!("Websocket subscription thread starting...");
+macro_rules! some_or_continue {
+    ($i:expr) => {
+        if let Some(v) = $i {
+            v
+        } else {
+            continue;
+        }
+    };
+}
 
-    async fn s(clients: &BonfireClientList) -> Result<()> {
-        let client = PubsubClient::new(&*WEBSOCKET_URL).await.unwrap();
+async fn bix_thread(
+    clients: BonfireClientList,
+    rx_chan: UnboundedReceiver<Vec<BonsolInstruction>>,
+    jobs: Arc<Mutex<HashMap<String, Job>>>,
+) {
+    debug!("BIX thread starting...");
 
-        let (stream, _unsub) = client
-            .block_subscribe(
-                RpcBlockSubscribeFilter::MentionsAccountOrProgram(BONSOL_PROGRAM.to_string()),
-                Some(RpcBlockSubscribeConfig {
-                    encoding: Some(UiTransactionEncoding::Base64),
-                    max_supported_transaction_version: Some(0),
-                    show_rewards: Some(false),
-                    commitment: Some(CommitmentConfig::confirmed()),
-                    transaction_details: Some(solana_transaction_status::TransactionDetails::Full),
-                }),
-            )
-            .await?;
+    rx_chan
+        .for_each(|bixes| {
+            let clients = clients.clone();
+            let jobs = jobs.clone();
 
-        stream
-            .filter_map(async |block| block.value.block)
-            .flat_map(|block| {
-                let bh = block.block_height.unwrap_or(block.parent_slot);
-                stream::iter(
-                    block
-                        .transactions
-                        .into_iter()
-                        .flatten()
-                        .filter_map(move |tx| {
-                            tx.transaction
-                                .decode()
-                                .map(|dtx| tx.meta.map(|meta| (dtx, meta, bh)))
-                                .flatten()
-                        }),
-                )
-            })
-            .map(move |(tx, meta, bh)| {
-                let accounts = tx.message.static_account_keys().to_owned();
-                let mut out_vec = Vec::new();
-
-                tx.message
-                    .instructions()
-                    .into_iter()
-                    .filter(|ix| ix.program_id(&accounts) == &BONSOL_PROGRAM)
-                    .map(|ix| BonsolInstruction {
-                        cpi: false,
-                        last_known_block: bh,
-                        data: ix.data.clone(),
-                        accounts: ix
-                            .accounts
-                            .iter()
-                            .map(|a| accounts[*a as usize].to_bytes().to_vec())
-                            .collect(),
-                    })
-                    .for_each(|bix| {
-                        out_vec.push(bix);
-                    });
-
-                if let OptionSerializer::Some(itxs) = meta.inner_instructions {
-                    itxs.into_iter()
-                        .flat_map(|x| x.instructions)
-                        .filter_map(|x| match x {
-                            UiInstruction::Compiled(ix) => Some(ix),
-                            _ => None,
-                        })
-                        .filter(|ix| {
-                            accounts.get(ix.program_id_index as usize) == Some(&BONSOL_PROGRAM)
-                        })
-                        .filter_map(|ix| {
-                            bs58::decode(ix.data)
-                                .into_vec()
-                                .ok()
-                                .map(|data| (data, ix.accounts))
-                        })
-                        .map(|(data, acc)| BonsolInstruction {
-                            cpi: true,
-                            accounts: acc
-                                .iter()
-                                .map(|a| accounts[*a as usize].to_bytes().to_vec())
-                                .collect(),
-                            data,
-                            last_known_block: bh,
-                        })
-                        .for_each(|bix| {
-                            out_vec.push(bix);
-                        });
-                }
-                out_vec
-            })
-            .for_each(|bix| async move {
+            async move {
+                // Send events to all clients
                 clients
                     .get_all()
                     .await
                     .iter()
-                    .for_each(|c| c.send_event(bix.clone().into()));
-            })
-            .await;
+                    .for_each(|c| c.send_event(bixes.clone().into()));
 
-        Ok::<_, Error>(())
+                // Parse instructions
+                let pixes = bixes
+                    .iter()
+                    .filter_map(|bix| Some((parse_ix_data(&bix.data).ok()?, bix.accounts.clone())));
+
+                let mut jobs = jobs.lock().await;
+
+                for (pix, accounts) in pixes {
+                    let (execution_id, new_status) = match pix.ix_type() {
+                        ChannelInstructionIxType::ExecuteV1 => {
+                            let ix = some_or_continue!(pix.execute_v1_nested_flatbuffer());
+                            (some_or_continue!(ix.execution_id()), JobStatus::Submitted)
+                        }
+                        ChannelInstructionIxType::ClaimV1 => {
+                            let ix = some_or_continue!(pix.claim_v1_nested_flatbuffer());
+                            (some_or_continue!(ix.execution_id()), JobStatus::Claimed)
+                        }
+                        ChannelInstructionIxType::StatusV1 => {
+                            let ix = some_or_continue!(pix.status_v1_nested_flatbuffer());
+                            (some_or_continue!(ix.execution_id()), JobStatus::Done)
+                        }
+                        _ => continue,
+                    };
+
+                    // extract claimer/node only for ClaimV1 and StatusV1
+                    let claimer: Option<String> =
+                        if matches!(pix.ix_type(), ChannelInstructionIxType::ExecuteV1) {
+                            None
+                        } else {
+                            accounts
+                                .get(3)
+                                .and_then(|data| -> Option<Pubkey> { data.clone().try_into().ok() })
+                                .map(|c| c.to_string())
+                        };
+
+                    // Apply valid state transitions only
+                    jobs.entry(execution_id.to_owned())
+                        .and_modify(|job| {
+                            if is_valid_transition(job.status, new_status) {
+                                job.status = new_status;
+                                job.node = claimer.clone();
+                                job.updated_at = Utc::now();
+                            }
+                        })
+                        .or_insert_with(|| Job {
+                            execution_id: execution_id.to_owned(),
+                            node: claimer,
+                            status: new_status,
+                            updated_at: Utc::now(),
+                            created_at: Utc::now(),
+                        });
+                }
+            }
+        })
+        .await;
+}
+
+// ---------------------------------------------------------
+// Allowed transitions: Submitted → Claimed → Done
+// ---------------------------------------------------------
+fn is_valid_transition(old: JobStatus, new: JobStatus) -> bool {
+    match (old, new) {
+        (JobStatus::Submitted, JobStatus::Claimed) => true,
+        (JobStatus::Claimed, JobStatus::Done) => true,
+        (JobStatus::Submitted, JobStatus::Done) => true, // allows jump if job didn’t exist before
+        (_, _) => false,                                 // backwards or same → not allowed
     }
+}
+
+async fn subscription(tx_chan: UnboundedSender<Vec<BonsolInstruction>>) -> Result<()> {
+    debug!("Websocket subscription thread starting...");
+
+    let s = move || {
+        let tx_chan = tx_chan.clone();
+        async move {
+            let client = PubsubClient::new(&*WEBSOCKET_URL).await.unwrap();
+
+            client
+                .block_subscribe(
+                    RpcBlockSubscribeFilter::MentionsAccountOrProgram(BONSOL_PROGRAM.to_string()),
+                    Some(RpcBlockSubscribeConfig {
+                        encoding: Some(UiTransactionEncoding::Base64),
+                        max_supported_transaction_version: Some(0),
+                        show_rewards: Some(false),
+                        commitment: Some(CommitmentConfig::confirmed()),
+                        transaction_details: Some(
+                            solana_transaction_status::TransactionDetails::Full,
+                        ),
+                    }),
+                )
+                .await?
+                .0
+                .filter_map(async |block| block.value.block)
+                .flat_map(|block| {
+                    let bh = block.block_height.unwrap_or(block.parent_slot);
+                    stream::iter(
+                        block
+                            .transactions
+                            .into_iter()
+                            .flatten()
+                            .filter_map(move |tx| {
+                                tx.transaction
+                                    .decode()
+                                    .map(|dtx| tx.meta.map(|meta| (dtx, meta, bh)))
+                                    .flatten()
+                            }),
+                    )
+                })
+                .map(move |(tx, meta, bh)| {
+                    let accounts = tx.message.static_account_keys().to_owned();
+                    let mut out_vec = Vec::new();
+
+                    tx.message
+                        .instructions()
+                        .into_iter()
+                        .filter(|ix| ix.program_id(&accounts) == &BONSOL_PROGRAM)
+                        .map(|ix| BonsolInstruction {
+                            cpi: false,
+                            last_known_block: bh,
+                            data: ix.data.clone(),
+                            accounts: ix
+                                .accounts
+                                .iter()
+                                .map(|a| accounts[*a as usize].to_bytes().to_vec())
+                                .collect(),
+                        })
+                        .for_each(|bix| {
+                            out_vec.push(bix);
+                        });
+
+                    if let OptionSerializer::Some(itxs) = meta.inner_instructions {
+                        itxs.into_iter()
+                            .flat_map(|x| x.instructions)
+                            .filter_map(|x| match x {
+                                UiInstruction::Compiled(ix) => Some(ix),
+                                _ => None,
+                            })
+                            .filter(|ix| {
+                                accounts.get(ix.program_id_index as usize) == Some(&BONSOL_PROGRAM)
+                            })
+                            .filter_map(|ix| {
+                                bs58::decode(ix.data)
+                                    .into_vec()
+                                    .ok()
+                                    .map(|data| (data, ix.accounts))
+                            })
+                            .map(|(data, acc)| BonsolInstruction {
+                                cpi: true,
+                                accounts: acc
+                                    .iter()
+                                    .map(|a| accounts[*a as usize].to_bytes().to_vec())
+                                    .collect(),
+                                data,
+                                last_known_block: bh,
+                            })
+                            .for_each(|bix| {
+                                out_vec.push(bix);
+                            });
+                    }
+                    Ok(out_vec)
+                })
+                .forward(tx_chan)
+                .await?;
+
+            Ok::<_, Error>(())
+        }
+    };
 
     loop {
-        let r = s(&clients).await;
+        let r = s().await;
         info!("Subscription ended, reason {:?}. Reconnecting", r);
     }
 }
@@ -345,7 +386,7 @@ impl BonfireClientBuilder {
 
         let mut event_writer = protocol::writer(conn.open_uni().await?);
         let pubkey: Pubkey = challenge_response.public_key.into();
-        let (bix_tx, mut bix_rx) = mpsc::unbounded_channel();
+        let (bix_tx, mut bix_rx) = unbounded();
 
         let client = Arc::new(BonfireClient {
             hw,
@@ -379,7 +420,7 @@ impl BonfireClientBuilder {
         };
 
         let event_future = async move {
-            while let Some(msg) = bix_rx.recv().await {
+            while let Some(msg) = bix_rx.next().await {
                 event_writer.send(msg).await?;
             }
             Err::<(), _>(anyhow!("Connection dropped"))
@@ -418,7 +459,7 @@ struct BonfireClient {
 
 impl BonfireClient {
     pub fn send_event(&self, msg: Vec<BonsolInstruction>) {
-        self.tx.send(msg).unwrap();
+        self.tx.unbounded_send(msg).unwrap();
     }
 }
 
