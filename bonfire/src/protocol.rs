@@ -1,6 +1,6 @@
 use std::{pin::Pin, sync::Arc};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use bincode::{Decode, Encode};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use rand::RngCore;
