@@ -1,7 +1,7 @@
 [package]
 name = "bonsol-bonfire"
 version.workspace = true
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 actix-web = "4.11.0"
@@ -24,3 +24,6 @@ tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = { version = "0.7.17", features = ["codec"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["time", "json", "env-filter"] }
+
+bonsol-schema = { workspace = true }
+chrono = { version = "0.4.42", features = ["serde"] }

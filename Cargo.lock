@@ -1455,6 +1455,8 @@ dependencies = [
  "actix-web-lab",
  "anyhow",
  "bincode 2.0.1",
+ "bonsol-schema",
+ "chrono",
  "futures",
  "paste",
  "quinn",
