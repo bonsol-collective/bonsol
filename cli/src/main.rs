@@ -19,6 +19,7 @@ mod deploy;
 mod estimate;
 mod execute;
 mod init;
+mod logs;
 mod prove;
 mod read_receipt;
 
@@ -163,5 +164,11 @@ async fn main() -> anyhow::Result<()> {
         Command::ReadReceipt { receipt_path } => {
             read_receipt::read_receipt_file(Path::new(&receipt_path))
         }
+
+        Command::Logs {
+            bonfire_url,
+            image_id,
+            execution_id,
+        } => logs::logs(bonfire_url, image_id, execution_id).await,
     }
 }

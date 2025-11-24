@@ -103,7 +103,7 @@ pub async fn web_server(
             .app_data(log_rx.clone())
             .app_data(jobs_list.clone())
     })
-    .bind(("0.0.0.0", 8081))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await?;
 

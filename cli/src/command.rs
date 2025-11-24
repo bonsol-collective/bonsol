@@ -241,4 +241,16 @@ pub enum Command {
         #[arg(help = "The path to the binary proof receipt file (.bin)")]
         receipt_path: String,
     },
+
+    #[command(about = "Stream logs from bonfire.bonsol.org (server-sent events)")]
+    Logs {
+        #[arg(help = "Filter logs by image id", short = 'b', long)]
+        bonfire_url: Option<String>,
+
+        #[arg(help = "Filter logs by image id", short = 'i', long)]
+        image_id: Option<String>,
+
+        #[arg(help = "Filter logs by execution id", short = 'e', long)]
+        execution_id: Option<String>,
+    },
 }
