@@ -309,7 +309,6 @@ where
     serializer.serialize_str(value.as_ref())
 }
 
-// New: custom deserializer for Arc<str>
 fn arc_str_deserializer<'de, D>(deserializer: D) -> Result<Arc<str>, D::Error>
 where
     D: Deserializer<'de>,
