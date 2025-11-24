@@ -25,7 +25,6 @@ pub async fn logs(
     }
 
     // Create an EventSource connected to the logs endpoint
-    // (the API below follows the example you provided; exact names may vary by crate)
     let mut es = EventSource::get(url.as_str());
 
     // Stream SSE events
@@ -33,8 +32,6 @@ pub async fn logs(
         match event {
             Ok(Event::Open) => println!("Connection Open!"),
             Ok(Event::Message(message)) => {
-                // Most SSE message types expose .data (and maybe .id, .event)
-                // Print the data payload as before.
                 let log: LogEvent = serde_json::from_str(&message.data).unwrap();
                 println!("{}", log.pretty());
             }
