@@ -244,7 +244,7 @@ pub enum Command {
 
     #[command(about = "Stream logs from bonfire.bonsol.org (server-sent events)")]
     Logs {
-        #[arg(help = "Filter logs by image id", short = 'b', long)]
+        #[arg(help = "The URL of the bonfire server", short = 'b', long)]
         bonfire_url: Option<String>,
 
         #[arg(help = "Filter logs by image id", short = 'i', long)]
