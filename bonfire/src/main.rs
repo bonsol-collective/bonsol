@@ -102,7 +102,7 @@ async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
     loop {
         jobs.lock()
             .await
-            .retain(|_, job| job.expires_at < Utc::now());
+            .retain(|_, job| job.expires_at > Utc::now());
         tokio::time::sleep(Duration::from_secs(600)).await; //Sleep 10 min
     }
 }
