@@ -19,7 +19,7 @@ members = [
 
 
 resolver = "2"
-package.version = "0.7.0"
+package.version = "0.7.1"
 
 [workspace.dependencies]
 solana-sdk = "2.3.1"

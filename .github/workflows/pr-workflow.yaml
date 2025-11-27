@@ -40,7 +40,7 @@ jobs:
         if: failure()
         run: |
           echo "=== ERROR LOG CONTENTS ==="
-          cat /github/home/.cache/pre-commit/pre-commit.log
+          cat ~/.cache/pre-commit/pre-commit.log
 
   check-formatting:
     name: Check & Format

@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use bincode::{Decode, Encode};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use rand::RngCore;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use solana_sdk::{
     signature::{Keypair, Signature},
     signer::Signer,
@@ -253,10 +253,52 @@ impl BonfireMessage {
     }
 }
 
-#[derive(Serialize, Encode, Decode, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, Clone, Copy)]
 pub enum LogSource {
     Stdout,
     Stderr,
+}
+
+impl std::fmt::Display for LogSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            LogSource::Stdout => "stdout",
+            LogSource::Stderr => "stderr",
+        })
+    }
+}
+
+impl LogEvent {
+    /// Pretty-print this log event in a syslog-ish, bracketed format.
+    /// Example:
+    /// [2025-11-24T21:11:56Z] [stdout] [img <id>] [job <id>] message
+    pub fn pretty(&self) -> String {
+        let ts = chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+
+        let image_id: String = self.image_id.chars().take(8).collect();
+        let job_id: String = self.job_id.chars().take(8).collect();
+
+        let header = format!(
+            "[{}] [{}] [img {}] [job {}]",
+            ts, self.source, image_id, job_id,
+        );
+
+        let msg = self.log.trim_end_matches(&['\r', '\n'][..]);
+
+        if msg.contains('\n') {
+            // multiline message
+            let indented = msg
+                .lines()
+                .map(|l| format!("  {}", l))
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            format!("{header}:\n{indented}")
+        } else {
+            // single line message
+            format!("{header} {msg}")
+        }
+    }
 }
 
 fn arc_str_serializer<S>(value: &Arc<str>, serializer: S) -> Result<S::Ok, S::Error>
@@ -267,12 +309,27 @@ where
     serializer.serialize_str(value.as_ref())
 }
 
-#[derive(Serialize, Encode, Decode, Clone, Debug)]
+fn arc_str_deserializer<'de, D>(deserializer: D) -> Result<Arc<str>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Deserialize into an owned String, then convert to Arc<str>
+    let s = String::deserialize(deserializer)?;
+    Ok(Arc::<str>::from(s))
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Clone, Debug)]
 pub struct LogEvent {
     pub source: LogSource,
-    #[serde(serialize_with = "arc_str_serializer")]
+    #[serde(
+        serialize_with = "arc_str_serializer",
+        deserialize_with = "arc_str_deserializer"
+    )]
     pub image_id: Arc<str>,
-    #[serde(serialize_with = "arc_str_serializer")]
+    #[serde(
+        serialize_with = "arc_str_serializer",
+        deserialize_with = "arc_str_deserializer"
+    )]
     pub job_id: Arc<str>,
     pub log: String,
 }

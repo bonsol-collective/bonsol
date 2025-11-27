@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::{anyhow, Error, Result};
 use bonsol_schema::{parse_ix_data, ChannelInstructionIxType};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Days, Utc};
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     stream, SinkExt, StreamExt,
@@ -65,9 +65,11 @@ pub enum JobStatus {
 pub struct Job {
     status: JobStatus,
     execution_id: String,
+    image_id: Option<String>,
     node: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
+    expires_at: DateTime<Utc>,
 }
 
 #[tokio::main]
@@ -89,8 +91,20 @@ async fn main() -> Result<()> {
     tokio::spawn(subscription(bix_tx));
     tokio::spawn(quic_server(clients.clone(), log_tx));
     tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
+    tokio::spawn(jobs_cleaner(jobs.clone()));
     web::web_server(clients, jobs, log_rx).await?;
     Ok(())
+}
+
+async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
+    debug!("Job cleaner thread starting...");
+
+    loop {
+        jobs.lock()
+            .await
+            .retain(|_, job| job.expires_at > Utc::now());
+        tokio::time::sleep(Duration::from_secs(600)).await; //Sleep 10 min
+    }
 }
 
 async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Result<()> {
@@ -157,28 +171,53 @@ async fn bix_thread(
                     .for_each(|c| c.send_event(bixes.clone().into()));
 
                 // Parse instructions
-                let parsed_bixes = bixes
-                    .iter()
-                    .filter_map(|bix| Some((parse_ix_data(&bix.data).ok()?, bix.accounts.clone())));
+                let parsed_bixes = bixes.iter().filter_map(|bix| {
+                    Some((
+                        parse_ix_data(&bix.data).ok()?,
+                        bix.accounts.clone(),
+                        bix.last_known_block,
+                    ))
+                });
 
                 let mut jobs = jobs.lock().await;
 
-                for (pix, accounts) in parsed_bixes {
-                    let (execution_id, new_status) = match pix.ix_type() {
+                for (pix, accounts, last_known_block) in parsed_bixes {
+                    let (execution_id, image_id, max_bh, new_status) = match pix.ix_type() {
                         ChannelInstructionIxType::ExecuteV1 => {
                             let ix = some_or_continue!(pix.execute_v1_nested_flatbuffer());
-                            (some_or_continue!(ix.execution_id()), JobStatus::Submitted)
+                            (
+                                some_or_continue!(ix.execution_id()),
+                                ix.image_id().map(str::to_owned),
+                                Some(ix.max_block_height()),
+                                JobStatus::Submitted,
+                            )
                         }
                         ChannelInstructionIxType::ClaimV1 => {
                             let ix = some_or_continue!(pix.claim_v1_nested_flatbuffer());
-                            (some_or_continue!(ix.execution_id()), JobStatus::Claimed)
+                            (
+                                some_or_continue!(ix.execution_id()),
+                                None,
+                                None,
+                                JobStatus::Claimed,
+                            )
                         }
                         ChannelInstructionIxType::StatusV1 => {
                             let ix = some_or_continue!(pix.status_v1_nested_flatbuffer());
-                            (some_or_continue!(ix.execution_id()), JobStatus::Done)
+                            (
+                                some_or_continue!(ix.execution_id()),
+                                None,
+                                None,
+                                JobStatus::Done,
+                            )
                         }
                         _ => continue,
                     };
+
+                    let expires_at = max_bh
+                        .map(|max_bh| (max_bh - last_known_block) as f32 / 0.5) //Calculate the time to the max_bh in seconds
+                        .map(|delta_sec| Utc::now() + Duration::from_secs_f32(delta_sec)) //Convert to DateTime
+                        .map(|e| e.clamp(Utc::now(), Utc::now() + Days::new(1))) //Clamp it to the range now(), now() + 24h
+                        .unwrap_or_else(|| Utc::now() + Days::new(1)); //If no expiration, take 24h
 
                     // extract claimer/node only for ClaimV1 and StatusV1
                     let claimer: Option<String> =
@@ -203,9 +242,11 @@ async fn bix_thread(
                         .or_insert_with(|| Job {
                             execution_id: execution_id.to_owned(),
                             node: claimer,
+                            image_id,
                             status: new_status,
                             updated_at: Utc::now(),
                             created_at: Utc::now(),
+                            expires_at,
                         });
                 }
             }
@@ -231,7 +272,7 @@ async fn subscription(tx_chan: UnboundedSender<Vec<BonsolInstruction>>) -> Resul
     let s = move || {
         let tx_chan = tx_chan.clone();
         async move {
-            let client = PubsubClient::new(&*WEBSOCKET_URL).await.unwrap();
+            let client = PubsubClient::new(&*WEBSOCKET_URL).await?;
 
             client
                 .block_subscribe(
