@@ -280,10 +280,8 @@ pub fn execute_transform_cli_inputs(inputs: Vec<CliInput>) -> Result<Vec<InputT>
                     let data = n.into_bytes();
                     res.push(InputT::public(data));
                 } else {
-                    return Err(anyhow::anyhow!(
-                        "PublicData input \'{}\' is not a valid number (i64, u64, f64) or 0x-prefixed hex string",
-                        input.data
-                    ));
+                    // Fallback: treat as raw string (consistent with bonsol prove behavior)
+                    res.push(InputT::public(input.data.into_bytes()));
                 }
             }
             _ => {
