@@ -574,12 +574,15 @@ mod test {
 
     #[test]
     fn test_execute_transform_cli_inputs() {
-        // Case 1: Invalid PublicData (non-numeric, non-hex string) - Should now be an error
-        let invalid_public_data_str = CliInput {
+        // Case 1: Raw string PublicData - should now work (consistent with bonsol prove)
+        let raw_string_input = CliInput {
             input_type: "PublicData".to_string(),
-            data: "1234567890abcdef".to_string(), // This was the old first test case
+            data: "1234567890abcdef".to_string(),
         };
-        assert!(execute_transform_cli_inputs(vec![invalid_public_data_str]).is_err());
+        assert_eq!(
+            execute_transform_cli_inputs(vec![raw_string_input]).unwrap(),
+            vec![InputT::public("1234567890abcdef".as_bytes().to_vec())]
+        );
 
         // Case 2: Valid hex PublicData
         let hex_input = CliInput {
@@ -642,12 +645,15 @@ mod test {
             vec![InputT::public((-456i64).to_le_bytes().to_vec())]
         );
 
-        // Case 8: New - PublicData with invalid string (non-numeric, non-hex) - explicit test
-        let invalid_str_input = CliInput {
+        // Case 8: Raw string PublicData - should now work (consistent with bonsol prove)
+        let raw_str_input = CliInput {
             input_type: "PublicData".to_string(),
             data: "hello".to_string(),
         };
-        assert!(execute_transform_cli_inputs(vec![invalid_str_input]).is_err());
+        assert_eq!(
+            execute_transform_cli_inputs(vec![raw_str_input]).unwrap(),
+            vec![InputT::public("hello".as_bytes().to_vec())]
+        );
 
         // Case 9: New - PublicData with invalid hex string
         let invalid_hex_input = CliInput {
