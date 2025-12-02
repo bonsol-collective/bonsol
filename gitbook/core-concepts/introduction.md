@@ -18,8 +18,6 @@ Bonsol lets you run any program off-chain and generate a zero-knowledge proof th
 **Bonsol shifts Solana from a system limited by what fits into a transaction  
 to a system powered by what can be proven to a transaction.**
 
----
-
 ## Solana’s Hidden Limit
 
 <!-- ![Graphic highlighting Solana’s constraints](image-1.png) -->
@@ -38,7 +36,6 @@ These limits aren’t flaws—they keep Solana predictable and fast.
 
 Bonsol removes these constraints safely by shifting all heavy computation off-chain and proving correctness back on-chain.
 
----
 
 ## The Off-Chain Workflow (The Bonsol Model)
 
@@ -64,7 +61,6 @@ This unlocks a new programming approach:
 Instead of writing on-chain programs that *do the work*,  
 you write programs that *verify the work*.
 
----
 
 ## How Bonsol Works
 
@@ -107,7 +103,6 @@ Your Solana program receives:
 - Execution metadata  
 - Input digest for tamper-proofing  
 
----
 
 ## Why Bonsol Uses STARKs + SNARKs (Hybrid Approach)
 
@@ -125,7 +120,6 @@ Your Solana program receives:
 - **STARK → freedom to compute anything**  
 - **SNARK → freedom to verify on-chain cheaply**  
 
----
 
 ## Input Digest Verification (Preventing Input Forgery)
 
@@ -143,7 +137,6 @@ If even one byte changes:
 
 This guarantees correctness and avoids tampering.
 
----
 
 ## When to Use Bonsol (Real Use Cases)
 
