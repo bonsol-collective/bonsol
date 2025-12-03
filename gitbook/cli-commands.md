@@ -232,10 +232,10 @@ The execution request file should be a JSON file with the following structure:
   "imageId": "20b9db715f989e3f57842787badafae101ce0b16202491bac1a3aebf573da0ba",
   "executionId": "9878798-987987-987987-987987",
   "tip": 100,
-  "maxBlockHeight": 100,
+  "expiry": 100,
   "inputs": [
     {
-      "inputType": "Public",
+      "inputType": "PublicData",
       "data": "<base64 encoded data>"
     }
   ],
@@ -243,9 +243,10 @@ The execution request file should be a JSON file with the following structure:
     "programId": "your program id",
     "instructionPrefix": [0, 1, 2, 3],
     "extraAccounts": [
-      {
-        "address": "",
-        "role": "writable"
+       {
+        "pubkey": "",
+        "isSigner": false,
+        "isWritable": true
       }
     ]
   },
