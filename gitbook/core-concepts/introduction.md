@@ -13,10 +13,16 @@ That’s exactly what Bonsol enables.
 
 Bonsol lets you run any program off-chain and generate a zero-knowledge proof that the execution was correct. This proof is extremely small and can be verified cheaply on Solana. Under the hood, it uses **RISC Zero’s STARK proofs** for strong security, and then compresses them into a **Groth16 SNARK** for on-chain verification.
 
+<div align="center">
+
+> **Bonsol shifts Solana from a system limited by what fits into a transaction  
+> to a system powered by what can be proven to a transaction.**
+
+</div>
+
 ![High-level Bonsol Architecture – End-to-end flow](image.png)
 
-**Bonsol shifts Solana from a system limited by what fits into a transaction  
-to a system powered by what can be proven to a transaction.**
+
 
 ## Solana’s Hidden Limit
 
