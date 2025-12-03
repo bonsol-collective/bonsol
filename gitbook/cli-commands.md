@@ -43,7 +43,7 @@ This command creates a new Bonsol program structure in the specified directory.
 Build your zero-knowledge program using:
 
 ```bash
-build --zk-program-path <ZK_PROGRAM_PATH>
+bonsol build --zk-program-path <ZK_PROGRAM_PATH>
 ```
 
 Options:
