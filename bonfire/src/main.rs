@@ -28,17 +28,18 @@ use solana_transaction_status::{
 };
 use tokio::{
     sync::{
-        broadcast::{self, Sender},
-        Mutex,
+        Mutex, broadcast::{self, Sender}, mpsc
     },
     time::sleep,
 };
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn, error};
 
 use crate::protocol::{
     BonfireMessage, BonsolInstruction, Challenge, HardwareSpecs, LogEvent, LoginResponse, Ping,
     SpecsAck,
+    LogSource,
 };
+use bonsol_elasticsearch::{BonsolStore, LogEntry,LogType};
 
 mod protocol;
 mod web;
@@ -82,6 +83,31 @@ async fn main() -> Result<()> {
 
     info!("Bonfire {} is starting!", env!("CARGO_PKG_VERSION"));
 
+    let es_store: Option<Arc<BonsolStore>> = match BonsolStore::from_env_optional() {
+        Ok(Some(store)) => {
+            // Ensure index exists on startup
+            if let Err(e) = store.ensure_index().await {
+                warn!("Failed to ensure ES index: {}", e);
+            }
+
+            if let Err(e) = store.health_check().await {
+                warn!("ES health check failed: {}", e);
+            } else {
+                info!("Elasticsearch connected successfully");
+            }
+
+            Some(Arc::new(store))
+        }
+        Ok(None) => {
+            info!("Elasticsearch not configured, historical logs disabled");
+            None
+        }
+        Err(e) => {
+            error!("Failed to initialize Elasticsearch: {}", e);
+            None
+        }
+    };
+
     let clients = BonfireClientList::new();
     let jobs = Arc::new(Mutex::new(HashMap::new()));
 
@@ -89,7 +115,7 @@ async fn main() -> Result<()> {
     let (bix_tx, bix_rx) = unbounded();
 
     tokio::spawn(subscription(bix_tx));
-    tokio::spawn(quic_server(clients.clone(), log_tx));
+    tokio::spawn(quic_server(clients.clone(), log_tx, es_store));
     tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
     tokio::spawn(jobs_cleaner(jobs.clone()));
     web::web_server(clients, jobs, log_rx).await?;
@@ -107,7 +133,7 @@ async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
     }
 }
 
-async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Result<()> {
+async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, es_store: Option<Arc<BonsolStore>>) -> Result<()> {
     debug!("QUIC thread starting...");
     let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
@@ -120,8 +146,11 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Re
 
     loop {
         if let Some(incoming) = endpoint.accept().await {
+
             let clients = clients.clone();
             let log_tx = log_tx.clone();
+            let es_store = es_store.clone();
+
             tokio::spawn(async move {
                 // accept connection in dedicated thread
                 let conn = incoming.await?;
@@ -129,6 +158,7 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Re
                 let client = BonfireClientBuilder::new()
                     .with_connection(conn)
                     .with_log_channel(log_tx)
+                    .with_es_store(es_store)
                     .build()
                     .await?;
 
@@ -375,6 +405,7 @@ async fn subscription(tx_chan: UnboundedSender<Vec<BonsolInstruction>>) -> Resul
 struct BonfireClientBuilder {
     conn: Option<Connection>,
     log_tx: Option<Sender<LogEvent>>,
+    es_store: Option<Arc<BonsolStore>>,
 }
 
 impl BonfireClientBuilder {
@@ -389,6 +420,11 @@ impl BonfireClientBuilder {
 
     fn with_log_channel(mut self, log_tx: Sender<LogEvent>) -> Self {
         self.log_tx = Some(log_tx);
+        self
+    }
+
+    fn with_es_store(mut self, es_store: Option<Arc<BonsolStore>>)->Self{
+        self.es_store = es_store;
         self
     }
 
@@ -467,10 +503,90 @@ impl BonfireClientBuilder {
             Err::<(), _>(anyhow!("Connection dropped"))
         };
 
+        let es_store = self.es_store.clone();
+        let node_pubkey = client.pubkey.to_string();
+
         let log_future = async move {
             let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await?);
             let log_tx = self.log_tx.unwrap();
+
+            // Creating channel if ES is configured
+            let persist_tx = if let Some(ref store ) = es_store {
+                let (tx,mut rx) = mpsc::channel::<LogEntry>(10_000);
+                let store_clone = store.clone();
+
+                tokio::spawn(async move {
+                    let mut batch :Vec<LogEntry> = Vec::with_capacity(100);
+                    let mut interval = tokio::time::interval(Duration::from_secs(1));
+
+                    loop{
+                        tokio::select! {
+                            log_opt = rx.recv()=>{
+                                match log_opt{
+                                    Some(log)=>{
+                                        batch.push(log);
+
+                                        if batch.len() >=100{
+                                            if let Err(e) = store_clone.index_log_bulk(&batch).await{
+                                                warn!("Failed to bulk index logs: {}",e);
+                                            }else {
+                                                trace!("Bulk indexed {} logs",batch.len());
+                                            }
+                                            batch.clear();
+                                        }
+                                    }
+                                    None =>{
+                                        // channel closed, flused remaining logs and exit
+                                        if !batch.is_empty(){
+                                            if let Err(e) = store_clone.index_log_bulk(&batch).await{
+                                                warn!("Failed to flush remaining logs: {}", e);
+                                            }else{
+                                                debug!("Flushed {} remaining logs on channel close", batch.len());
+                                            }
+                                        }  
+                                        break; 
+                                    }
+                                }
+                            }
+                            _ = interval.tick() => {
+                                if !batch.is_empty() {
+                                    if let Err(e) = store_clone.index_log_bulk(&batch).await {
+                                        warn!("Failed to bulk index logs (periodic): {}", e);
+                                    } else {
+                                        trace!("Periodic bulk indexed {} logs", batch.len());
+                                    }
+                                    batch.clear();
+                                }
+                            }
+                        }
+                    }
+                });
+                Some(tx)
+            }else{
+                None
+            };
+
             while let Some(Ok(msg)) = log_reader.next().await {
+                if let Some(ref tx) = persist_tx{
+                    let log_entry = LogEntry{
+                        timestamp : Utc::now(),
+                        level: "INFO".to_string(),
+                        message: msg.log.clone(),
+                        kind: match msg.source{
+                            LogSource::Stdout=>LogType::Stdout,
+                            LogSource::Stderr=>LogType::Stderr, 
+                        },
+                        job_id: Some(msg.job_id.to_string()),
+                        image_id: Some(msg.image_id.to_string()),
+                        node_id: Some(node_pubkey.clone()),
+                        meta:None,
+                    };
+
+                    // Non blocking send
+                    if let Err(e) = tx.try_send(log_entry){
+                        warn!("ES persistence buffer full, dropping log: {}", e);
+                    }
+                }
                 log_tx.send(msg)?;
             }
             Err::<(), _>(anyhow!("Connection dropped"))
