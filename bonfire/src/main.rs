@@ -114,11 +114,13 @@ async fn main() -> Result<()> {
     let (log_tx, log_rx) = broadcast::channel(100);
     let (bix_tx, bix_rx) = unbounded();
 
+    let es_store_for_web = es_store.clone();
+
     tokio::spawn(subscription(bix_tx));
     tokio::spawn(quic_server(clients.clone(), log_tx, es_store));
     tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
     tokio::spawn(jobs_cleaner(jobs.clone()));
-    web::web_server(clients, jobs, log_rx).await?;
+    web::web_server(clients, jobs, log_rx,es_store_for_web).await?;
     Ok(())
 }
 
