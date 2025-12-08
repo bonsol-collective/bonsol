@@ -41,8 +41,11 @@ use crate::protocol::{
 };
 use bonsol_elasticsearch::{BonsolStore, LogEntry,LogType};
 
+mod log_persister;
 mod protocol;
 mod web;
+
+use log_persister::LogBufferManager;
 
 const BONSOL_PROGRAM: Pubkey = pubkey!("BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew");
 
@@ -116,11 +119,20 @@ async fn main() -> Result<()> {
 
     let es_store_for_web = es_store.clone();
 
+    // Creating log buffer manager if ES is configured
+    let persist_tx = es_store.clone().map(|store| {
+        LogBufferManager::new(
+            store,
+            100,                        // batch_size
+            Duration::from_secs(1),     // flush_interval
+        ).spawn()
+    });
+
     tokio::spawn(subscription(bix_tx));
-    tokio::spawn(quic_server(clients.clone(), log_tx, es_store));
+    tokio::spawn(quic_server(clients.clone(), log_tx, persist_tx));
     tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
     tokio::spawn(jobs_cleaner(jobs.clone()));
-    web::web_server(clients, jobs, log_rx,es_store_for_web).await?;
+    web::web_server(clients, jobs, log_rx, es_store_for_web).await?;
     Ok(())
 }
 
@@ -135,7 +147,7 @@ async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
     }
 }
 
-async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, es_store: Option<Arc<BonsolStore>>) -> Result<()> {
+async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, persist_tx: Option<mpsc::Sender<LogEntry>>) -> Result<()> {
     debug!("QUIC thread starting...");
     let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
@@ -151,7 +163,7 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, es_st
 
             let clients = clients.clone();
             let log_tx = log_tx.clone();
-            let es_store = es_store.clone();
+            let persist_tx = persist_tx.clone();
 
             tokio::spawn(async move {
                 // accept connection in dedicated thread
@@ -160,7 +172,7 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, es_st
                 let client = BonfireClientBuilder::new()
                     .with_connection(conn)
                     .with_log_channel(log_tx)
-                    .with_es_store(es_store)
+                    .with_persist_channel(persist_tx)
                     .build()
                     .await?;
 
@@ -407,7 +419,7 @@ async fn subscription(tx_chan: UnboundedSender<Vec<BonsolInstruction>>) -> Resul
 struct BonfireClientBuilder {
     conn: Option<Connection>,
     log_tx: Option<Sender<LogEvent>>,
-    es_store: Option<Arc<BonsolStore>>,
+    persist_tx: Option<mpsc::Sender<LogEntry>>,
 }
 
 impl BonfireClientBuilder {
@@ -425,8 +437,8 @@ impl BonfireClientBuilder {
         self
     }
 
-    fn with_es_store(mut self, es_store: Option<Arc<BonsolStore>>)->Self{
-        self.es_store = es_store;
+    fn with_persist_channel(mut self, persist_tx: Option<mpsc::Sender<LogEntry>>) -> Self {
+        self.persist_tx = persist_tx;
         self
     }
 
@@ -505,90 +517,37 @@ impl BonfireClientBuilder {
             Err::<(), _>(anyhow!("Connection dropped"))
         };
 
-        let es_store = self.es_store.clone();
+        let persist_tx = self.persist_tx.clone();
         let node_pubkey = client.pubkey.to_string();
 
         let log_future = async move {
             let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await?);
             let log_tx = self.log_tx.unwrap();
 
-            // Creating channel if ES is configured
-            let persist_tx = if let Some(ref store ) = es_store {
-                let (tx,mut rx) = mpsc::channel::<LogEntry>(10_000);
-                let store_clone = store.clone();
-
-                tokio::spawn(async move {
-                    let mut batch :Vec<LogEntry> = Vec::with_capacity(100);
-                    let mut interval = tokio::time::interval(Duration::from_secs(1));
-
-                    loop{
-                        tokio::select! {
-                            log_opt = rx.recv()=>{
-                                match log_opt{
-                                    Some(log)=>{
-                                        batch.push(log);
-
-                                        if batch.len() >=100{
-                                            if let Err(e) = store_clone.index_log_bulk(&batch).await{
-                                                warn!("Failed to bulk index logs: {}",e);
-                                            }else {
-                                                trace!("Bulk indexed {} logs",batch.len());
-                                            }
-                                            batch.clear();
-                                        }
-                                    }
-                                    None =>{
-                                        // channel closed, flused remaining logs and exit
-                                        if !batch.is_empty(){
-                                            if let Err(e) = store_clone.index_log_bulk(&batch).await{
-                                                warn!("Failed to flush remaining logs: {}", e);
-                                            }else{
-                                                debug!("Flushed {} remaining logs on channel close", batch.len());
-                                            }
-                                        }  
-                                        break; 
-                                    }
-                                }
-                            }
-                            _ = interval.tick() => {
-                                if !batch.is_empty() {
-                                    if let Err(e) = store_clone.index_log_bulk(&batch).await {
-                                        warn!("Failed to bulk index logs (periodic): {}", e);
-                                    } else {
-                                        trace!("Periodic bulk indexed {} logs", batch.len());
-                                    }
-                                    batch.clear();
-                                }
-                            }
-                        }
-                    }
-                });
-                Some(tx)
-            }else{
-                None
-            };
-
             while let Some(Ok(msg)) = log_reader.next().await {
-                if let Some(ref tx) = persist_tx{
-                    let log_entry = LogEntry{
-                        timestamp : Utc::now(),
+                // Persist to Elasticsearch if configured
+                if let Some(ref tx) = persist_tx {
+                    let log_entry = LogEntry {
+                        timestamp: Utc::now(),
                         level: "INFO".to_string(),
                         message: msg.log.clone(),
-                        kind: match msg.source{
-                            LogSource::Stdout=>LogType::Stdout,
-                            LogSource::Stderr=>LogType::Stderr, 
+                        kind: match msg.source {
+                            LogSource::Stdout => LogType::Stdout,
+                            LogSource::Stderr => LogType::Stderr,
                         },
                         job_id: Some(msg.job_id.to_string()),
                         image_id: Some(msg.image_id.to_string()),
                         node_id: Some(node_pubkey.clone()),
-                        meta:None,
+                        meta: None,
                     };
 
-                    // Non blocking send
-                    if let Err(e) = tx.try_send(log_entry){
+                    // Non-blocking send to buffer manager
+                    if let Err(e) = tx.try_send(log_entry) {
                         warn!("ES persistence buffer full, dropping log: {}", e);
                     }
                 }
+
+                // Broadcast to web clients
                 log_tx.send(msg)?;
             }
             Err::<(), _>(anyhow!("Connection dropped"))
