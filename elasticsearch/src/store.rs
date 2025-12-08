@@ -73,6 +73,7 @@ impl BonsolStore {
             }
         });
 
+        // TODO: Index need lifecycle management
         let res = self.client
             .indices()
             .create(IndicesCreateParts::Index(&self.index_name))
