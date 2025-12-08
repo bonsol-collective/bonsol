@@ -323,3 +323,76 @@ mod elasticsearch_unit_tests {
         assert_eq!(desc.order, "desc");
     }
 }
+
+// ============================================================================
+// LogBufferManager Unit Tests
+// ============================================================================
+
+#[cfg(test)]
+mod log_buffer_manager_tests {
+    use std::sync::Arc;
+    use std::time::Duration;
+    use bonsol_elasticsearch::{BonsolStore, LogEntry, LogType};
+    use bonsol_bonfire::log_persister::LogBufferManager;
+    use chrono::Utc;
+
+    /// Helper to create a test LogEntry
+    fn create_test_log(message: &str) -> LogEntry {
+        LogEntry {
+            timestamp: Utc::now(),
+            level: "INFO".to_string(),
+            message: message.to_string(),
+            kind: LogType::Stdout,
+            job_id: Some("test-job".to_string()),
+            image_id: Some("test-image".to_string()),
+            node_id: Some("test-node".to_string()),
+            meta: None,
+        }
+    }
+
+    #[test]
+    fn test_log_buffer_manager_configuration() {
+        // Test that LogBufferManager can be configured with valid BonsolStore
+        let store = BonsolStore::new("http://localhost:9200", "test-index")
+            .expect("Should create store with valid URL");
+        
+        let _manager = LogBufferManager::new(
+            Arc::new(store),
+            100,
+            Duration::from_secs(5),
+        );
+        
+        // If we get here without panic, configuration works
+    }
+
+    #[tokio::test]
+    async fn test_log_buffer_manager_spawn_and_send() {
+        let store = BonsolStore::new("http://localhost:9200", "test-index")
+            .expect("Should create store with valid URL");
+        
+        let manager = LogBufferManager::new(
+            Arc::new(store),
+            10,
+            Duration::from_millis(100),
+        );
+
+        let tx = manager.spawn();
+
+        // Verify we can send logs through the channel
+        let log = create_test_log("Test message");
+        let send_result = tx.try_send(log);
+        assert!(send_result.is_ok(), "Should be able to send log to buffer");
+
+        // Send more logs to verify channel works
+        for i in 0..5 {
+            let log = create_test_log(&format!("Test message {}", i));
+            assert!(tx.try_send(log).is_ok(), "Should send log {}", i);
+        }
+
+        // Drop sender to trigger graceful shutdown
+        drop(tx);
+        
+        // Give the background task time to process
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}

@@ -126,25 +126,30 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+/// Helper to extract BonsolStore or return a 503 error response.
+fn require_es_store(
+    es_store: &Data<Option<Arc<BonsolStore>>>,
+) -> Result<&Arc<BonsolStore>, HttpResponse> {
+    es_store.as_ref().as_ref().ok_or_else(|| {
+        HttpResponse::ServiceUnavailable().json(ErrorResponse {
+            success: false,
+            error: "Historical logs not available - Elasticsearch not configured".to_string(),
+        })
+    })
+}
+
 #[get("/logs/history")]
 async fn logs_history(
-    es_store:Data<Option<Arc<BonsolStore>>>,
-    query: Query<HistoryLogsQuery>
-)->impl Responder{
-
-    // check if Es is configured 
-    let store = match es_store.as_ref() {
-        Some(s)=>s,
-        None =>{
-            return HttpResponse::ServiceUnavailable().json(ErrorResponse{
-                success:false,
-                error:"Historical Logs not available - ElasticSearch not configured".to_string()
-            })
-        }
+    es_store: Data<Option<Arc<BonsolStore>>>,
+    query: Query<HistoryLogsQuery>,
+) -> impl Responder {
+    let store = match require_es_store(&es_store) {
+        Ok(s) => s,
+        Err(resp) => return resp,
     };
 
     // parse time filters 
-    let from = query.from.as_ref().and_then(|s|{
+    let from = query.from.as_ref().and_then(|s| {
         chrono::DateTime::parse_from_rfc3339(s)
             .ok()
             .map(|dt| dt.with_timezone(&chrono::Utc))
@@ -193,14 +198,9 @@ async fn logs_by_job(
     es_store: Data<Option<Arc<BonsolStore>>>,
     job_id: Path<String>,
 ) -> impl Responder {
-    let store = match es_store.as_ref() {
-        Some(s) => s,
-        None => {
-            return HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                success: false,
-                error: "Historical logs not available - Elasticsearch not configured".to_string(),
-            });
-        }
+    let store = match require_es_store(&es_store) {
+        Ok(s) => s,
+        Err(resp) => return resp,
     };
 
     match store.get_logs_by_job(&job_id).await {
@@ -226,14 +226,9 @@ async fn logs_by_node(
     node_id: Path<String>,
     query: Query<HashMap<String, String>>,
 ) -> impl Responder {
-    let store = match es_store.as_ref() {
-        Some(s) => s,
-        None => {
-            return HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                success: false,
-                error: "Historical logs not available - Elasticsearch not configured".to_string(),
-            });
-        }
+    let store = match require_es_store(&es_store) {
+        Ok(s) => s,
+        Err(resp) => return resp,
     };
 
     let limit = query
@@ -263,14 +258,9 @@ async fn logs_by_node(
 async fn logs_stats(
     es_store: Data<Option<Arc<BonsolStore>>>,
 ) -> impl Responder {
-    let store = match es_store.as_ref() {
-        Some(s) => s,
-        None => {
-            return HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                success: false,
-                error: "Historical logs not available - Elasticsearch not configured".to_string(),
-            });
-        }
+    let store = match require_es_store(&es_store) {
+        Ok(s) => s,
+        Err(resp) => return resp,
     };
 
     // Get total count
