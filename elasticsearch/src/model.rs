@@ -87,5 +87,4 @@ fn default_order() -> String { "desc".to_string() }
 pub struct LogSearchResponse{
     pub data: Vec<LogEntry>,
     pub pagination: Pagination,
-    pub took_ms: u64,
 }

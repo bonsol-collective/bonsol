@@ -294,10 +294,6 @@ impl BonsolStore {
             .as_u64()
             .unwrap_or(0);
 
-        let took_ms = response_body["took"]
-            .as_u64()
-            .unwrap_or(0);
-
         // converting hits to LogEntry 
         let data: Vec<LogEntry> = hits
             .iter()
@@ -316,7 +312,6 @@ impl BonsolStore {
                 total, 
                 total_pages 
             }, 
-            took_ms 
         })
 
     }

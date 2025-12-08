@@ -5,7 +5,7 @@ use std::{
 
 use actix_web::{
     get,
-    web::{Data, Path, Query},
+    web::{Data, Query},
     App, HttpResponse, HttpServer, Responder,
 };
 use actix_web_lab::sse;
@@ -193,99 +193,6 @@ async fn logs_history(
 }
 
 
-#[get("/logs/history/job/{job_id}")]
-async fn logs_by_job(
-    es_store: Data<Option<Arc<BonsolStore>>>,
-    job_id: Path<String>,
-) -> impl Responder {
-    let store = match require_es_store(&es_store) {
-        Ok(s) => s,
-        Err(resp) => return resp,
-    };
-
-    match store.get_logs_by_job(&job_id).await {
-        Ok(data) => HttpResponse::Ok().json(serde_json::json!({
-            "success": true,
-            "job_id": job_id.as_str(),
-            "count": data.len(),
-            "data": data
-        })),
-        Err(e) => {
-            tracing::error!("Failed to get logs for job {}: {}", job_id, e);
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                success: false,
-                error: format!("Failed to get logs: {}", e),
-            })
-        }
-    }
-}
-
-#[get("/logs/history/node/{node_id}")]
-async fn logs_by_node(
-    es_store: Data<Option<Arc<BonsolStore>>>,
-    node_id: Path<String>,
-    query: Query<HashMap<String, String>>,
-) -> impl Responder {
-    let store = match require_es_store(&es_store) {
-        Ok(s) => s,
-        Err(resp) => return resp,
-    };
-
-    let limit = query
-        .get("limit")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(100)
-        .min(1000);
-
-    match store.get_logs_by_node(&node_id, limit).await {
-        Ok(logs_vec) => HttpResponse::Ok().json(serde_json::json!({
-            "success": true,
-            "node_id": node_id.as_str(),
-            "count": logs_vec.len(),
-            "data": logs_vec
-        })),
-        Err(e) => {
-            tracing::error!("Failed to get logs for node {}: {}", node_id, e);
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                success: false,
-                error: format!("Failed to get logs: {}", e),
-            })
-        }
-    }
-}
-
-#[get("/logs/history/stats")]
-async fn logs_stats(
-    es_store: Data<Option<Arc<BonsolStore>>>,
-) -> impl Responder {
-    let store = match require_es_store(&es_store) {
-        Ok(s) => s,
-        Err(resp) => return resp,
-    };
-
-    // Get total count
-    let query = LogSearchQuery {
-        limit: 0,
-        ..Default::default()
-    };
-
-    match store.search_log(query).await {
-        Ok(response) => HttpResponse::Ok().json(serde_json::json!({
-            "success": true,
-            "total_logs": response.pagination.total,
-            "elasticsearch_available": true
-        })),
-        Err(e) => {
-            tracing::error!("Failed to get log stats: {}", e);
-            HttpResponse::InternalServerError().json(ErrorResponse {
-                success: false,
-                error: format!("Failed to get stats: {}", e),
-            })
-        }
-    }
-}
-
-
 pub async fn web_server(
     clients: BonfireClientList,
     jobs_list: Arc<Mutex<HashMap<String, Job>>>,
@@ -305,9 +212,6 @@ pub async fn web_server(
             .service(health)
             .service(jobs)
             .service(logs_history)
-            .service(logs_by_job)
-            .service(logs_by_node)
-            .service(logs_stats)
             .app_data(clients.clone())
             .app_data(log_rx.clone())
             .app_data(jobs_list.clone())
