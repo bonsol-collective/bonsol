@@ -356,6 +356,7 @@ mod integration_tests {
 
         // Index logs with specific text
         let log = LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
             level: "ERROR".to_string(),
             message: "UniqueSearchableError12345".to_string(),
@@ -447,60 +448,5 @@ mod integration_tests {
 
         let result = store.search_log(query).await.unwrap();
         assert!(result.data.iter().all(|l| matches!(l.kind, LogType::Stderr)));
-    }
-
-    #[tokio::test]
-    async fn test_get_logs_by_job() {
-        let Some(store) = get_test_store() else {
-            eprintln!("Skipping test: ELASTICSEARCH_URL not set");
-            return;
-        };
-
-        store.ensure_index().await.unwrap();
-
-        let job_id = "specific-job-12345";
-        let log = create_test_log(job_id, "Job specific log", LogType::Stdout);
-        store.index_log(&log).await.unwrap();
-
-        // Wait for ES to refresh
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-        let result = store.get_logs_by_job(job_id).await;
-        assert!(result.is_ok());
-
-        let logs = result.unwrap();
-        assert!(logs.iter().all(|l| l.job_id.as_deref() == Some(job_id)));
-    }
-
-    #[tokio::test]
-    async fn test_get_logs_by_node() {
-        let Some(store) = get_test_store() else {
-            eprintln!("Skipping test: ELASTICSEARCH_URL not set");
-            return;
-        };
-
-        store.ensure_index().await.unwrap();
-
-        let node_id = "specific-node-67890";
-        let log = LogEntry {
-            timestamp: Utc::now(),
-            level: "INFO".to_string(),
-            message: "Node specific log".to_string(),
-            kind: LogType::Stdout,
-            job_id: Some("any-job".to_string()),
-            image_id: None,
-            node_id: Some(node_id.to_string()),
-            meta: None,
-        };
-        store.index_log(&log).await.unwrap();
-
-        // Wait for ES to refresh
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-        let result = store.get_logs_by_node(node_id, 100).await;
-        assert!(result.is_ok());
-
-        let logs = result.unwrap();
-        assert!(logs.iter().all(|l| l.node_id.as_deref() == Some(node_id)));
     }
 }

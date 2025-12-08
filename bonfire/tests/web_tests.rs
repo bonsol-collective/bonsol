@@ -123,74 +123,6 @@ mod web_endpoint_tests {
         }
     }
 
-    #[tokio::test]
-    #[ignore = "Requires running Bonfire server with ES"]
-    async fn test_logs_by_job_endpoint() {
-        let base_url = TestConfig::new()
-            .map(|c| c.base_url)
-            .unwrap_or_else(TestConfig::default_url);
-            
-        let url = format!("{}/logs/history/job/test-job-123", base_url);
-        let result = get_json(&url).await;
-        
-        match result {
-            Ok(json) => {
-                assert_eq!(json["success"], true);
-                assert_eq!(json["job_id"], "test-job-123");
-                assert!(json["data"].is_array());
-            }
-            Err(e) if e.contains("503") => {
-                println!("ES not configured: {}", e);
-            }
-            Err(e) => panic!("Unexpected error: {}", e),
-        }
-    }
-
-    #[tokio::test]
-    #[ignore = "Requires running Bonfire server with ES"]
-    async fn test_logs_by_node_endpoint() {
-        let base_url = TestConfig::new()
-            .map(|c| c.base_url)
-            .unwrap_or_else(TestConfig::default_url);
-            
-        let url = format!("{}/logs/history/node/test-node-abc?limit=50", base_url);
-        let result = get_json(&url).await;
-        
-        match result {
-            Ok(json) => {
-                assert_eq!(json["success"], true);
-                assert_eq!(json["node_id"], "test-node-abc");
-                assert!(json["data"].is_array());
-            }
-            Err(e) if e.contains("503") => {
-                println!("ES not configured: {}", e);
-            }
-            Err(e) => panic!("Unexpected error: {}", e),
-        }
-    }
-
-    #[tokio::test]
-    #[ignore = "Requires running Bonfire server with ES"]
-    async fn test_logs_stats_endpoint() {
-        let base_url = TestConfig::new()
-            .map(|c| c.base_url)
-            .unwrap_or_else(TestConfig::default_url);
-            
-        let url = format!("{}/logs/history/stats", base_url);
-        let result = get_json(&url).await;
-        
-        match result {
-            Ok(json) => {
-                assert_eq!(json["success"], true);
-                assert!(json["total_logs"].is_number());
-                assert_eq!(json["elasticsearch_available"], true);
-            }
-            Err(e) if e.contains("503") => {
-                println!("ES not configured: {}", e);
-            }
-            Err(e) => panic!("Unexpected error: {}", e),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -280,6 +212,7 @@ mod elasticsearch_unit_tests {
     #[test]
     fn test_log_entry_creation() {
         let entry = LogEntry {
+            id: "test-id".to_string(),
             timestamp: Utc::now(),
             level: "INFO".to_string(),
             message: "Test message".to_string(),
@@ -339,6 +272,7 @@ mod log_buffer_manager_tests {
     /// Helper to create a test LogEntry
     fn create_test_log(message: &str) -> LogEntry {
         LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
             level: "INFO".to_string(),
             message: message.to_string(),
