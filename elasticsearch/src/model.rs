@@ -20,6 +20,7 @@ pub enum LogType {
 // DTO for historical logs
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogEntry {
+    pub id: String,
     pub timestamp: DateTime<Utc>,
     pub level: String,
     pub message: String,

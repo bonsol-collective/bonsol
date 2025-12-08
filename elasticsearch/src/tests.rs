@@ -12,6 +12,7 @@ mod unit_tests {
     #[test]
     fn test_log_entry_deserialization() {
         let json = r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440000",
             "timestamp": "2025-12-07T10:00:00Z",
             "level": "ERROR",
             "message": "Something went wrong",
@@ -23,6 +24,7 @@ mod unit_tests {
         }"#;
 
         let entry: LogEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.id, "550e8400-e29b-41d4-a716-446655440000");
         assert_eq!(entry.level, "ERROR");
         assert_eq!(entry.message, "Something went wrong");
         assert!(matches!(entry.kind, LogType::Stderr));
@@ -88,6 +90,7 @@ mod unit_tests {
     #[test]
     fn test_log_entry_with_special_characters_in_message() {
         let entry = LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
             level: "INFO".to_string(),
             message: "Message with \"quotes\" and 'apostrophes' and \nnewlines".to_string(),
@@ -103,6 +106,7 @@ mod unit_tests {
         
         assert_eq!(parsed.message, entry.message);
         assert_eq!(parsed.job_id, entry.job_id);
+        assert_eq!(parsed.id, entry.id);
     }
 
     #[test]
@@ -124,6 +128,7 @@ mod unit_tests {
         });
 
         let entry = LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
             level: "DEBUG".to_string(),
             message: "Complex meta test".to_string(),
@@ -217,6 +222,7 @@ mod integration_tests {
 
     fn create_test_log(job_id: &str, message: &str, kind: LogType) -> LogEntry {
         LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
             level: "INFO".to_string(),
             message: message.to_string(),

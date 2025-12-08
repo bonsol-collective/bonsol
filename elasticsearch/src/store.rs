@@ -113,7 +113,7 @@ impl BonsolStore {
     pub async fn index_log(&self,log:&LogEntry)->Result<()>{
         let res = self
             .client
-            .index(IndexParts::Index(&self.index_name))
+            .index(IndexParts::IndexId(&self.index_name, &log.id))
             .body(log)
             .send()
             .await
@@ -136,8 +136,9 @@ impl BonsolStore {
         let mut ops = BulkOperations::new();
 
         for log in logs {
-            // Create an index operation for each log
-            ops.push(BulkOperation::index(log.clone()))?;
+            // Create an index operation using the log's ID as the document ID
+            // This ensures idempotency - re-indexing the same log won't create duplicates
+            ops.push(BulkOperation::index(log.clone()).id(&log.id))?;
         }
 
         let res = self

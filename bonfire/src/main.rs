@@ -524,11 +524,20 @@ impl BonfireClientBuilder {
             let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await?);
             let log_tx = self.log_tx.unwrap();
 
-            while let Some(Ok(msg)) = log_reader.next().await {
+            while let Some(Ok(mut msg)) = log_reader.next().await {
+                // Generate a unique ID for this log event (for deduplication)
+                let log_id = uuid::Uuid::new_v4().to_string();
+                let timestamp = Utc::now();
+                let timestamp_str = timestamp.to_rfc3339();
+
+                msg.id = log_id.clone();
+                msg.timestamp = timestamp_str.clone();
+
                 // Persist to Elasticsearch if configured
                 if let Some(ref tx) = persist_tx {
                     let log_entry = LogEntry {
-                        timestamp: Utc::now(),
+                        id: log_id,
+                        timestamp,
                         level: "INFO".to_string(),
                         message: msg.log.clone(),
                         kind: match msg.source {
