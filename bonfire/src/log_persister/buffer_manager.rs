@@ -13,12 +13,7 @@ pub struct LogBufferManager {
 }
 
 impl LogBufferManager {
-  
-    pub fn new(
-        log_store: Arc<BonsolStore>,
-        batch_size: usize,
-        flush_interval: Duration,
-    ) -> Self {
+    pub fn new(log_store: Arc<BonsolStore>, batch_size: usize, flush_interval: Duration) -> Self {
         Self {
             log_store,
             batch_size,
@@ -111,4 +106,3 @@ impl LogBufferManager {
         batch.clear();
     }
 }
-

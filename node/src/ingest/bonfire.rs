@@ -64,12 +64,12 @@ impl BonfireIngester {
                     while let Ok(msg) = rx.recv() {
                         logs_tx
                             .send(bonsol_bonfire::LogEvent {
-                                id: String::new(),  
+                                id: String::new(),
                                 source,
                                 image_id: msg.image_id,
                                 job_id: msg.job_id,
                                 log: String::from_utf8_lossy(&msg.log).into_owned(),
-                                timestamp: String::new(),  
+                                timestamp: String::new(),
                             })
                             .expect("Log channel dropped. This shouldn't happen!");
                     }

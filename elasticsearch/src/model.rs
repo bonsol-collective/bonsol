@@ -31,7 +31,6 @@ pub struct LogEntry {
     pub meta: Option<serde_json::Value>,
 }
 
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogSearchQuery {
     /// Filter by log source (stdout/stderr)
@@ -79,12 +78,18 @@ impl Default for LogSearchQuery {
     }
 }
 
-fn default_page() -> u32 { 1 }
-fn default_limit() -> u32 { 50 }
-fn default_order() -> String { "desc".to_string() }
+fn default_page() -> u32 {
+    1
+}
+fn default_limit() -> u32 {
+    50
+}
+fn default_order() -> String {
+    "desc".to_string()
+}
 
-#[derive(Debug,Clone,Serialize)]
-pub struct LogSearchResponse{
+#[derive(Debug, Clone, Serialize)]
+pub struct LogSearchResponse {
     pub data: Vec<LogEntry>,
     pub pagination: Pagination,
 }

@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo test --test web_tests
 //! For integration tests with ES: ELASTICSEARCH_URL=http://localhost:9200 cargo test --test web_tests
-//! 
+//!
 //! To run with a live server:
 //! 1. Start Elasticsearch: docker compose -f docker/docker-compose.elasticsearch.yml up -d
 //! 2. Start Bonfire: cargo run --bin bonsol-bonfire
@@ -17,9 +17,11 @@ struct TestConfig {
 
 impl TestConfig {
     fn new() -> Option<Self> {
-        std::env::var("BONFIRE_URL").ok().map(|url| Self { base_url: url })
+        std::env::var("BONFIRE_URL")
+            .ok()
+            .map(|url| Self { base_url: url })
     }
-    
+
     fn default_url() -> String {
         "http://localhost:8080".to_string()
     }
@@ -35,19 +37,19 @@ mod web_endpoint_tests {
             .timeout(Duration::from_secs(10))
             .build()
             .map_err(|e| format!("Failed to create client: {}", e))?;
-            
+
         let response = client
             .get(url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
-            
+
         let status = response.status();
         let body = response
             .text()
             .await
             .map_err(|e| format!("Failed to read body: {}", e))?;
-            
+
         if status.is_success() {
             serde_json::from_str(&body)
                 .map_err(|e| format!("Failed to parse JSON: {} - Body: {}", e, body))
@@ -62,13 +64,13 @@ mod web_endpoint_tests {
         let base_url = TestConfig::new()
             .map(|c| c.base_url)
             .unwrap_or_else(TestConfig::default_url);
-            
+
         let url = format!("{}/health", base_url);
         let client = reqwest::Client::new();
-        
+
         let response = client.get(&url).send().await;
         assert!(response.is_ok(), "Health check should succeed");
-        
+
         let resp = response.unwrap();
         assert!(resp.status().is_success(), "Health check should return 2xx");
     }
@@ -79,10 +81,10 @@ mod web_endpoint_tests {
         let base_url = TestConfig::new()
             .map(|c| c.base_url)
             .unwrap_or_else(TestConfig::default_url);
-            
+
         let url = format!("{}/logs/history", base_url);
         let result = get_json(&url).await;
-        
+
         // Either succeeds with ES or returns 503 without ES
         match result {
             Ok(json) => {
@@ -104,13 +106,13 @@ mod web_endpoint_tests {
         let base_url = TestConfig::new()
             .map(|c| c.base_url)
             .unwrap_or_else(TestConfig::default_url);
-            
+
         let url = format!(
             "{}/logs/history?source=stdout&level=INFO&page=1&limit=10&order=desc",
             base_url
         );
         let result = get_json(&url).await;
-        
+
         match result {
             Ok(json) => {
                 assert_eq!(json["success"], true);
@@ -122,7 +124,6 @@ mod web_endpoint_tests {
             Err(e) => panic!("Unexpected error: {}", e),
         }
     }
-
 }
 
 #[cfg(test)]
@@ -198,10 +199,7 @@ mod elasticsearch_unit_tests {
     #[test]
     fn test_bonsolstore_creation_invalid_urls() {
         // Only truly invalid URLs that can't be parsed
-        let invalid_urls = vec![
-            "",
-            "://missing-scheme",
-        ];
+        let invalid_urls = vec!["", "://missing-scheme"];
 
         for url in invalid_urls {
             let result = BonsolStore::new(url, "test_index");
@@ -263,11 +261,11 @@ mod elasticsearch_unit_tests {
 
 #[cfg(test)]
 mod log_buffer_manager_tests {
+    use bonsol_bonfire::log_persister::LogBufferManager;
+    use bonsol_elasticsearch::{BonsolStore, LogEntry, LogType};
+    use chrono::Utc;
     use std::sync::Arc;
     use std::time::Duration;
-    use bonsol_elasticsearch::{BonsolStore, LogEntry, LogType};
-    use bonsol_bonfire::log_persister::LogBufferManager;
-    use chrono::Utc;
 
     /// Helper to create a test LogEntry
     fn create_test_log(message: &str) -> LogEntry {
@@ -289,13 +287,9 @@ mod log_buffer_manager_tests {
         // Test that LogBufferManager can be configured with valid BonsolStore
         let store = BonsolStore::new("http://localhost:9200", "test-index")
             .expect("Should create store with valid URL");
-        
-        let _manager = LogBufferManager::new(
-            Arc::new(store),
-            100,
-            Duration::from_secs(5),
-        );
-        
+
+        let _manager = LogBufferManager::new(Arc::new(store), 100, Duration::from_secs(5));
+
         // If we get here without panic, configuration works
     }
 
@@ -303,12 +297,8 @@ mod log_buffer_manager_tests {
     async fn test_log_buffer_manager_spawn_and_send() {
         let store = BonsolStore::new("http://localhost:9200", "test-index")
             .expect("Should create store with valid URL");
-        
-        let manager = LogBufferManager::new(
-            Arc::new(store),
-            10,
-            Duration::from_millis(100),
-        );
+
+        let manager = LogBufferManager::new(Arc::new(store), 10, Duration::from_millis(100));
 
         let tx = manager.spawn();
 
@@ -325,7 +315,7 @@ mod log_buffer_manager_tests {
 
         // Drop sender to trigger graceful shutdown
         drop(tx);
-        
+
         // Give the background task time to process
         tokio::time::sleep(Duration::from_millis(50)).await;
     }

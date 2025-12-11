@@ -85,7 +85,6 @@ async fn health() -> impl Responder {
     "Healthy!"
 }
 
-
 #[derive(Debug, Deserialize)]
 pub struct HistoryLogsQuery {
     /// Filter by source: "stdout" or "stderr"
@@ -148,7 +147,7 @@ async fn logs_history(
         Err(resp) => return resp,
     };
 
-    // parse time filters 
+    // parse time filters
     let from = query.from.as_ref().and_then(|s| {
         chrono::DateTime::parse_from_rfc3339(s)
             .ok()
@@ -162,7 +161,7 @@ async fn logs_history(
     });
 
     // Build Search Query
-    let search_query = LogSearchQuery{
+    let search_query = LogSearchQuery {
         source: query.source.clone(),
         job_id: query.job_id.clone(),
         image_id: query.image_id.clone(),
@@ -176,11 +175,11 @@ async fn logs_history(
         order: query.order.clone().unwrap_or_else(|| "desc".to_string()),
     };
 
-    // executing search 
+    // executing search
     match store.search_log(search_query).await {
-        Ok(response)=> HttpResponse::Ok().json(HistoryLogsResponse{
-            success:true,
-            data:response
+        Ok(response) => HttpResponse::Ok().json(HistoryLogsResponse {
+            success: true,
+            data: response,
         }),
         Err(e) => {
             tracing::error!("Failed to search logs: {}", e);
@@ -192,12 +191,11 @@ async fn logs_history(
     }
 }
 
-
 pub async fn web_server(
     clients: BonfireClientList,
     jobs_list: Arc<Mutex<HashMap<String, Job>>>,
     log_rx: Receiver<LogEvent>,
-    es_store: Option<Arc<BonsolStore>>
+    es_store: Option<Arc<BonsolStore>>,
 ) -> Result<()> {
     debug!("Web thread starting...");
     let log_rx = Data::new(log_rx);

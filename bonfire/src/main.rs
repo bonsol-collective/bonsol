@@ -28,18 +28,18 @@ use solana_transaction_status::{
 };
 use tokio::{
     sync::{
-        Mutex, broadcast::{self, Sender}, mpsc
+        broadcast::{self, Sender},
+        mpsc, Mutex,
     },
     time::sleep,
 };
-use tracing::{debug, info, trace, warn, error};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::protocol::{
-    BonfireMessage, BonsolInstruction, Challenge, HardwareSpecs, LogEvent, LoginResponse, Ping,
-    SpecsAck,
-    LogSource,
+    BonfireMessage, BonsolInstruction, Challenge, HardwareSpecs, LogEvent, LogSource,
+    LoginResponse, Ping, SpecsAck,
 };
-use bonsol_elasticsearch::{BonsolStore, LogEntry,LogType};
+use bonsol_elasticsearch::{BonsolStore, LogEntry, LogType};
 
 mod log_persister;
 mod protocol;
@@ -123,9 +123,10 @@ async fn main() -> Result<()> {
     let persist_tx = es_store.clone().map(|store| {
         LogBufferManager::new(
             store,
-            100,                        // batch_size
-            Duration::from_secs(1),     // flush_interval
-        ).spawn()
+            100,                    // batch_size
+            Duration::from_secs(1), // flush_interval
+        )
+        .spawn()
     });
 
     tokio::spawn(subscription(bix_tx));
@@ -147,7 +148,11 @@ async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
     }
 }
 
-async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, persist_tx: Option<mpsc::Sender<LogEntry>>) -> Result<()> {
+async fn quic_server(
+    clients: BonfireClientList,
+    log_tx: Sender<LogEvent>,
+    persist_tx: Option<mpsc::Sender<LogEntry>>,
+) -> Result<()> {
     debug!("QUIC thread starting...");
     let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
@@ -160,7 +165,6 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>, persi
 
     loop {
         if let Some(incoming) = endpoint.accept().await {
-
             let clients = clients.clone();
             let log_tx = log_tx.clone();
             let persist_tx = persist_tx.clone();

@@ -34,20 +34,29 @@ mod unit_tests {
 
     #[test]
     fn test_log_type_serialization() {
-        assert_eq!(serde_json::to_string(&LogType::Stdout).unwrap(), "\"stdout\"");
-        assert_eq!(serde_json::to_string(&LogType::Stderr).unwrap(), "\"stderr\"");
-        assert_eq!(serde_json::to_string(&LogType::System).unwrap(), "\"system\"");
+        assert_eq!(
+            serde_json::to_string(&LogType::Stdout).unwrap(),
+            "\"stdout\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LogType::Stderr).unwrap(),
+            "\"stderr\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LogType::System).unwrap(),
+            "\"system\""
+        );
     }
 
     #[test]
     fn test_log_search_query_defaults() {
         let query = LogSearchQuery::default();
-        
+
         // Check defaults match expected values
         assert_eq!(query.page, 1);
         assert_eq!(query.limit, 50);
         assert_eq!(query.order, "desc");
-        
+
         // These should be None
         assert!(query.source.is_none());
         assert!(query.job_id.is_none());
@@ -103,7 +112,7 @@ mod unit_tests {
 
         let json = serde_json::to_string(&entry).unwrap();
         let parsed: LogEntry = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(parsed.message, entry.message);
         assert_eq!(parsed.job_id, entry.job_id);
         assert_eq!(parsed.id, entry.id);
@@ -141,7 +150,7 @@ mod unit_tests {
 
         let json = serde_json::to_string(&entry).unwrap();
         let parsed: LogEntry = serde_json::from_str(&json).unwrap();
-        
+
         assert!(parsed.meta.is_some());
         let parsed_meta = parsed.meta.unwrap();
         assert_eq!(parsed_meta["nested"]["field"], "value");
@@ -159,7 +168,7 @@ mod unit_tests {
         }"#;
 
         let query: LogSearchQuery = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(query.source.as_deref(), Some("stderr"));
         assert_eq!(query.job_id.as_deref(), Some("job-123"));
         assert_eq!(query.page, 2);
@@ -173,11 +182,11 @@ mod unit_tests {
         let json = r#"{}"#;
 
         let query: LogSearchQuery = serde_json::from_str(json).unwrap();
-        
+
         assert!(query.source.is_none());
         assert!(query.job_id.is_none());
-        assert_eq!(query.page, 1);      // default
-        assert_eq!(query.limit, 50);    // default
+        assert_eq!(query.page, 1); // default
+        assert_eq!(query.limit, 50); // default
         assert_eq!(query.order, "desc"); // default
     }
 
@@ -187,8 +196,8 @@ mod unit_tests {
         assert!(BonsolStore::new("http://localhost:9200", "test").is_ok());
         assert!(BonsolStore::new("https://es.example.com:9200", "test").is_ok());
         assert!(BonsolStore::new("http://user:pass@localhost:9200", "test").is_ok());
-        
-        // Invalid URLs  
+
+        // Invalid URLs
         assert!(BonsolStore::new("not-a-url", "test").is_err());
         assert!(BonsolStore::new("", "test").is_err());
         // Note: ftp:// URLs can be parsed but would fail on actual connection
@@ -257,7 +266,11 @@ mod integration_tests {
 
         // Calling again should succeed (index already exists)
         let result2 = store.ensure_index().await;
-        assert!(result2.is_ok(), "Second ensure_index failed: {:?}", result2.err());
+        assert!(
+            result2.is_ok(),
+            "Second ensure_index failed: {:?}",
+            result2.err()
+        );
     }
 
     #[tokio::test]
@@ -271,7 +284,7 @@ mod integration_tests {
 
         let log = create_test_log("single-job-1", "Test single log entry", LogType::Stdout);
         let result = store.index_log(&log).await;
-        
+
         assert!(result.is_ok(), "Failed to index log: {:?}", result.err());
     }
 
@@ -285,11 +298,17 @@ mod integration_tests {
         store.ensure_index().await.unwrap();
 
         let logs: Vec<LogEntry> = (0..10)
-            .map(|i| create_test_log(
-                &format!("bulk-job-{}", i),
-                &format!("Bulk log message {}", i),
-                if i % 2 == 0 { LogType::Stdout } else { LogType::Stderr },
-            ))
+            .map(|i| {
+                create_test_log(
+                    &format!("bulk-job-{}", i),
+                    &format!("Bulk log message {}", i),
+                    if i % 2 == 0 {
+                        LogType::Stdout
+                    } else {
+                        LogType::Stderr
+                    },
+                )
+            })
             .collect();
 
         let result = store.index_log_bulk(&logs).await;
@@ -319,11 +338,13 @@ mod integration_tests {
 
         // Index some test data
         let logs: Vec<LogEntry> = (0..5)
-            .map(|i| create_test_log(
-                "search-test-job",
-                &format!("Searchable message number {}", i),
-                LogType::Stdout,
-            ))
+            .map(|i| {
+                create_test_log(
+                    "search-test-job",
+                    &format!("Searchable message number {}", i),
+                    LogType::Stdout,
+                )
+            })
             .collect();
         store.index_log_bulk(&logs).await.unwrap();
 
@@ -381,7 +402,10 @@ mod integration_tests {
         assert!(result.is_ok());
 
         let response = result.unwrap();
-        assert!(response.data.iter().any(|l| l.message.contains("UniqueSearchableError12345")));
+        assert!(response
+            .data
+            .iter()
+            .any(|l| l.message.contains("UniqueSearchableError12345")));
     }
 
     #[tokio::test]
@@ -395,11 +419,13 @@ mod integration_tests {
 
         // Index 15 logs
         let logs: Vec<LogEntry> = (0..15)
-            .map(|i| create_test_log(
-                "pagination-job",
-                &format!("Pagination test message {}", i),
-                LogType::Stdout,
-            ))
+            .map(|i| {
+                create_test_log(
+                    "pagination-job",
+                    &format!("Pagination test message {}", i),
+                    LogType::Stdout,
+                )
+            })
             .collect();
         store.index_log_bulk(&logs).await.unwrap();
 
@@ -447,6 +473,9 @@ mod integration_tests {
         };
 
         let result = store.search_log(query).await.unwrap();
-        assert!(result.data.iter().all(|l| matches!(l.kind, LogType::Stderr)));
+        assert!(result
+            .data
+            .iter()
+            .all(|l| matches!(l.kind, LogType::Stderr)));
     }
 }
