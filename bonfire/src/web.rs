@@ -148,18 +148,33 @@ async fn logs_history(
     };
 
     // parse time filters
-    let from = query.from.as_ref().and_then(|s| {
-        chrono::DateTime::parse_from_rfc3339(s)
-            .ok()
-            .map(|dt| dt.with_timezone(&chrono::Utc))
-    });
+    let from = if let Some(ref s) = query.from {
+        match chrono::DateTime::parse_from_rfc3339(s) {
+            Ok(dt) => Some(dt.with_timezone(&chrono::Utc)),
+            Err(e) => {
+                return HttpResponse::BadRequest().json(ErrorResponse {
+                    success: false,
+                    error: format!("Invalid 'from' timestamp: {}. Expected ISO8601/RFC3339 format.", e),
+                });
+            }
+        }
+    } else {
+        None
+    };
 
-    let to = query.to.as_ref().and_then(|s| {
-        chrono::DateTime::parse_from_rfc3339(s)
-            .ok()
-            .map(|dt| dt.with_timezone(&chrono::Utc))
-    });
-
+    let to = if let Some(ref s) = query.to {
+        match chrono::DateTime::parse_from_rfc3339(s) {
+            Ok(dt) => Some(dt.with_timezone(&chrono::Utc)),
+            Err(e) => {
+                return HttpResponse::BadRequest().json(ErrorResponse {
+                    success: false,
+                    error: format!("Invalid 'to' timestamp: {}. Expected ISO8601/RFC3339 format.", e),
+                });
+            }
+        }
+    } else {
+        None
+    };
     // Build Search Query
     let search_query = LogSearchQuery {
         source: query.source.clone(),
