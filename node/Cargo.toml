@@ -83,6 +83,8 @@ quinn = "0.11.9"
 tokio-stream = "0.1.17"
 sysinfo = "0.37.2"
 nvml-wrapper = "0.11.0"
+uuid = {version = "1.19.0" ,features = ["v4", "fast-rng"]}
+chrono = {version = "0.4.42", features = ["serde"]}
 
 [dev-dependencies]
 expect-test = "1.5.0"
