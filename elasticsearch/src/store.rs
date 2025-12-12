@@ -67,7 +67,6 @@ impl BonsolStore {
             "mappings": {
                 "properties": {
                     "timestamp": { "type": "date" },
-                    "level":     { "type": "keyword" },
                     "message":   { "type": "text" },
                     "kind":      { "type": "keyword" },
                     "job_id":    { "type": "keyword" },
@@ -221,15 +220,6 @@ impl BonsolStore {
             filter_clauses.push(serde_json::json!({
                 "term":{
                     "node_id":node_id
-                }
-            }));
-        }
-
-        // Filter by level
-        if let Some(ref level) = query.level {
-            filter_clauses.push(serde_json::json!({
-                "term":{
-                    "level":level.to_uppercase()
                 }
             }));
         }

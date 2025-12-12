@@ -97,8 +97,6 @@ pub struct HistoryLogsQuery {
     pub node_id: Option<String>,
     /// Full-text search in log message
     pub search: Option<String>,
-    /// Filter by log level
-    pub level: Option<String>,
     /// Start time (ISO8601 format)
     pub from: Option<String>,
     /// End time (ISO8601 format)
@@ -154,7 +152,10 @@ async fn logs_history(
             Err(e) => {
                 return HttpResponse::BadRequest().json(ErrorResponse {
                     success: false,
-                    error: format!("Invalid 'from' timestamp: {}. Expected ISO8601/RFC3339 format.", e),
+                    error: format!(
+                        "Invalid 'from' timestamp: {}. Expected ISO8601/RFC3339 format.",
+                        e
+                    ),
                 });
             }
         }
@@ -168,7 +169,10 @@ async fn logs_history(
             Err(e) => {
                 return HttpResponse::BadRequest().json(ErrorResponse {
                     success: false,
-                    error: format!("Invalid 'to' timestamp: {}. Expected ISO8601/RFC3339 format.", e),
+                    error: format!(
+                        "Invalid 'to' timestamp: {}. Expected ISO8601/RFC3339 format.",
+                        e
+                    ),
                 });
             }
         }
@@ -182,7 +186,6 @@ async fn logs_history(
         image_id: query.image_id.clone(),
         node_id: query.node_id.clone(),
         search: query.search.clone(),
-        level: query.level.clone(),
         from,
         to,
         page: query.page.unwrap_or(1),

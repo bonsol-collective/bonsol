@@ -108,7 +108,7 @@ mod web_endpoint_tests {
             .unwrap_or_else(TestConfig::default_url);
 
         let url = format!(
-            "{}/logs/history?source=stdout&level=INFO&page=1&limit=10&order=desc",
+            "{}/logs/history?source=stdout&page=1&limit=10&order=desc",
             base_url
         );
         let result = get_json(&url).await;
@@ -137,7 +137,6 @@ mod query_parameter_tests {
         let query = LogSearchQuery {
             source: Some("stderr".to_string()),
             job_id: Some("job-123".to_string()),
-            level: Some("ERROR".to_string()),
             page: 2,
             limit: 25,
             order: "asc".to_string(),
@@ -146,7 +145,6 @@ mod query_parameter_tests {
 
         assert_eq!(query.source.as_deref(), Some("stderr"));
         assert_eq!(query.job_id.as_deref(), Some("job-123"));
-        assert_eq!(query.level.as_deref(), Some("ERROR"));
         assert_eq!(query.page, 2);
         assert_eq!(query.limit, 25);
         assert_eq!(query.order, "asc");
@@ -212,7 +210,6 @@ mod elasticsearch_unit_tests {
         let entry = LogEntry {
             id: "test-id".to_string(),
             timestamp: Utc::now(),
-            level: "INFO".to_string(),
             message: "Test message".to_string(),
             kind: LogType::Stdout,
             job_id: Some("job-123".to_string()),
@@ -221,7 +218,6 @@ mod elasticsearch_unit_tests {
             meta: None,
         };
 
-        assert_eq!(entry.level, "INFO");
         assert!(matches!(entry.kind, LogType::Stdout));
     }
 
@@ -272,7 +268,6 @@ mod log_buffer_manager_tests {
         LogEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
-            level: "INFO".to_string(),
             message: message.to_string(),
             kind: LogType::Stdout,
             job_id: Some("test-job".to_string()),

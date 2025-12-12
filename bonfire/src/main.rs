@@ -542,10 +542,6 @@ impl BonfireClientBuilder {
                     let log_entry = LogEntry {
                         id: log_id,
                         timestamp,
-                        level: match msg.source {
-                            LogSource::Stdout => "INFO".to_string(),
-                            LogSource::Stderr => "ERROR".to_string(),
-                        },
                         message: msg.log.clone(),
                         kind: match msg.source {
                             LogSource::Stdout => LogType::Stdout,

@@ -22,7 +22,6 @@ pub enum LogType {
 pub struct LogEntry {
     pub id: String,
     pub timestamp: DateTime<Utc>,
-    pub level: String,
     pub message: String,
     pub kind: LogType,
     pub job_id: Option<String>,
@@ -43,8 +42,6 @@ pub struct LogSearchQuery {
     pub node_id: Option<String>,
     /// Full-text search in message
     pub search: Option<String>,
-    /// Filter by log level
-    pub level: Option<String>,
     /// Start time (ISO8601)
     pub from: Option<DateTime<Utc>>,
     /// End time (ISO8601)
@@ -68,7 +65,6 @@ impl Default for LogSearchQuery {
             image_id: None,
             node_id: None,
             search: None,
-            level: None,
             from: None,
             to: None,
             page: default_page(),

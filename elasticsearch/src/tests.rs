@@ -14,7 +14,6 @@ mod unit_tests {
         let json = r#"{
             "id": "550e8400-e29b-41d4-a716-446655440000",
             "timestamp": "2025-12-07T10:00:00Z",
-            "level": "ERROR",
             "message": "Something went wrong",
             "kind": "stderr",
             "job_id": "job-abc",
@@ -25,7 +24,6 @@ mod unit_tests {
 
         let entry: LogEntry = serde_json::from_str(json).unwrap();
         assert_eq!(entry.id, "550e8400-e29b-41d4-a716-446655440000");
-        assert_eq!(entry.level, "ERROR");
         assert_eq!(entry.message, "Something went wrong");
         assert!(matches!(entry.kind, LogType::Stderr));
         assert_eq!(entry.job_id, Some("job-abc".to_string()));
@@ -63,7 +61,6 @@ mod unit_tests {
         assert!(query.image_id.is_none());
         assert!(query.node_id.is_none());
         assert!(query.search.is_none());
-        assert!(query.level.is_none());
         assert!(query.from.is_none());
         assert!(query.to.is_none());
     }
@@ -79,7 +76,6 @@ mod unit_tests {
             image_id: Some("image-prefix".to_string()),
             node_id: Some("node-123".to_string()),
             search: Some("error occurred".to_string()),
-            level: Some("ERROR".to_string()),
             from: Some(from_time),
             to: Some(to_time),
             page: 3,
@@ -101,7 +97,6 @@ mod unit_tests {
         let entry = LogEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
-            level: "INFO".to_string(),
             message: "Message with \"quotes\" and 'apostrophes' and \nnewlines".to_string(),
             kind: LogType::Stdout,
             job_id: Some("job-with-special-chars-!@#$%".to_string()),
@@ -139,7 +134,6 @@ mod unit_tests {
         let entry = LogEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
-            level: "DEBUG".to_string(),
             message: "Complex meta test".to_string(),
             kind: LogType::System,
             job_id: None,
@@ -233,7 +227,6 @@ mod integration_tests {
         LogEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
-            level: "INFO".to_string(),
             message: message.to_string(),
             kind,
             job_id: Some(job_id.to_string()),
@@ -379,7 +372,6 @@ mod integration_tests {
         let log = LogEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
-            level: "ERROR".to_string(),
             message: "UniqueSearchableError12345".to_string(),
             kind: LogType::Stderr,
             job_id: Some("text-search-job".to_string()),
