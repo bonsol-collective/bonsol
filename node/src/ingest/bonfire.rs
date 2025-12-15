@@ -272,6 +272,7 @@ impl BonfireIngester {
         let memory_bytes = sys.total_memory();
 
         Ok(HardwareSpecs {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             cpu_type,
             cpu_mhz,
             cpu_cores,
