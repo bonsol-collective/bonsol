@@ -5,6 +5,7 @@ use bonsol_bonfire::{
     BonfireMessage, BonsolInstruction, Gpu, HardwareSpecs, LogEvent, LogSource, Pong,
 };
 use bonsol_prover::util::EventChannelRx;
+use chrono::Utc;
 use futures::{future::try_join3, stream::Peekable, SinkExt, StreamExt};
 use quinn::{
     rustls::{
@@ -22,7 +23,6 @@ use tokio::sync::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::{debug, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::ingest::{Ingester, TxChannel};
 

@@ -91,7 +91,7 @@ pub struct HistoryLogsQuery {
     pub source: Option<String>,
     /// Filter by job ID (prefix match)
     pub job_id: Option<String>,
-    /// Filter by image ID (prefix match)  
+    /// Filter by image ID (prefix match)
     pub image_id: Option<String>,
     /// Filter by node public key
     pub node_id: Option<String>,
