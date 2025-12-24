@@ -47,9 +47,16 @@ if [ ! -x "$(which cargo)" ]; then
     exit 1
 fi
 
-cargo build-sbf && solana-test-validator \
+echo "Building Bonsol on-chain program..."
+(cd onchain/bonsol && cargo build-sbf)
+
+echo "Building Callback Example program..."
+(cd onchain/example-program-on-bonsol && cargo build-sbf)
+
+# Note: We updated the paths to point to the sub-project target directories
+solana-test-validator \
     --limit-ledger-size 0 \
-    --bind-address 0.0.0.0 \
+    --bind-address 127.0.0.1 \
     --rpc-pubsub-enable-block-subscription \
     --bpf-program BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew target/deploy/bonsol.so \
     --bpf-program exay1T7QqsJPNcwzMiWubR6vZnqrgM16jZRraHgqBGG target/deploy/callback_example.so \

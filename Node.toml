@@ -14,4 +14,4 @@ Rpc = { rpc_url = "http://localhost:8899" }
 [signer_config]
 KeypairFile = { path = "node_keypair.json" }
 [ingester_config]
-Bonfire = { server_address = "127.0.0.1:8041" }
+Bonfire = { server_address = "127.0.0.1:8041" , ca_cert = "./certs/ca-cert.pem" }

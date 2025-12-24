@@ -111,6 +111,9 @@ fi
 
 echo "Using log configuration: RUST_LOG=$RUST_LOG"
 
+# This ensures the node can find the librapidsnark.so/dylib installed in ./stark
+export LD_LIBRARY_PATH="$PWD/stark:$LD_LIBRARY_PATH"
+
 # Run the node based on platform and configuration
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [ "$USE_CUDA" = true ]; then

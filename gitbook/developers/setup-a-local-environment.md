@@ -84,6 +84,20 @@ cd bonsol
 {% endstep %}
 
 {% step %}
+#### Run the Bonfire Coordinator
+
+* Starts Elasticsearch (via Docker) for persistent log storage
+* Automatically generates TLS certificates in certs/ if missing
+* Starts the coordination server for Node communication
+
+```bash
+# Start Bonfire
+./bin/run-bonfire.sh
+```
+
+{% endstep %}
+
+{% step %}
 #### Run a local Bonsol node
 
 * Creates a new node keypair if one doesn't exist
