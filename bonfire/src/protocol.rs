@@ -90,6 +90,9 @@ pub struct Pong;
 
 #[derive(Serialize, Encode, Decode, Debug, Clone)]
 pub struct HardwareSpecs {
+    /// Node version
+    pub version: String,
+
     /// CPU model or architecture string, e.g. "AMD Ryzen 7 5800X" or "Apple M2"
     pub cpu_type: String,
 
@@ -320,6 +323,7 @@ where
 
 #[derive(Serialize, Deserialize, Encode, Decode, Clone, Debug)]
 pub struct LogEvent {
+    pub id: String,
     pub source: LogSource,
     #[serde(
         serialize_with = "arc_str_serializer",
@@ -332,4 +336,5 @@ pub struct LogEvent {
     )]
     pub job_id: Arc<str>,
     pub log: String,
+    pub timestamp: String,
 }

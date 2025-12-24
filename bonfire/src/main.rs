@@ -29,19 +29,23 @@ use solana_transaction_status::{
 use tokio::{
     sync::{
         broadcast::{self, Sender},
-        Mutex,
+        mpsc, Mutex,
     },
     time::sleep,
 };
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::protocol::{
-    BonfireMessage, BonsolInstruction, Challenge, HardwareSpecs, LogEvent, LoginResponse, Ping,
-    SpecsAck,
+    BonfireMessage, BonsolInstruction, Challenge, HardwareSpecs, LogEvent, LogSource,
+    LoginResponse, Ping, SpecsAck,
 };
+use bonsol_elasticsearch::{BonsolStore, LogEntry, LogType};
 
+mod log_persister;
 mod protocol;
 mod web;
+
+use log_persister::LogBufferManager;
 
 const BONSOL_PROGRAM: Pubkey = pubkey!("BoNsHRcyLLNdtnoDf8hiCNZpyehMC4FDMxs6NTxFi3ew");
 
@@ -82,17 +86,54 @@ async fn main() -> Result<()> {
 
     info!("Bonfire {} is starting!", env!("CARGO_PKG_VERSION"));
 
+    let es_store: Option<Arc<BonsolStore>> = match BonsolStore::from_env_optional() {
+        Ok(Some(store)) => {
+            // Ensure index exists on startup
+            if let Err(e) = store.ensure_index().await {
+                warn!("Failed to ensure ES index: {}", e);
+            }
+
+            if let Err(e) = store.health_check().await {
+                warn!("ES health check failed: {}", e);
+            } else {
+                info!("Elasticsearch connected successfully");
+            }
+
+            Some(Arc::new(store))
+        }
+        Ok(None) => {
+            info!("Elasticsearch not configured, historical logs disabled");
+            None
+        }
+        Err(e) => {
+            error!("Failed to initialize Elasticsearch: {}", e);
+            None
+        }
+    };
+
     let clients = BonfireClientList::new();
     let jobs = Arc::new(Mutex::new(HashMap::new()));
 
     let (log_tx, log_rx) = broadcast::channel(100);
     let (bix_tx, bix_rx) = unbounded();
 
+    let es_store_for_web = es_store.clone();
+
+    // Creating log buffer manager if ES is configured
+    let persist_tx = es_store.clone().map(|store| {
+        LogBufferManager::new(
+            store,
+            100,                    // batch_size
+            Duration::from_secs(1), // flush_interval
+        )
+        .spawn()
+    });
+
     tokio::spawn(subscription(bix_tx));
-    tokio::spawn(quic_server(clients.clone(), log_tx));
+    tokio::spawn(quic_server(clients.clone(), log_tx, persist_tx));
     tokio::spawn(bix_thread(clients.clone(), bix_rx, jobs.clone()));
     tokio::spawn(jobs_cleaner(jobs.clone()));
-    web::web_server(clients, jobs, log_rx).await?;
+    web::web_server(clients, jobs, log_rx, es_store_for_web).await?;
     Ok(())
 }
 
@@ -107,7 +148,11 @@ async fn jobs_cleaner(jobs: Arc<Mutex<HashMap<String, Job>>>) {
     }
 }
 
-async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Result<()> {
+async fn quic_server(
+    clients: BonfireClientList,
+    log_tx: Sender<LogEvent>,
+    persist_tx: Option<mpsc::Sender<LogEntry>>,
+) -> Result<()> {
     debug!("QUIC thread starting...");
     let key = PrivateKeyDer::from_pem_file(&*TLS_KEY_FILE)?;
     let cert: Result<_, _> = CertificateDer::pem_file_iter(&*TLS_CERT_FILE)?.collect();
@@ -122,6 +167,8 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Re
         if let Some(incoming) = endpoint.accept().await {
             let clients = clients.clone();
             let log_tx = log_tx.clone();
+            let persist_tx = persist_tx.clone();
+
             tokio::spawn(async move {
                 // accept connection in dedicated thread
                 let conn = incoming.await?;
@@ -129,6 +176,7 @@ async fn quic_server(clients: BonfireClientList, log_tx: Sender<LogEvent>) -> Re
                 let client = BonfireClientBuilder::new()
                     .with_connection(conn)
                     .with_log_channel(log_tx)
+                    .with_persist_channel(persist_tx)
                     .build()
                     .await?;
 
@@ -375,6 +423,7 @@ async fn subscription(tx_chan: UnboundedSender<Vec<BonsolInstruction>>) -> Resul
 struct BonfireClientBuilder {
     conn: Option<Connection>,
     log_tx: Option<Sender<LogEvent>>,
+    persist_tx: Option<mpsc::Sender<LogEntry>>,
 }
 
 impl BonfireClientBuilder {
@@ -389,6 +438,11 @@ impl BonfireClientBuilder {
 
     fn with_log_channel(mut self, log_tx: Sender<LogEvent>) -> Self {
         self.log_tx = Some(log_tx);
+        self
+    }
+
+    fn with_persist_channel(mut self, persist_tx: Option<mpsc::Sender<LogEntry>>) -> Self {
+        self.persist_tx = persist_tx;
         self
     }
 
@@ -467,10 +521,45 @@ impl BonfireClientBuilder {
             Err::<(), _>(anyhow!("Connection dropped"))
         };
 
+        let persist_tx = self.persist_tx.clone();
+        let node_pubkey = client.pubkey.to_string();
+
         let log_future = async move {
             let mut log_reader = protocol::reader::<_, LogEvent>(conn.accept_uni().await?);
             let log_tx = self.log_tx.unwrap();
-            while let Some(Ok(msg)) = log_reader.next().await {
+
+            while let Some(Ok(mut msg)) = log_reader.next().await {
+                // Generate a unique ID for this log event (for deduplication)
+                let log_id = uuid::Uuid::new_v4().to_string();
+                let timestamp = Utc::now();
+                let timestamp_str = timestamp.to_rfc3339();
+
+                msg.id = log_id.clone();
+                msg.timestamp = timestamp_str.clone();
+
+                // Persist to Elasticsearch if configured
+                if let Some(ref tx) = persist_tx {
+                    let log_entry = LogEntry {
+                        id: log_id,
+                        timestamp,
+                        message: msg.log.clone(),
+                        kind: match msg.source {
+                            LogSource::Stdout => LogType::Stdout,
+                            LogSource::Stderr => LogType::Stderr,
+                        },
+                        job_id: Some(msg.job_id.to_string()),
+                        image_id: Some(msg.image_id.to_string()),
+                        node_id: Some(node_pubkey.clone()),
+                        meta: None,
+                    };
+
+                    // Non-blocking send to buffer manager
+                    if let Err(e) = tx.try_send(log_entry) {
+                        warn!("ES persistence buffer full, dropping log: {}", e);
+                    }
+                }
+
+                // Broadcast to web clients
                 log_tx.send(msg)?;
             }
             Err::<(), _>(anyhow!("Connection dropped"))

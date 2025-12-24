@@ -5,6 +5,7 @@ use bonsol_bonfire::{
     BonfireMessage, BonsolInstruction, Gpu, HardwareSpecs, LogEvent, LogSource, Pong,
 };
 use bonsol_prover::util::EventChannelRx;
+use chrono::Utc;
 use futures::{future::try_join3, stream::Peekable, SinkExt, StreamExt};
 use quinn::{
     rustls::{
@@ -21,6 +22,7 @@ use tokio::sync::{
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 use crate::ingest::{Ingester, TxChannel};
 
@@ -64,10 +66,12 @@ impl BonfireIngester {
                     while let Ok(msg) = rx.recv() {
                         logs_tx
                             .send(bonsol_bonfire::LogEvent {
+                                id: Uuid::new_v4().to_string(),
                                 source,
                                 image_id: msg.image_id,
                                 job_id: msg.job_id,
                                 log: String::from_utf8_lossy(&msg.log).into_owned(),
+                                timestamp: Utc::now().to_rfc3339(),
                             })
                             .expect("Log channel dropped. This shouldn't happen!");
                     }
@@ -268,6 +272,7 @@ impl BonfireIngester {
         let memory_bytes = sys.total_memory();
 
         Ok(HardwareSpecs {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             cpu_type,
             cpu_mhz,
             cpu_cores,
