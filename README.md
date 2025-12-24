@@ -9,7 +9,7 @@
 
 
 
-![bonsol-header](gitbook/.gitbook/assets/bonsol.png)
+![bonsol-header](gitbook/.gitbook/assets/bonsol.jpg)
 
 # Bonsol
 
