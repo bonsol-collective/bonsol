@@ -9,7 +9,7 @@ icon: bullseye-arrow
 # Installation
 
 {% hint style="info" %}
-Interested in contributing? Head over to the [broken-reference](broken-reference/ "mention") section to learn more.
+Interested in contributing? Head over to the [Broken link](/broken/pages/U24zr4BbMl2l7GmGCge7 "mention") section to learn more.
 {% endhint %}
 
 ## Requirements

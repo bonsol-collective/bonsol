@@ -29,6 +29,10 @@
 * [Setup a prover node](provers/setup-a-prover-node/README.md)
   * [Manually Provision a Bonsol Node](provers/setup-a-prover-node/manually-provision-a-bonsol-node.md)
 
+## QCash
+
+* [QCash](qcash/setup-a-prover-node.md)
+
 ## Contributing
 
 * [Contributor guidelines](contributing/contributor-guidelines.md)
