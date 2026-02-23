@@ -31,7 +31,7 @@
 
 ## QCash
 
-* [QCash](qcash/setup-a-prover-node.md)
+* [QCash](qcash/overview.md)
 
 ## Contributing
 
