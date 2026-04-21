@@ -1,5 +1,6 @@
 ---
 description: Quantum-Safe Private Transfer on Solana
+hidden: true
 icon: server
 ---
 
