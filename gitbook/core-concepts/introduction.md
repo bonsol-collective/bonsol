@@ -7,66 +7,163 @@ icon: subtitles
 
 # Introduction
 
-## Understanding Bonsol
+Blockchains are excellent at verifying things, but they struggle with heavy computation. That’s why most complex logic still runs off-chain fast, but not trustless. What if you could keep the speed of off-chain compute while still proving that everything ran correctly?
 
-Bonsol acts as a bridge between Solana's on-chain capabilities and off-chain computational power. It allows developers to execute computationally intensive tasks off-chain and then verify the results on-chain, leveraging the power of verifiable computation. Using Bonsol, developers can:
+That’s exactly what Bonsol enables.
 
-* Lower their regulatory burden
-* Build trust with their community
-* Simplify protocol design
+Bonsol lets you run any program off-chain and generate a zero-knowledge proof that the execution was correct. This proof is extremely small and can be verified cheaply on Solana. Under the hood, it uses **RISC Zero’s STARK proofs** for strong security, and then compresses them into a **Groth16 SNARK** for on-chain verification.
 
-Bonsol is deeply integrated with Solana and can be used to build a variety of use cases. You can compose other programs on top of Bonsol to add verifiable computation to your protocol, or add a verifiable layer on top of existing primitives. Bonsol is built on top of the excellent RISC Zero zkVM, which allows developers to write arbitrary programs and generate verifiable proofs of their execution, in some cases those proofs can be zero-knowledge with regard to the inputs.
+<div align="center">
+
+> **Bonsol shifts Solana from a system limited by what fits into a transaction  
+> to a system powered by what can be proven to a transaction.**
+
+</div>
+
+![High-level Bonsol Architecture – End-to-end flow](image.png)
+
+
+
+## Solana’s Hidden Limit
+
+<!-- ![Graphic highlighting Solana’s constraints](image-1.png) -->
+
+Solana is incredibly fast, but it achieves that speed by enforcing strict limits on what a single transaction can do.
+
+| **Limitation**              | **Meaning**                                             |
+|-----------------------------|---------------------------------------------------------|
+| **Compute Unit caps**       | Only a small amount of computation can run on-chain.    |
+| **Transaction size limits** | Large inputs, payloads, or datasets cannot fit.         |
+| **Execution time caps**     | Long or CPU-heavy logic isn’t allowed.                 |
+
+Because of these constraints, you cannot run ML models, simulations, large dataset processing, or complex verification logic inside a Solana program.
+
+These limits aren’t flaws—they keep Solana predictable and fast.
+
+Bonsol removes these constraints safely by shifting all heavy computation off-chain and proving correctness back on-chain.
+
+
+## The Off-Chain Workflow (The Bonsol Model)
+
+![Diagram of off-chain execution + on-chain verification](image-2.png)
+
+**Heavy work happens off-chain.  
+Correctness is enforced on-chain.**
+
+Bonsol divides computation into two worlds:
+
+### **Off-chain:**
+- Unlimited CPU, memory, and execution time  
+- You can run anything: ML inference, simulations, BP decoding, game engines, ZK circuits  
+- No restrictions on data size or complexity  
+
+### **On-chain:**
+- Solana receives a tiny Groth16 proof  
+- The program verifies correctness instantly  
+- No need to trust the prover  
+
+This unlocks a new programming approach:
+
+Instead of writing on-chain programs that *do the work*,  
+you write programs that *verify the work*.
+
 
 ## How Bonsol Works
 
-1. Developers create verifiable programs using RISC Zero Tooling
-2. These verifiable programs are registered with Bonsol
-3. Users can request execution of these verifiable programs through Bonsol
-4. Provers run the verifiable programs and generate STARK proofs
-5. Bonsol wraps the STARK proof into a SNARK (Succinct Non-interactive ARgument of Knowledge)
-6. The SNARK proof is verified natively on Solana
+![Before and after – using Bonsol vs standard Solana transaction](image-3.png)
 
-### RISC0 STARK Proofs
+Here’s the full pipeline:
 
-RISC Zero generates STARK proofs, which have several important properties:
+### **1. Write a normal Rust program**
+This becomes your “guest program.”  
+RISC Zero compiles and runs it inside a zkVM.
 
-1. Scalability: STARK proofs can handle arbitrarily large computations, with proof size and verification time growing logarithmically with the computation size.
-2. Transparency: STARKs don't require a trusted setup, enhancing their security and reducing reliance on external parties.
-3. Variable Length: The size of a STARK proof is directly related to the complexity and length of the computation being proved. This means that for simple computations, the proof can be quite small, while for more complex ones, it can grow larger.
-4. Post-Quantum Security: STARKs are believed to be secure against attacks from quantum computers.
+### **2. A prover executes it off-chain**
+This can be:
+- Your local machine  
+- A backend server  
+- A decentralized prover network  
 
-However, these proofs can become quite large for complex computations, which can be problematic for on-chain verification on Solana.
+RISC Zero generates a **STARK proof** of execution.
 
-### STARK to SNARK Conversion
+### **3. Bonsol converts STARK → Groth16 SNARK**
 
-To address the potential size issues of STARK proofs, Bonsol converts them into Groth16 SNARKs. This process involves several steps:
+Why convert?
 
-1. Proof Aggregation: In the case of using Proofs as Inputs, Bonsol may first aggregate multiple proof segments into a single, more compact proof.
-2. Circuit Generation: The STARK verification circuit is transformed into an arithmetic circuit suitable for SNARK proving.
-3. Trusted Setup: A one-time trusted setup is performed for the Groth16 scheme. This setup is universal for all STARK to SNARK conversions in Bonsol.
-4. Proof Generation: Using the Groth16 scheme, a new SNARK proof is generated that attests to the validity of the original STARK proof.
+- STARKs: large (100s of KB)  
+- Groth16 SNARKs: tiny (~200 bytes)  
+- Groth16 verifies in <200k CU on Solana  
 
-### Benefits of Groth16 SNARKs
+This conversion step makes native Solana verification possible.
 
-The conversion to Groth16 SNARKs offers several advantages:
+### **4. Solana verifies the SNARK**
+If the proof verifies:
+- The computation definitely ran correctly  
+- The outputs are authentic  
+- Inputs match the on-chain digest  
+- No prover can forge or skip logic  
 
-1. Constant-size proofs: Regardless of the complexity of the original computation, the Groth16 SNARK proof has a fixed, small size.
-2. Fast verification: Groth16 proofs can be verified extremely quickly, which is crucial for on-chain verification.
-3. Efficient implementation: The algebraic structure of Groth16 proofs allows for efficient implementation on Solana.
+### **5. Bonsol invokes your callback program**
+Your Solana program receives:
+- Proven outputs  
+- Execution metadata  
+- Input digest for tamper-proofing  
 
-### Native Verification on Solana
 
-Bonsol implements a native Groth16 verifier on Solana, allowing for:
+## Why Bonsol Uses STARKs + SNARKs (Hybrid Approach)
 
-* Efficient proof verification, with the verification call happening in less than 200k compute units
-* This means we can compose over other programs in the same transaction
+**STARK (RISC Zero stage) advantages**
+- Transparent (no trusted setup)  
+- Post-quantum secure  
+- Best for large programs  
 
-### Input Digest Verification
+**SNARK (Groth16 stage) advantages**
+- Very small proofs  
+- Extremely cheap to verify on Solana  
+- Perfect for blockchain constraints  
 
-To ensure the integrity of inputs, Bonsol:
+**Hybrid = the best of both**
+- **STARK → freedom to compute anything**  
+- **SNARK → freedom to verify on-chain cheaply**  
 
-1. Ensures that verifiable programs compute a digest (hash) of all inputs (public and private)
-2. Commits this digest as part of the verifiable programs execution
-3. Verifies the digest on-chain during proof verification
 
-This additional step prevents potential attacks where a malicious prover might try to use different inputs than those specified in the execution request.\
+## Input Digest Verification (Preventing Input Forgery)
+
+Bonsol ensures provers cannot cheat by modifying inputs.
+
+Every guest program must:
+- Compute a digest (hash) of all input bytes  
+- Commit that digest inside the proof  
+- Have it validated against the on-chain expected digest  
+
+If even one byte changes:
+- Digest mismatch  
+- Proof rejected  
+- Prover ignored or penalized  
+
+This guarantees correctness and avoids tampering.
+
+
+## When to Use Bonsol (Real Use Cases)
+
+Below are **some practical examples**.
+
+### **1. Verifiable Compute**
+Run complex logic off-chain—AI inference, simulations, risk checks—and prove the result on-chain without re-executing it.
+
+### **2. Storage & Transaction Proofs**
+Prove that a specific transaction or piece of historical data is valid without replaying all logic on-chain.
+
+### **3. Verifiable Oracles**
+Fetch external data, validate signatures or TLS sessions off-chain, and submit a proof instead of raw data.
+
+### **4. Gaming & Fairness**
+Create fair raffles, hidden-state games, or randomness-heavy mechanics where results are provably correct.
+
+## Conclusion
+
+If it’s too heavy, too big, **Bonsol is the right tool.** 
+<!-- or too private for Solana, -->
+
+Bonsol unlocks a new category of applications by allowing Solana programs to verify  
+what previously could not even be computed on-chain.
