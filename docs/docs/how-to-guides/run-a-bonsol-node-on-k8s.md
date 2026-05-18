@@ -9,7 +9,7 @@ Bonsol has a fully featured docker image and helm chart that can be used to run 
 
 
 ## Kublet/Docker requirements
-The bonsol code makes use of a c++ groth16 witness generator, this thing can easily blow your stack. You will need to make sure the the kublet will respect changing the containers maximum ulimit settings such as the stack size.
+The bonsol code makes use of a c++ groth16 witness generator, this thing can easily blow your stack. You will need to make sure the kublet will respect changing the containers maximum ulimit settings such as the stack size.
 This will vary from k8s provider to k8s provider, but you can check the kubelet docs for your provider to see how to up the maximum ulimits.
 I know it sounds crazy but `ulimit -s unlimited` is the best bet right now. We hope to remove this requirement in the future.
 
